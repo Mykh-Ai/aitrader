@@ -1,0 +1,11 @@
+services:
+  aggregator:
+    build: .
+    container_name: shi-aggregator
+    restart: unless-stopped
+    volumes:
+      - ./feed:/app/feed
+      - ./logs:/app/logs
+    environment:
+      - FEED_DIR=/app/feed
+      - LOGS_DIR=/app/logs
