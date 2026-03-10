@@ -73,6 +73,7 @@ class CandleBuffer:
         self.open_interest = 0.0
         self.funding_rate = 0.0
         self.mark_price = 0.0
+        self.last_price = 0.0
 
     def reset(self):
         self.open = None
@@ -94,6 +95,7 @@ class CandleBuffer:
         if self.open is None:
             self.open = price
         self.close = price
+        self.last_price = price
         self.high = max(self.high, price) if self.high is not None else price
         self.low = min(self.low, price) if self.low is not None else price
         self.volume += qty
@@ -262,6 +264,13 @@ def fetch_open_interest():
         log(f"⚠️ REST OI error: {e}")
 
 
+def oi_loop():
+    """Окремий цикл polling OI кожні 60 секунд."""
+    while True:
+        fetch_open_interest()
+        time.sleep(60)
+
+
 # ═══════════════════════════════════════════════════════════════════
 # Flush — запис у CSV
 # ═══════════════════════════════════════════════════════════════════
@@ -273,18 +282,13 @@ def get_csv_path() -> str:
 def flush_candle():
     """Зберігає хвилинну свічку в CSV і скидає буфер."""
 
-    # OI через REST (WS не дає)
-    fetch_open_interest()
-
     with lock:
         if buffer.is_empty():
-            log("⏭️  Порожня свічка — пропуск")
-            oi = buffer.open_interest
-            fr = buffer.funding_rate
-            buffer.reset()
-            buffer.open_interest = oi
-            buffer.funding_rate = fr
-            return
+            selected_price = buffer.mark_price or buffer.last_price or 0.0
+            buffer.open = selected_price
+            buffer.high = selected_price
+            buffer.low = selected_price
+            buffer.close = selected_price
 
         ts = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
         row = buffer.to_csv_row(ts)
@@ -356,6 +360,7 @@ def main():
 
     # Потоки
     threading.Thread(target=ws_loop, daemon=True, name="ws-binance").start()
+    threading.Thread(target=oi_loop, daemon=True, name="oi-poller").start()
     threading.Thread(target=health_loop, daemon=True, name="health").start()
 
     # Синхронізація на початок хвилини
