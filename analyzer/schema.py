@@ -64,6 +64,16 @@ FEATURE_COLUMNS_IMPLEMENTED = [
     "SwingHigh_H4_ConfirmedAt",
     "SwingLow_H4_Price",
     "SwingLow_H4_ConfirmedAt",
+    "Sweep_H1_Up",
+    "Sweep_H1_Down",
+    "Sweep_H1_Direction",
+    "Sweep_H1_ReferenceLevel",
+    "Sweep_H1_ReferenceTs",
+    "Sweep_H4_Up",
+    "Sweep_H4_Down",
+    "Sweep_H4_Direction",
+    "Sweep_H4_ReferenceLevel",
+    "Sweep_H4_ReferenceTs",
 ]
 
 # Planned placeholders for future phases; not materialized yet.
