@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from analyzer.pipeline import run
+from analyzer.schema import FEATURE_COLUMNS_IMPLEMENTED, FEATURE_COLUMNS_PLANNED
 
 
 def test_pipeline_smoke_writes_outputs(tmp_path):
@@ -12,6 +13,26 @@ def test_pipeline_smoke_writes_outputs(tmp_path):
     assert result["events"].empty
     assert result["features_path"].exists()
     assert result["events_path"].exists()
+
+
+def test_pipeline_output_contains_implemented_feature_columns(tmp_path):
+    fixture = Path(__file__).parent / "fixtures" / "sample_raw_minimal.csv"
+
+    result = run(fixture, tmp_path)
+    features = result["features"]
+
+    for col in FEATURE_COLUMNS_IMPLEMENTED:
+        assert col in features.columns
+
+
+def test_pipeline_output_does_not_claim_planned_columns_as_materialized(tmp_path):
+    fixture = Path(__file__).parent / "fixtures" / "sample_raw_minimal.csv"
+
+    result = run(fixture, tmp_path)
+    features = result["features"]
+
+    for col in FEATURE_COLUMNS_PLANNED:
+        assert col not in features.columns
 
 
 def test_fixture_files_exist_and_loadable():
