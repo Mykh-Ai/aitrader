@@ -156,9 +156,11 @@ docker logs -f shi-aggregator
 ### Локально (dev)
 
 ```bash
-pip install websocket-client requests
+pip install -r requirements.txt websocket-client requests
 python binance_aggregator_shi.py
 ```
+
+Для Analyzer/tests потрібен реальний `pandas` (локальні shim-модулі не використовуються).
 
 ### Змінні середовища
 
