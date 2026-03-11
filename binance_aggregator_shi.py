@@ -58,9 +58,11 @@ AGG_INTERVAL = 60  # секунд
 # ─── CSV ─────────────────────────────────────────────────────────
 CSV_HEADER = (
     "Timestamp,Open,High,Low,Close,"
-    "Volume,Trades,BuyQty,SellQty,"
+    "Volume,AggTrades,BuyQty,SellQty,"
+    "VWAP,"
     "OpenInterest,FundingRate,"
-    "LiqBuyQty,LiqSellQty\n"
+    "LiqBuyQty,LiqSellQty,"
+    "IsSynthetic\n"
 )
 
 
@@ -84,6 +86,7 @@ class CandleBuffer:
         self.trades = 0
         self.buy_qty = 0.0
         self.sell_qty = 0.0
+        self.notional = 0.0
         self.liq_buy_qty = 0.0
         self.liq_sell_qty = 0.0
 
@@ -99,6 +102,7 @@ class CandleBuffer:
         self.high = max(self.high, price) if self.high is not None else price
         self.low = min(self.low, price) if self.low is not None else price
         self.volume += qty
+        self.notional += price * qty
         self.trades += 1
         if is_buyer_maker:
             self.sell_qty += qty
@@ -118,13 +122,16 @@ class CandleBuffer:
     def is_empty(self) -> bool:
         return self.trades == 0
 
-    def to_csv_row(self, timestamp: str) -> str:
+    def to_csv_row(self, timestamp: str, is_synthetic: int) -> str:
+        vwap = self.notional / self.volume if self.volume > 0 else self.close
         return (
             f"{timestamp},"
             f"{self.open:.2f},{self.high:.2f},{self.low:.2f},{self.close:.2f},"
             f"{self.volume:.6f},{self.trades},{self.buy_qty:.6f},{self.sell_qty:.6f},"
+            f"{vwap:.2f},"
             f"{self.open_interest:.2f},{self.funding_rate:.8f},"
-            f"{self.liq_buy_qty:.6f},{self.liq_sell_qty:.6f}\n"
+            f"{self.liq_buy_qty:.6f},{self.liq_sell_qty:.6f},"
+            f"{is_synthetic}\n"
         )
 
 
@@ -283,15 +290,18 @@ def flush_candle():
     """Зберігає хвилинну свічку в CSV і скидає буфер."""
 
     with lock:
+        is_synthetic = 0
         if buffer.is_empty():
             selected_price = buffer.mark_price or buffer.last_price or 0.0
             buffer.open = selected_price
             buffer.high = selected_price
             buffer.low = selected_price
             buffer.close = selected_price
+            is_synthetic = 1
 
-        ts = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-        row = buffer.to_csv_row(ts)
+        bar_time = datetime.datetime.utcnow().replace(second=0, microsecond=0)
+        ts = bar_time.strftime("%Y-%m-%d %H:%M:%S")
+        row = buffer.to_csv_row(ts, is_synthetic)
 
         # Зберігаємо OI/FR для наступної свічки
         oi = buffer.open_interest

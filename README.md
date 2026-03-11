@@ -41,13 +41,94 @@ Binance Futures API (fstream/fapi)     Binance Spot API
 | Timestamp | system | UTC час свічки |
 | Open, High, Low, Close | aggTrade WS | OHLCV ціни |
 | Volume | aggTrade WS | Загальний обсяг |
-| Trades | aggTrade WS | Кількість угод |
+| AggTrades | aggTrade WS | Кількість aggTrade повідомлень |
 | BuyQty | aggTrade WS | Обсяг buy taker (для delta) |
 | SellQty | aggTrade WS | Обсяг sell taker (для delta) |
+| VWAP | aggTrade WS | 1m volume-weighted average traded price |
 | OpenInterest | REST /fapi/v1/openInterest | Відкритий інтерес (BTC) |
 | FundingRate | markPrice WS | Ставка фінансування |
 | LiqBuyQty | forceOrder WS | Обсяг ліквідацій шортів |
 | LiqSellQty | forceOrder WS | Обсяг ліквідацій лонгів |
+| IsSynthetic | system | Ознака synthetic candle (1 = без трейдів) |
+
+### Data Notes
+
+AggTrades column reflects the number of Binance aggTrade messages,
+not the exact number of individual exchange fills.
+
+BuyQty and SellQty remain accurate for delta/CVD calculations,
+but AggTrades should not be interpreted as the true number
+of individual exchange trades.
+
+### Synthetic Candles
+
+If no trades occur during a 1-minute interval the collector writes
+a synthetic candle using the last known price (mark price or last trade).
+
+Such candles are marked with:
+
+IsSynthetic = 1
+
+Analyzer modules may ignore these bars when calculating
+compression, volatility contraction or other microstructure features.
+
+### Liquidation Data
+
+LiqBuyQty and LiqSellQty are derived from the Binance forceOrder stream.
+
+This stream reports observed liquidation events but should not be treated
+as a guaranteed complete ground truth of all market liquidations.
+
+These values are intended for contextual analysis rather than exact
+measurement of total liquidation volume.
+
+### Order Flow Interpretation
+
+BuyQty and SellQty represent taker-aggressor volume derived from Binance
+aggTrade messages.
+
+They measure which side initiated market orders, but they do not
+by themselves indicate directional control.
+
+Directional interpretation must always be combined with price response
+(close location, wick structure, range expansion/contraction).
+
+Example:
+
+High BuyQty with weak upward price response may indicate
+buy absorption rather than bullish control.
+
+### Execution Granularity Note
+
+BuyQty and SellQty are derived from the Binance aggTrade stream and represent
+taker-aggressor volume aggregated by the exchange.
+
+These values are suitable for bar-level order flow analysis such as:
+
+- Delta
+- CVD
+- Absorption on 1-minute candles
+- Sweep context
+
+However, aggTrade does not preserve full fill-by-fill execution granularity.
+
+Therefore these fields should not be interpreted as footprint-grade trade tape
+and should not be used for micro-burst or fill-sequence analysis.
+
+Such use cases require a raw trade stream collector and are out of scope for v1.0.
+
+### VWAP (1-minute)
+
+VWAP is the 1-minute volume-weighted average traded price.
+
+Formula:
+
+VWAP = sum(price * qty) / sum(qty)
+
+VWAP is included as a bar-level execution context feature and can be used
+by the Analyzer for absorption, acceptance/rejection and event quality analysis.
+
+If a bar has no trades, VWAP falls back to the candle close price.
 
 ### Зберігання
 
