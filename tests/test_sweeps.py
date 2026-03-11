@@ -100,3 +100,52 @@ def test_h1_h4_plumbing_sweeps_work_independently():
 
     assert out["Sweep_H1_Up"].dtype == bool
     assert out["Sweep_H4_Down"].dtype == bool
+
+
+def test_sweep_flags_are_mutually_exclusive_per_timeframe():
+    ts = pd.date_range("2025-01-01T00:00:00Z", periods=16, freq="1h", tz="UTC")
+    highs = [8, 10, 9, 7, 16, 20, 18, 17, 14, 15, 13, 12, 13, 21, 12, 11]
+    lows = [5, 6, 5, 4, 8, 9, 8, 7, 6, 7, 6, 5, 6, 7, 6, 5]
+    df = pd.DataFrame({"Timestamp": ts, "High": highs, "Low": lows})
+
+    out = detect_sweeps(annotate_swings(df))
+
+    for tf_label in ("H1", "H4"):
+        both = out[f"Sweep_{tf_label}_Up"] & out[f"Sweep_{tf_label}_Down"]
+        assert not both.any(), f"{tf_label} has rows with both up and down sweeps"
+
+
+def test_sweep_fields_remain_consistent_with_flags_and_references():
+    ts = pd.date_range("2025-01-01T00:00:00Z", periods=16, freq="1h", tz="UTC")
+    highs = [8, 10, 9, 7, 16, 20, 18, 17, 14, 15, 13, 12, 13, 21, 12, 11]
+    lows = [5, 6, 5, 4, 8, 9, 8, 7, 6, 7, 6, 5, 6, 7, 6, 5]
+    df = pd.DataFrame({"Timestamp": ts, "High": highs, "Low": lows})
+
+    out = detect_sweeps(annotate_swings(df))
+
+    for tf_label in ("H1", "H4"):
+        up_col = f"Sweep_{tf_label}_Up"
+        down_col = f"Sweep_{tf_label}_Down"
+        direction_col = f"Sweep_{tf_label}_Direction"
+        ref_level_col = f"Sweep_{tf_label}_ReferenceLevel"
+        ref_ts_col = f"Sweep_{tf_label}_ReferenceTs"
+        high_level_col = f"SwingHigh_{tf_label}_Price"
+        low_level_col = f"SwingLow_{tf_label}_Price"
+        high_ts_col = f"SwingHigh_{tf_label}_ConfirmedAt"
+        low_ts_col = f"SwingLow_{tf_label}_ConfirmedAt"
+
+        for _, row in out.iterrows():
+            if row[up_col]:
+                assert not row[down_col]
+                assert row[direction_col] == "up"
+                assert row[ref_level_col] == row[high_level_col]
+                assert row[ref_ts_col] == row[high_ts_col]
+            elif row[down_col]:
+                assert not row[up_col]
+                assert row[direction_col] == "down"
+                assert row[ref_level_col] == row[low_level_col]
+                assert row[ref_ts_col] == row[low_ts_col]
+            else:
+                assert pd.isna(row[direction_col])
+                assert pd.isna(row[ref_level_col])
+                assert pd.isna(row[ref_ts_col])
