@@ -56,6 +56,14 @@ FEATURE_COLUMNS_IMPLEMENTED = [
     "LowerWickToRange",
     "OI_Change",
     "LiqTotal",
+    "SwingHigh_H1_Price",
+    "SwingHigh_H1_ConfirmedAt",
+    "SwingLow_H1_Price",
+    "SwingLow_H1_ConfirmedAt",
+    "SwingHigh_H4_Price",
+    "SwingHigh_H4_ConfirmedAt",
+    "SwingLow_H4_Price",
+    "SwingLow_H4_ConfirmedAt",
 ]
 
 # Planned placeholders for future phases; not materialized yet.
