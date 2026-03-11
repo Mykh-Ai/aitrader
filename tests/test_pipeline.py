@@ -11,8 +11,11 @@ def test_pipeline_smoke_writes_outputs(tmp_path):
 
     assert result["features"].shape[0] == 2
     assert result["events"].empty
+    assert result["setups"].empty
     assert result["features_path"].exists()
     assert result["events_path"].exists()
+    assert result["setups_path"].exists()
+    assert result["setups_path"].name == "analyzer_setups.csv"
 
 
 def test_pipeline_output_contains_implemented_feature_columns(tmp_path):
