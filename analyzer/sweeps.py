@@ -33,26 +33,29 @@ def _annotate_tf_sweeps(out: pd.DataFrame, tf_label: str) -> pd.DataFrame:
     high_level = pd.to_numeric(out[high_price_col], errors="coerce")
     low_level = pd.to_numeric(out[low_price_col], errors="coerce")
 
-    up = high_level.notna() & (out["High"] > high_level)
-    down = low_level.notna() & (out["Low"] < low_level)
+    raw_up = high_level.notna() & (out["High"] > high_level)
+    raw_down = low_level.notna() & (out["Low"] < low_level)
+
+    ambiguous = raw_up & raw_down
+    up = raw_up & ~ambiguous
+    down = raw_down & ~ambiguous
 
     out[up_col] = up.astype(bool)
     out[down_col] = down.astype(bool)
 
     direction = pd.Series(pd.NA, index=out.index, dtype="object")
-    direction.loc[up & ~down] = "up"
-    direction.loc[down & ~up] = "down"
-    direction.loc[up & down] = "both"
+    direction.loc[up] = "up"
+    direction.loc[down] = "down"
     out[direction_col] = direction
 
     ref_level = pd.Series(pd.NA, index=out.index, dtype="Float64")
-    ref_level.loc[up & ~down] = high_level.loc[up & ~down]
-    ref_level.loc[down & ~up] = low_level.loc[down & ~up]
+    ref_level.loc[up] = high_level.loc[up]
+    ref_level.loc[down] = low_level.loc[down]
     out[ref_level_col] = ref_level
 
     ref_ts = pd.Series(pd.NaT, index=out.index, dtype="object")
-    ref_ts.loc[up & ~down] = out.loc[up & ~down, high_ts_col]
-    ref_ts.loc[down & ~up] = out.loc[down & ~up, low_ts_col]
+    ref_ts.loc[up] = out.loc[up, high_ts_col]
+    ref_ts.loc[down] = out.loc[down, low_ts_col]
     out[ref_ts_col] = pd.to_datetime(ref_ts, utc=True)
 
     return out
