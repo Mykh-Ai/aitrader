@@ -19,13 +19,92 @@ High
 Low
 Close
 Volume
-Trades
+AggTrades
 BuyQty
 SellQty
+VWAP
 OpenInterest
 FundingRate
 LiqBuyQty
 LiqSellQty
+IsSynthetic
+
+---
+
+## Data Fields
+
+### AggTrades
+
+Number of Binance aggTrade messages received during the 1-minute bar.
+
+Note:
+This is not the exact number of exchange fills. Binance aggTrade stream
+aggregates multiple executions into single messages.
+
+AggTrades should therefore be interpreted as a proxy for trade activity
+rather than a precise trade count.
+
+### VWAP (1-minute)
+
+Volume-weighted average traded price of the 1-minute candle.
+
+Formula:
+
+    VWAP = sum(price * qty) / sum(qty)
+
+VWAP represents the average execution price of all trades during the bar.
+
+If a candle contains no trades (synthetic candle), VWAP is set equal to Close.
+
+## Data Quality / Special Cases
+
+### IsSynthetic
+
+Binary flag indicating whether the candle was generated without trades.
+
+Values:
+0 — normal candle (trades occurred)
+1 — synthetic candle (no trades during the interval)
+
+Synthetic candles are created using the last known price
+(mark price or last trade price).
+
+Analyzer modules may optionally exclude synthetic candles
+from volatility or compression calculations.
+
+## Data Limitations
+
+### Execution Granularity
+
+Order flow metrics (BuyQty, SellQty, Delta) are derived from Binance aggTrade.
+
+The aggTrade stream aggregates multiple fills and therefore does not
+preserve full fill-by-fill execution order.
+
+These metrics are suitable for bar-level order flow analysis (1-minute),
+but they should not be interpreted as footprint-grade execution tape.
+
+## Interpretation Guidelines
+
+### Aggressor vs Control
+
+BuyQty and SellQty represent taker-aggressor volume.
+
+They indicate which side initiated market orders but do not by themselves
+indicate directional market control.
+
+Directional interpretation must always be combined with price response
+(close location, wick structure, and range behavior).
+
+### Liquidation Context
+
+LiqBuyQty and LiqSellQty are derived from the Binance forceOrder stream.
+
+This stream reports observed liquidation events but does not guarantee
+complete coverage of all market liquidations.
+
+These values are intended as contextual signals rather than exact
+measurements of liquidation volume.
 
 ---
 
@@ -66,13 +145,15 @@ High
 Low
 Close
 Volume
-Trades
+AggTrades
 BuyQty
 SellQty
+VWAP
 OpenInterest
 FundingRate
 LiqBuyQty
 LiqSellQty
+IsSynthetic
 
 Derived metrics are defined in Section 1.
 
@@ -1764,7 +1845,7 @@ CSV export — опціональний, для ручної інспекції.
 
     - ts must be unique (no duplicate rows)
     - ts is bar close timestamp in UTC
-    - no gaps allowed (порожні свічки заповнюються попередніми значеннями)
+    - no gaps allowed (minutes with no trades are emitted as synthetic candles and marked IsSynthetic=1)
     - columns order: raw fields first, then derived metrics
 
 ### Column list (повний, відповідає Blocks 1-5)
@@ -1772,8 +1853,8 @@ CSV export — опціональний, для ручної інспекції.
 Raw (з aggregator):
 
     ts, open, high, low, close,
-    volume, trades, buy_qty, sell_qty,
-    open_interest, funding_rate, liq_buy_qty, liq_sell_qty
+    volume, agg_trades, buy_qty, sell_qty, vwap,
+    open_interest, funding_rate, liq_buy_qty, liq_sell_qty, is_synthetic
 
 Base metrics (Block 1):
 
