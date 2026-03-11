@@ -86,6 +86,16 @@ FEATURE_COLUMNS_IMPLEMENTED = [
     "FailedBreak_H4_ReferenceLevel",
     "FailedBreak_H4_ReferenceSweepTs",
     "FailedBreak_H4_ConfirmedTs",
+    "RelVolume_20",
+    "DeltaAbsRatio_20",
+    "OIChangeAbsRatio_20",
+    "LiqTotalRatio_20",
+    "CtxRelVolumeSpike_v1",
+    "CtxDeltaSpike_v1",
+    "CtxOISpike_v1",
+    "CtxLiqSpike_v1",
+    "CtxWickReclaim_v1",
+    "AbsorptionScore_v1",
 ]
 
 # Planned placeholders for future phases; not materialized yet.
