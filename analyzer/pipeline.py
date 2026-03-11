@@ -10,6 +10,7 @@ from .events import build_events
 from .failed_breaks import detect_failed_breaks
 from .io import ensure_output_dir, save_dataframe
 from .loader import load_raw_csv
+from .setups import extract_setup_candidates
 from .sweeps import detect_sweeps
 from .swings import annotate_swings
 
@@ -26,14 +27,18 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
     features = detect_failed_breaks(features)
     features = detect_absorption(features)
     events = build_events(features)
+    setups = extract_setup_candidates(features, events)
 
     out_dir = ensure_output_dir(output_dir)
     features_path = save_dataframe(features, out_dir / "analyzer_features.csv")
     events_path = save_dataframe(events, out_dir / "analyzer_events.csv")
+    setups_path = save_dataframe(setups, out_dir / "analyzer_setups.csv")
 
     return {
         "features": features,
         "events": events,
+        "setups": setups,
         "features_path": features_path,
         "events_path": events_path,
+        "setups_path": setups_path,
     }
