@@ -1,206 +1,252 @@
 # Стратегія Ші v1.0 — AI Trader
 
-Алгоритмічна торгова система на BTC. Сигнали з Binance Futures, execution через Binance Spot Margin.
+BTC research and analysis system being built toward algorithmic trading.
+Currently at Phase 1: raw data collection + Analyzer facts engine.
+Target execution: Binance Spot Margin BTC/USDC (isolated, max 2x) — planned Phase 4.
 
-## Архітектура
+## System Architecture
 
 ```
-Binance Futures API (fstream/fapi)     Binance Spot API
-        │                                     │
-   [сигнал/дані]                        [execution]
-        │                                     │
-   aggregator (Phase 1)                 executor (Phase 3)
-   BTCUSDT Perpetual                    BTC/USDC margin 2x
+Binance Futures API (fstream / fapi)
+        │
+   [raw market data]
+        │
+   Collector / Aggregator        ← Phase 1: IMPLEMENTED
+   BTCUSDT Perpetual 1m feed
+        │
+   Analyzer (facts engine)       ← Phase 1: IMPLEMENTED
+   schema → loader → base metrics
+   → swings → sweeps → failed breaks
+   → absorption → events → output
+        │
+   Research / Setup Extraction   ← Phase 2: NEXT
+   setup candidates, edge stats
+        │
+   Backtester                    ← Phase 3: PLANNED
+   6-month validation
+        │
+   Executor                      ← Phase 4: PLANNED
+   Binance Spot Margin BTC/USDC (isolated, max 2x)
 ```
 
-## Стратегія
+## Project Status
 
-**Liquidity Grab + CVD Divergence**
+| Phase | Status | Description |
+|-------|--------|-------------|
+| 1. Raw feed + Analyzer facts engine | ✅ Implemented | 1m collector live; Analyzer computes all Phase 1 features and events |
+| 2. Research / setup extraction | 🔜 Next | Candidate generation, edge statistics on labeled events |
+| 3. Backtesting | 🔜 Planned | 6-month strategy validation |
+| 4. Execution | 🔜 Planned | Live trading via Binance Spot Margin API |
 
-- H1/H4 structural swing визначає ключові рівні
-- Ціна знімає рівень (sweep) → volume spike + delta spike підтверджують
-- CVD дивергенція на 15m (контекст 4H/1D) → вхід
-- TP1 на 2R (50%), решта трейл по структурі
-- Ризик: 1% на трейд, isolated margin, max 2x
+## Analyzer — Scope
 
-## Фази проєкту
+The Analyzer is a **facts engine**. It:
 
-| Фаза | Статус | Опис |
-|------|--------|------|
-| 1. Raw Data | ✅ LIVE | Збір 1m даних: OHLCV, OI, funding, liquidations |
-| 2. Analyzer | 🔜 | Delta, CVD, absorption, свінги, distance_to_liquidity |
-| 3. Backtesting | 🔜 | Валідація edge на 6 міс. даних |
-| 4. Execution | 🔜 | Live торгівля через Spot Margin API |
+- Computes derived features and metrics from raw 1m feed
+- Detects and normalizes structural events (swings, sweeps, failed breaks)
+- Outputs a deterministic feature table and event table
+
+The Analyzer does **not**:
+
+- Open trades or generate live entry signals
+- Perform strategy optimization or ruleset selection
+- Act as executor or interface with the exchange
+
+## Analyzer — Module Architecture
+
+Package: `analyzer/`
+
+| Module | Responsibility |
+|--------|---------------|
+| `schema.py` | Schema contracts: required column lists, feature column registry, `EVENT_COLUMNS`, `SchemaValidationError` |
+| `loader.py` | Load and validate raw aggregator CSV: parse UTC timestamps, enforce required columns, coerce numerics, normalize `IsSynthetic`, reject duplicates |
+| `base_metrics.py` | Compute per-bar derived metrics: Delta, CVD, DeltaPct, BarRange, BodySize, UpperWick, LowerWick, CloseLocation, BodyToRange, wick ratios, OI_Change, LiqTotal |
+| `swings.py` | Detect H1/H4 structural fractal swings with confirmation delay; annotate feature table with `SwingHigh_*_Price`, `SwingHigh_*_ConfirmedAt`, `SwingLow_*` columns |
+| `sweeps.py` | Detect H1/H4 sweeps of confirmed swing levels on 1m bars; annotate `Sweep_*_Up`, `Sweep_*_Down`, direction, reference level/timestamp |
+| `failed_breaks.py` | Detect H1/H4 failed-break events: track bars-since-sweep forward in time; annotate `FailedBreak_*_Up`, `FailedBreak_*_Down`, confirmed timestamp |
+| `absorption.py` | Compute deterministic rolling-ratio context features: `RelVolume_20`, `DeltaAbsRatio_20`, `OIChangeAbsRatio_20`, `LiqTotalRatio_20`, context spike booleans, `AbsorptionScore_v1` |
+| `events.py` | Build normalized event table from materialized feature columns; emits `SWING_HIGH`, `SWING_LOW`, `SWEEP_UP`, `SWEEP_DOWN`, `FAILED_BREAK_UP`, `FAILED_BREAK_DOWN`; Confidence and MetaJson are null in this phase |
+| `io.py` | Output helpers: ensure output directory exists, save DataFrames to CSV |
+| `pipeline.py` | Orchestration entrypoint: wires the full layer sequence and saves artifacts (`analyzer_features.csv`, `analyzer_events.csv`) |
+
+### Tests
+
+`tests/` contains one test file per analyzer module:
+
+```
+tests/
+├── test_schema.py
+├── test_loader.py
+├── test_base_metrics.py
+├── test_swings.py
+├── test_sweeps.py
+├── test_failed_breaks.py
+├── test_absorption.py
+├── test_events.py
+└── test_pipeline.py
+```
+
+`tests/fixtures/` holds minimal CSV files used as shared test inputs:
+
+```
+tests/fixtures/
+├── sample_raw_minimal.csv
+├── sample_raw_with_gap.csv
+└── sample_raw_with_synthetic.csv
+```
+
+`docs/Spec_v1.0.md` is the normative Analyzer contract. Tests are written against the spec.
+
+## Repository Structure
+
+```
+Aitrader/
+├── binance_aggregator_shi.py   # Phase 1: raw 1m collector (LIVE)
+├── analyzer/                   # Analyzer package (Phase 1)
+│   ├── __init__.py
+│   ├── schema.py
+│   ├── loader.py
+│   ├── base_metrics.py
+│   ├── swings.py
+│   ├── sweeps.py
+│   ├── failed_breaks.py
+│   ├── absorption.py
+│   ├── events.py
+│   ├── io.py
+│   └── pipeline.py
+├── tests/                      # Unit tests for Analyzer
+│   ├── fixtures/               # Shared CSV test fixtures
+│   ├── test_schema.py
+│   ├── test_loader.py
+│   └── ...
+├── docs/
+│   └── Spec_v1.0.md            # Analyzer spec and contract
+├── feed/                       # 1m CSV files by day (not in git)
+│   └── YYYY-MM-DD.csv
+├── logs/                       # Aggregator logs (not in git)
+├── Dockerfile
+├── docker-compose.yml
+└── CLAUDE.md
+```
 
 ## Phase 1: Aggregator
 
-### Що збирає (1m інтервал)
+### Raw feed schema (1m candles)
 
-| Колонка | Джерело | Опис |
-|---------|---------|------|
-| Timestamp | system | UTC час свічки |
-| Open, High, Low, Close | aggTrade WS | OHLCV ціни |
-| Volume | aggTrade WS | Загальний обсяг |
-| AggTrades | aggTrade WS | Кількість aggTrade повідомлень |
-| BuyQty | aggTrade WS | Обсяг buy taker (для delta) |
-| SellQty | aggTrade WS | Обсяг sell taker (для delta) |
+| Column | Source | Description |
+|--------|--------|-------------|
+| Timestamp | system | UTC bar open time |
+| Open, High, Low, Close | aggTrade WS | OHLCV prices |
+| Volume | aggTrade WS | Total volume |
+| AggTrades | aggTrade WS | Number of Binance aggTrade messages (not individual fills) |
+| BuyQty | aggTrade WS | Taker buy volume (for delta) |
+| SellQty | aggTrade WS | Taker sell volume (for delta) |
 | VWAP | aggTrade WS | 1m volume-weighted average traded price |
-| OpenInterest | REST /fapi/v1/openInterest | Відкритий інтерес (BTC) |
-| FundingRate | markPrice WS | Ставка фінансування |
-| LiqBuyQty | forceOrder WS | Обсяг ліквідацій шортів |
-| LiqSellQty | forceOrder WS | Обсяг ліквідацій лонгів |
-| IsSynthetic | system | Ознака synthetic candle (1 = без трейдів) |
+| OpenInterest | REST /fapi/v1/openInterest | Open interest snapshot (BTC) |
+| FundingRate | markPrice WS | Funding rate |
+| LiqBuyQty | forceOrder WS | Short liquidation volume |
+| LiqSellQty | forceOrder WS | Long liquidation volume |
+| IsSynthetic | system | 1 = synthetic candle (no trades in interval) |
 
-### Data Notes
+### Data notes
 
-AggTrades column reflects the number of Binance aggTrade messages,
-not the exact number of individual exchange fills.
+**AggTrades** counts Binance aggTrade messages, not individual exchange fills. BuyQty / SellQty are accurate for delta and CVD. AggTrades should not be interpreted as true fill count.
 
-BuyQty and SellQty remain accurate for delta/CVD calculations,
-but AggTrades should not be interpreted as the true number
-of individual exchange trades.
+**Synthetic candles** — when no trades occur during a 1m interval, the collector writes a synthetic candle using the last known price (mark price or last trade). Marked `IsSynthetic=1`. Analyzer modules may exclude these when computing compression or volatility features.
 
-### Synthetic Candles
+**Liquidation data** — derived from the `forceOrder` stream. Observed liquidation events; not a guaranteed complete record of all market liquidations. Intended for contextual analysis.
 
-If no trades occur during a 1-minute interval the collector writes
-a synthetic candle using the last known price (mark price or last trade).
+**BuyQty / SellQty** — taker-aggressor volume. They indicate which side initiated market orders but do not by themselves indicate directional control. Always combine with price response (close location, wick structure, range behavior).
 
-Such candles are marked with:
+**VWAP** — `sum(price * qty) / sum(qty)` per bar. Falls back to Close on synthetic candles.
 
-IsSynthetic = 1
+### Storage
 
-Analyzer modules may ignore these bars when calculating
-compression, volatility contraction or other microstructure features.
+CSV by day: `feed/YYYY-MM-DD.csv`
 
-### Liquidation Data
+### WebSocket streams
 
-LiqBuyQty and LiqSellQty are derived from the Binance forceOrder stream.
-
-This stream reports observed liquidation events but should not be treated
-as a guaranteed complete ground truth of all market liquidations.
-
-These values are intended for contextual analysis rather than exact
-measurement of total liquidation volume.
-
-### Order Flow Interpretation
-
-BuyQty and SellQty represent taker-aggressor volume derived from Binance
-aggTrade messages.
-
-They measure which side initiated market orders, but they do not
-by themselves indicate directional control.
-
-Directional interpretation must always be combined with price response
-(close location, wick structure, range expansion/contraction).
-
-Example:
-
-High BuyQty with weak upward price response may indicate
-buy absorption rather than bullish control.
-
-### Execution Granularity Note
-
-BuyQty and SellQty are derived from the Binance aggTrade stream and represent
-taker-aggressor volume aggregated by the exchange.
-
-These values are suitable for bar-level order flow analysis such as:
-
-- Delta
-- CVD
-- Absorption on 1-minute candles
-- Sweep context
-
-However, aggTrade does not preserve full fill-by-fill execution granularity.
-
-Therefore these fields should not be interpreted as footprint-grade trade tape
-and should not be used for micro-burst or fill-sequence analysis.
-
-Such use cases require a raw trade stream collector and are out of scope for v1.0.
-
-### VWAP (1-minute)
-
-VWAP is the 1-minute volume-weighted average traded price.
-
-Formula:
-
-VWAP = sum(price * qty) / sum(qty)
-
-VWAP is included as a bar-level execution context feature and can be used
-by the Analyzer for absorption, acceptance/rejection and event quality analysis.
-
-If a bar has no trades, VWAP falls back to the candle close price.
-
-### Зберігання
-
-CSV по днях: `feed/YYYY-MM-DD.csv`
-
-### WS streams
-
-- `btcusdt@aggTrade` — трейди
-- `btcusdt@forceOrder` — ліквідації
+- `btcusdt@aggTrade` — trades
+- `btcusdt@forceOrder` — liquidations
 - `btcusdt@markPrice@1s` — funding rate, mark price
 
 ### REST endpoints
 
-- `GET /fapi/v1/openInterest?symbol=BTCUSDT` — OI snapshot раз/хв
+- `GET /fapi/v1/openInterest?symbol=BTCUSDT` — OI snapshot once per minute
 
-## Запуск
+## Running
 
-### Docker (production)
+### Collector — Docker (production)
 
 ```bash
 docker compose up -d --build
 docker logs -f shi-aggregator
 ```
 
-### Локально (dev)
+### Collector — Local (dev)
 
 ```bash
-pip install -r requirements.txt websocket-client requests
+pip install websocket-client requests
 python binance_aggregator_shi.py
 ```
 
-Для Analyzer/tests потрібен реальний `pandas` (локальні shim-модулі не використовуються).
+Output: `feed/YYYY-MM-DD.csv` — one file per UTC day.
 
-### Змінні середовища
+### Analyzer pipeline
 
-| Змінна | Default | Опис |
-|--------|---------|------|
-| FEED_DIR | ./feed | Директорія для CSV |
-| LOGS_DIR | ./logs | Директорія для логів |
+```python
+from analyzer.pipeline import run
 
-## Інфраструктура
+result = run("feed/2024-03-15.csv", output_dir="output/")
+# writes: output/analyzer_features.csv
+#         output/analyzer_events.csv
 
-- **Сервер:** VPS 95.216.139.172 (Ubuntu 24.04, 4GB RAM, 38GB disk)
-- **Розміщення:** /opt/aitrader
-- **Контейнер:** shi-aggregator
-- **Дані:** /opt/aitrader/feed/ (монтується як volume)
-- **Логи:** /opt/aitrader/logs/aggregator.log
+features = result["features"]   # pd.DataFrame — one row per 1m bar
+events   = result["events"]     # pd.DataFrame — one row per detected event
+```
+
+Requires `pandas`. Tests: `pytest tests/`.
+
+### Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| FEED_DIR | ./feed | CSV data directory |
+| LOGS_DIR | ./logs | Log directory |
+
+## Infrastructure
+
+- **Server:** VPS 95.216.139.172 (Ubuntu 24.04, 4GB RAM, 38GB disk)
+- **Location:** /opt/aitrader
+- **Container:** shi-aggregator
+- **Data:** /opt/aitrader/feed/ (mounted as volume)
+- **Logs:** /opt/aitrader/logs/aggregator.log
 
 ## Health monitoring
 
-Кожні 5 хвилин в лог пишеться:
+Every 5 minutes:
 ```
 💓 Health: WS=✅ | OI=83287 | FR=0.000027 | Mark=70400.00 | Candles=120/1440
 ```
 
-## Обмеження (MiCA / ЄС)
+## Target Architecture Constraints (Phase 4)
 
-- Futures торгівля заборонена для ЄС резидентів
-- Futures API (публічні дані) — без обмежень
-- Execution: Binance Spot Margin BTC/USDC (до 10x, ми використовуємо 2x)
+The following are fixed design constraints for the eventual execution layer.
+They are not yet implemented — execution is Phase 4.
 
-## Ризик-менеджмент (зафіксований)
+**Regulatory (MiCA / EU):**
+- Futures trading prohibited for EU residents
+- Futures public API (signal data) — no restrictions
+- Execution: Binance Spot Margin BTC/USDC (max 10x, design target: 2x)
 
+**Risk management (fixed, non-negotiable):**
 - Risk per trade: 1%
-- Position size = Risk / StopDistance
-- Режим: Isolated Margin, max 2x
-- Без cross, без мартінгейлу, без ручного втручання
-- Drawdown limit: 3% день / 7% тиждень → стоп торгівлі
+- Position sizing: Risk / StopDistance
+- Mode: Isolated Margin, max 2x leverage
+- No cross margin, no martingale, no manual intervention
+- Drawdown halt: 3% / day, 7% / week
 
-## Заборонено
-
-- Змінювати параметри під час просадки
-- Збільшувати ризик після мінуса
-- Ручне втручання в позиції
-- Додавати нові активи (тільки BTC)
+**Scope constraints:**
+- BTC only — no altcoins
+- No parameter changes during drawdown
+- No risk increases after a loss
