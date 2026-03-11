@@ -74,6 +74,18 @@ FEATURE_COLUMNS_IMPLEMENTED = [
     "Sweep_H4_Direction",
     "Sweep_H4_ReferenceLevel",
     "Sweep_H4_ReferenceTs",
+    "FailedBreak_H1_Up",
+    "FailedBreak_H1_Down",
+    "FailedBreak_H1_Direction",
+    "FailedBreak_H1_ReferenceLevel",
+    "FailedBreak_H1_ReferenceSweepTs",
+    "FailedBreak_H1_ConfirmedTs",
+    "FailedBreak_H4_Up",
+    "FailedBreak_H4_Down",
+    "FailedBreak_H4_Direction",
+    "FailedBreak_H4_ReferenceLevel",
+    "FailedBreak_H4_ReferenceSweepTs",
+    "FailedBreak_H4_ConfirmedTs",
 ]
 
 # Planned placeholders for future phases; not materialized yet.
