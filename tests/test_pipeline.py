@@ -13,12 +13,15 @@ def test_pipeline_smoke_writes_outputs(tmp_path):
     assert result["events"].empty
     assert result["setups"].empty
     assert result["outcomes"].empty
+    assert result["report"].empty
     assert result["features_path"].exists()
     assert result["events_path"].exists()
     assert result["setups_path"].exists()
     assert result["outcomes_path"].exists()
+    assert result["report_path"].exists()
     assert result["setups_path"].name == "analyzer_setups.csv"
     assert result["outcomes_path"].name == "analyzer_setup_outcomes.csv"
+    assert result["report_path"].name == "analyzer_setup_report.csv"
 
 
 def test_pipeline_output_contains_implemented_feature_columns(tmp_path):
