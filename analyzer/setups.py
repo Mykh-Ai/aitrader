@@ -42,9 +42,69 @@ ENRICHMENT_COLUMNS = [
     "LiqTotalRatio_20",
 ]
 
+LIFECYCLE_COLUMNS = [
+    "LifecycleStatus",
+    "InvalidatedAt",
+    "ExpiredAt",
+    "LifecycleBarsForward",
+]
+
+SETUP_TTL_BARS = 12
+
+SETUP_COLUMNS = [*SETUP_COLUMNS, *LIFECYCLE_COLUMNS]
+
 
 def _empty_setups() -> pd.DataFrame:
     return pd.DataFrame(columns=SETUP_COLUMNS)
+
+
+def _annotate_lifecycle(setups: pd.DataFrame, df: pd.DataFrame) -> pd.DataFrame:
+    features = df.loc[:, ["Timestamp", "Close"]].copy()
+    features["Timestamp"] = pd.to_datetime(features["Timestamp"], utc=True)
+    features = features.sort_values(by=["Timestamp"], kind="mergesort").reset_index(drop=True)
+
+    ts_to_index = pd.Series(features.index.to_numpy(), index=features["Timestamp"])
+
+    lifecycle_status: list[str] = []
+    invalidated_at: list[pd.Timestamp] = []
+    expired_at: list[pd.Timestamp] = []
+    lifecycle_bars_forward: list[int] = []
+
+    for setup in setups.itertuples(index=False):
+        setup_idx = int(ts_to_index[setup.SetupBarTs])
+        forward = features.iloc[setup_idx + 1 : setup_idx + 1 + SETUP_TTL_BARS]
+        bars_forward = int(len(forward))
+
+        if bars_forward == 0:
+            lifecycle_status.append("PENDING")
+            invalidated_at.append(pd.NaT)
+            expired_at.append(pd.NaT)
+            lifecycle_bars_forward.append(0)
+            continue
+
+        if setup.Direction == "LONG":
+            invalidation_mask = forward["Close"] < setup.ReferenceLevel
+        else:
+            invalidation_mask = forward["Close"] > setup.ReferenceLevel
+
+        if invalidation_mask.any():
+            first_invalidated = forward.loc[invalidation_mask, "Timestamp"].iloc[0]
+            lifecycle_status.append("INVALIDATED")
+            invalidated_at.append(first_invalidated)
+            expired_at.append(pd.NaT)
+        else:
+            lifecycle_status.append("EXPIRED")
+            invalidated_at.append(pd.NaT)
+            expired_at.append(forward["Timestamp"].iloc[-1])
+
+        lifecycle_bars_forward.append(bars_forward)
+
+    annotated = setups.copy()
+    annotated["LifecycleStatus"] = lifecycle_status
+    annotated["InvalidatedAt"] = invalidated_at
+    annotated["ExpiredAt"] = expired_at
+    annotated["LifecycleBarsForward"] = lifecycle_bars_forward
+    return annotated
 
 
 def _setup_id(
@@ -66,7 +126,6 @@ def extract_setup_candidates(df: pd.DataFrame, events_df: pd.DataFrame) -> pd.Da
 
     Step 2 enriches each setup with context snapshot columns from ``df``.
     """
-    _ = df
     if events_df.empty:
         return _empty_setups()
 
@@ -139,7 +198,7 @@ def extract_setup_candidates(df: pd.DataFrame, events_df: pd.DataFrame) -> pd.Da
         )
     ]
 
-    required_feature_columns = {"Timestamp", *ENRICHMENT_COLUMNS}
+    required_feature_columns = {"Timestamp", "Close", *ENRICHMENT_COLUMNS}
     missing_feature_columns = required_feature_columns - set(df.columns)
     if missing_feature_columns:
         raise KeyError(
@@ -171,6 +230,8 @@ def extract_setup_candidates(df: pd.DataFrame, events_df: pd.DataFrame) -> pd.Da
         sort=False,
         validate="many_to_one",
     ).drop(columns=["Timestamp"])
+
+    setups = _annotate_lifecycle(setups, df)
 
     setups = setups.sort_values(
         by=["DetectedAt", "ReferenceEventType", "Direction", "SetupId"], kind="mergesort"
