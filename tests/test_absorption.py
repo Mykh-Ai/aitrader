@@ -96,8 +96,49 @@ def test_absorption_features_have_no_lookahead_prefix_stability():
             assert prefix.iloc[-1][col] == full.iloc[i - 1][col]
 
 
-def test_pipeline_output_contains_absorption_context_columns(tmp_path):
+def test_pipeline_output_contains_absorption_context_columns(tmp_path, monkeypatch):
     fixture = Path(__file__).parent / "fixtures" / "sample_raw_minimal.csv"
+
+    monkeypatch.setattr(
+        "analyzer.pipeline.build_setup_report",
+        lambda setups, outcomes: pd.DataFrame(
+            [
+                {
+                    "GroupType": "overall",
+                    "GroupValue": "ALL",
+                    "SampleCount": 1,
+                    "Mean_MFE_Pct": 0.0,
+                    "Mean_MAE_Pct": 0.0,
+                    "Mean_CloseReturn_Pct": 0.0,
+                    "PositiveCloseReturnRate": 0.0,
+                },
+                {
+                    "GroupType": "SetupType",
+                    "GroupValue": "X",
+                    "SampleCount": 1,
+                    "Mean_MFE_Pct": 0.0,
+                    "Mean_MAE_Pct": 0.0,
+                    "Mean_CloseReturn_Pct": 0.0,
+                    "PositiveCloseReturnRate": 0.0,
+                },
+            ]
+        ),
+    )
+    monkeypatch.setattr(
+        "analyzer.pipeline.build_setup_context_report",
+        lambda setups, outcomes: pd.DataFrame(
+            columns=[
+                "GroupType",
+                "GroupValue",
+                "SampleCount",
+                "Mean_MFE_Pct",
+                "Mean_MAE_Pct",
+                "Mean_CloseReturn_Pct",
+                "PositiveCloseReturnRate",
+            ]
+        ),
+    )
+
     result = run(fixture, tmp_path)
 
     for col in [

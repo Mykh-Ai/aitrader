@@ -11,6 +11,7 @@ from .events import build_events
 from .failed_breaks import detect_failed_breaks
 from .io import ensure_output_dir, save_dataframe
 from .loader import load_raw_csv
+from .rankings import build_setup_rankings
 from .outcomes import build_setup_outcomes
 from .reports import build_setup_report
 from .setups import extract_setup_candidates
@@ -34,6 +35,7 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
     outcomes = build_setup_outcomes(features, setups)
     report = build_setup_report(setups, outcomes)
     context_report = build_setup_context_report(setups, outcomes)
+    rankings = build_setup_rankings(report, context_report)
 
     out_dir = ensure_output_dir(output_dir)
     features_path = save_dataframe(features, out_dir / "analyzer_features.csv")
@@ -42,6 +44,7 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
     outcomes_path = save_dataframe(outcomes, out_dir / "analyzer_setup_outcomes.csv")
     report_path = save_dataframe(report, out_dir / "analyzer_setup_report.csv")
     context_report_path = save_dataframe(context_report, out_dir / "analyzer_setup_context_report.csv")
+    rankings_path = save_dataframe(rankings, out_dir / "analyzer_setup_rankings.csv")
 
     return {
         "features": features,
@@ -50,10 +53,12 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
         "outcomes": outcomes,
         "report": report,
         "context_report": context_report,
+        "rankings": rankings,
         "features_path": features_path,
         "events_path": events_path,
         "setups_path": setups_path,
         "outcomes_path": outcomes_path,
         "report_path": report_path,
         "context_report_path": context_report_path,
+        "rankings_path": rankings_path,
     }
