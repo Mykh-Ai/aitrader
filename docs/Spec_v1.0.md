@@ -35,8 +35,12 @@ Phase 2 Status: **Implemented**
 | Research candidate selections | `analyzer/selections.py` | ✅ |
 | Shortlist export view | `analyzer/shortlists.py` | ✅ |
 | Shortlist explanations | `analyzer/shortlist_explanations.py` | ✅ |
+| Final research summary export | `analyzer/research_summary.py` | ✅ |
 
 ### Planned (Phase 3+)
+
+Phase 2 is complete through shortlist generation, shortlist explanations, and the final
+research summary layer. Backtesting remains Phase 3 and is not implemented in Analyzer.
 
 | Layer | Status |
 |-------|--------|
@@ -83,7 +87,9 @@ build_setup_shortlist()     shortlists.py         — filter and rank top candid
         ↓
 build_setup_shortlist_explanations() shortlist_explanations.py — derive explanation bands + code
         ↓
-save_dataframe()        io.py                     — write 10 output CSVs
+build_research_summary()     research_summary.py  — deterministic final summary from shortlist outputs
+        ↓
+save_dataframe()        io.py                     — write 11 output CSVs
 ```
 
 ### Layer responsibilities
@@ -131,8 +137,12 @@ Output is sorted deterministically by `[Timestamp, SourceTF, EventType, Side]`.
 
 **io.py** — `ensure_output_dir()`, `save_dataframe()` (CSV). Current output format is CSV.
 
-**pipeline.py** — `run(input_path, output_dir)` wires the full 15-step sequence and returns a metadata
-dict with 10 in-memory DataFrames and 10 output file paths.
+**research_summary.py** — Builds deterministic final research summary rows by strict one-to-one
+merge of shortlist and shortlist explanations. Derives `ResearchPriority` (`P1`/`P2`)
+from `SelectionDecision` and exports a compact final review surface.
+
+**pipeline.py** — `run(input_path, output_dir)` wires the full 16-step sequence and returns a metadata
+dict with 11 in-memory DataFrames and 11 output file paths.
 
 #### Phase 2 — Setup research pipeline
 
@@ -2248,12 +2258,12 @@ Block 6 гарантує:
 # 7. Analyzer Output Contracts — LOCKED
 
 > **Implementation status:** The Phase 1 pipeline writes CSV output
-> Currently outputs 10 CSV files via `analyzer/io.py`:
+> Currently outputs 11 CSV files via `analyzer/io.py`:
 > `analyzer_features.csv`, `analyzer_events.csv`, `analyzer_setups.csv`,
 > `analyzer_setup_outcomes.csv`, `analyzer_setup_report.csv`,
 > `analyzer_setup_context_report.csv`, `analyzer_setup_rankings.csv`,
 > `analyzer_setup_selections.csv`, `analyzer_setup_shortlist.csv`,
-> `analyzer_setup_shortlist_explanations.csv`.
+> `analyzer_setup_shortlist_explanations.csv`, `analyzer_research_summary.csv`.
 > The Parquet format described in section 7.1 is planned for a later phase.
 > The event table schema in sections 7.3–7.8 (`event_id`, `status`, `parent_event_id`, etc.)
 > describes the planned downstream contract; the currently implemented event columns are
@@ -2269,7 +2279,7 @@ Block 6 гарантує:
 
 ## 7.1 Output Files
 
-Analyzer створює 10 output datasets:
+Analyzer створює 11 output datasets:
 
     analyzer_features.csv                    — one row per 1m bar, all computed features
     analyzer_events.csv                      — one row per detected structural event
@@ -2281,6 +2291,7 @@ Analyzer створює 10 output datasets:
     analyzer_setup_selections.csv            — SELECT/REVIEW/REJECT per ranked group
     analyzer_setup_shortlist.csv             — ranked shortlist of top candidates
     analyzer_setup_shortlist_explanations.csv — explanation bands + composite code per shortlist row
+    analyzer_research_summary.csv            — deterministic final research summary surface
 
 Current format: CSV. Parquet — planned for a later phase (типізація, стиснення, швидке читання).
 
