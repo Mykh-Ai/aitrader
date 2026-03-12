@@ -147,3 +147,28 @@ def test_synthetic_bar_cannot_be_swing_center_for_structure():
     assert pd.isna(synthetic_confirm_row["SwingHigh_H1_Price"])
     assert pd.isna(synthetic_confirm_row["SwingHigh_H1_ConfirmedAt"])
     assert not (out["SwingHigh_H1_Price"] == 20.0).any()
+
+
+def test_confirmed_swing_first_materializes_on_first_real_row_when_confirm_ts_is_synthetic():
+    ts = pd.date_range("2025-01-01T00:00:00Z", periods=6, freq="1h", tz="UTC")
+    df = pd.DataFrame(
+        {
+            "Timestamp": ts,
+            "High": [10.0, 14.0, 11.0, 13.0, 15.0, 12.0],
+            "Low": [5.0, 6.0, 6.0, 6.0, 7.0, 6.0],
+            "IsSynthetic": [0, 0, 0, 1, 1, 0],
+        }
+    )
+
+    out = annotate_swings(df)
+
+    confirm_ts = pd.Timestamp("2025-01-01T03:00:00Z")
+    first_real_anchor_ts = pd.Timestamp("2025-01-01T05:00:00Z")
+
+    at_confirm = out.loc[out["Timestamp"] == confirm_ts].iloc[0]
+    assert pd.isna(at_confirm["SwingHigh_H1_Price"])
+    assert pd.isna(at_confirm["SwingHigh_H1_ConfirmedAt"])
+
+    at_first_real = out.loc[out["Timestamp"] == first_real_anchor_ts].iloc[0]
+    assert at_first_real["SwingHigh_H1_Price"] == 14.0
+    assert at_first_real["SwingHigh_H1_ConfirmedAt"] == confirm_ts

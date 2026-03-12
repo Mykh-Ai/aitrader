@@ -91,7 +91,11 @@ def _confirmed_swings(bars: pd.DataFrame, swing_kind: str, freq: str) -> pd.Data
 
 
 def _attach_latest_confirmed(
-    df: pd.DataFrame, confirmed: pd.DataFrame, price_col: str, confirmed_col: str
+    df: pd.DataFrame,
+    confirmed: pd.DataFrame,
+    price_col: str,
+    confirmed_col: str,
+    real_mask: pd.Series,
 ) -> pd.DataFrame:
     out = df.copy()
     if confirmed.empty:
@@ -99,11 +103,29 @@ def _attach_latest_confirmed(
         out[confirmed_col] = pd.NaT
         return out
 
+    real_rows = out.loc[real_mask, ["Timestamp"]].reset_index(drop=True)
+    if real_rows.empty:
+        out[price_col] = pd.NA
+        out[confirmed_col] = pd.NaT
+        return out
+
+    real_ts = pd.to_datetime(real_rows["Timestamp"], utc=True)
+    anchor_pos = real_ts.searchsorted(pd.to_datetime(confirmed["ConfirmedAt"], utc=True), side="left")
+    valid = anchor_pos < len(real_rows)
+    if not valid.any():
+        out[price_col] = pd.NA
+        out[confirmed_col] = pd.NaT
+        return out
+
+    anchored_confirmed = confirmed.loc[valid].copy().reset_index(drop=True)
+    anchored_confirmed["AnchorTs"] = real_rows.loc[anchor_pos[valid], "Timestamp"].to_numpy()
+    anchored_confirmed = anchored_confirmed.sort_values("AnchorTs", kind="mergesort").reset_index(drop=True)
+
     joined = pd.merge_asof(
         out[["Timestamp"]],
-        confirmed,
+        anchored_confirmed,
         left_on="Timestamp",
-        right_on="ConfirmedAt",
+        right_on="AnchorTs",
         direction="backward",
     )
     out[price_col] = joined["Price"]
@@ -124,8 +146,10 @@ def annotate_swings(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
 
     structure_df = out
+    real_mask = pd.Series(True, index=out.index)
     if "IsSynthetic" in out.columns:
         is_synth = pd.to_numeric(out["IsSynthetic"], errors="coerce").fillna(0).astype(int)
+        real_mask = is_synth == 0
         structure_df = out.loc[is_synth == 0]
 
     base_seconds = _infer_base_seconds(structure_df)
@@ -142,12 +166,14 @@ def annotate_swings(df: pd.DataFrame) -> pd.DataFrame:
             high_confirmed,
             price_col=f"SwingHigh_{tf_label}_Price",
             confirmed_col=f"SwingHigh_{tf_label}_ConfirmedAt",
+            real_mask=real_mask,
         )
         out = _attach_latest_confirmed(
             out,
             low_confirmed,
             price_col=f"SwingLow_{tf_label}_Price",
             confirmed_col=f"SwingLow_{tf_label}_ConfirmedAt",
+            real_mask=real_mask,
         )
 
     return out
