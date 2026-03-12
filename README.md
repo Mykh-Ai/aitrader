@@ -23,6 +23,7 @@ Binance Futures API (fstream / fapi)
    setups → outcomes → reports
    → context reports → rankings
    → selections → shortlist → explanations
+   → research summary
         │
    Backtester                    ← Phase 3: PLANNED
    6-month validation
@@ -36,7 +37,7 @@ Binance Futures API (fstream / fapi)
 | Phase | Status | Description |
 |-------|--------|-------------|
 | 1. Raw feed + Analyzer facts engine | ✅ Implemented | 1m collector live; Analyzer computes all features and events |
-| 2. Setup research pipeline | ✅ Implemented | Setup extraction, outcomes, reports, context analysis, rankings, selections, shortlist, explanations |
+| 2. Setup research pipeline | ✅ Implemented | Setup extraction, outcomes, reports, context analysis, rankings, selections, shortlist, explanations, final research summary |
 | 3. Backtesting | 🔜 Planned | 6-month strategy validation |
 | 4. Execution | 🔜 Planned | Live trading via Binance Spot Margin API |
 
@@ -53,12 +54,14 @@ The Analyzer is a **facts engine + research pipeline**. It:
 - Classifies ranked groups into research candidate selections (SELECT/REVIEW/REJECT)
 - Exports a deterministic shortlist of top candidates for review
 - Generates structured shortlist explanations with categorical bands and composite codes
+- Builds a deterministic final research summary surface from shortlist outputs
 
 All output is **research-only**. The Analyzer does **not**:
 
 - Open trades or generate live entry signals
 - Size positions or place orders
 - Perform strategy optimization or ruleset selection
+- Perform backtesting (this belongs to Phase 3)
 - Act as executor or interface with the exchange
 
 The selection, shortlist, and explanation layers are research triage tools —
@@ -72,7 +75,7 @@ Package: `analyzer/`
 
 | Module | Responsibility |
 |--------|---------------|
-| `schema.py` | Schema contracts: required column lists, feature column registry, `EVENT_COLUMNS`, `SETUP_COLUMNS`, `OUTCOME_COLUMNS`, `REPORT_COLUMNS`, `CONTEXT_REPORT_COLUMNS`, `RANKING_COLUMNS`, `SELECTION_COLUMNS`, `SHORTLIST_COLUMNS`, `SHORTLIST_EXPLANATION_COLUMNS` |
+| `schema.py` | Schema contracts: required raw input columns, numeric coercion contract, implemented/planned feature registry, `EVENT_COLUMNS`, and validation helpers/errors |
 | `loader.py` | Load and validate raw aggregator CSV: parse UTC timestamps, enforce required columns, coerce numerics, normalize `IsSynthetic`, reject duplicates |
 | `base_metrics.py` | Compute per-bar derived metrics: Delta, CVD, DeltaPct, BarRange, BodySize, UpperWick, LowerWick, CloseLocation, BodyToRange, wick ratios, OI_Change, LiqTotal |
 | `swings.py` | Detect H1/H4 structural fractal swings with confirmation delay; annotate feature table with `SwingHigh_*_Price`, `SwingHigh_*_ConfirmedAt`, `SwingLow_*` columns |
@@ -93,6 +96,7 @@ Package: `analyzer/`
 | `selections.py` | Classify ranked groups into SELECT/REVIEW/REJECT decisions with deterministic threshold logic; research triage only |
 | `shortlists.py` | Filter to SELECT+REVIEW rows, sort by priority and score, assign ShortlistRank; export/review view only |
 | `shortlist_explanations.py` | Derive categorical bands (ScoreBand, SampleBand, DeltaDirection, PositiveRateDirection) and composite ExplanationCode per shortlist row |
+| `research_summary.py` | Build deterministic final research summary rows from shortlist + shortlist explanations; map research priority and enforce strict one-to-one joins |
 
 **Infrastructure:**
 
@@ -123,6 +127,7 @@ tests/
 ├── test_selections.py
 ├── test_shortlists.py
 ├── test_shortlist_explanations.py
+├── test_research_summary.py
 └── test_pipeline.py
 ```
 
@@ -233,6 +238,7 @@ Aitrader/
 │   ├── selections.py
 │   ├── shortlists.py
 │   ├── shortlist_explanations.py
+│   ├── research_summary.py
 │   ├── io.py
 │   └── pipeline.py
 ├── tests/                      # Unit tests for Analyzer
@@ -329,6 +335,7 @@ result = run("feed/2024-03-15.csv", output_dir="output/")
 #         output/analyzer_setup_selections.csv
 #         output/analyzer_setup_shortlist.csv
 #         output/analyzer_setup_shortlist_explanations.csv
+output/analyzer_research_summary.csv
 
 features                = result["features"]                # pd.DataFrame — one row per 1m bar
 events                  = result["events"]                  # pd.DataFrame — one row per detected event
@@ -340,6 +347,10 @@ rankings                = result["rankings"]                # pd.DataFrame — s
 selections              = result["selections"]              # pd.DataFrame — SELECT/REVIEW/REJECT per group
 shortlist               = result["shortlist"]               # pd.DataFrame — ranked shortlist for review
 shortlist_explanations  = result["shortlist_explanations"]  # pd.DataFrame — explanation bands per shortlist row
+research_summary        = result["research_summary"]        # pd.DataFrame — final research summary surface
+
+shortlist_explanations_path = result["shortlist_explanations_path"]  # Path — analyzer_setup_shortlist_explanations.csv
+research_summary_path       = result["research_summary_path"]        # Path — analyzer_research_summary.csv
 ```
 
 Requires `pandas`. Tests: `pytest tests/`.
