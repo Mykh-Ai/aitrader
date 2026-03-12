@@ -149,3 +149,24 @@ def test_sweep_fields_remain_consistent_with_flags_and_references():
                 assert pd.isna(row[direction_col])
                 assert pd.isna(row[ref_level_col])
                 assert pd.isna(row[ref_ts_col])
+
+
+def test_synthetic_row_cannot_trigger_sweep_even_if_price_crosses_level():
+    ts = pd.date_range("2025-01-01T00:00:00Z", periods=5, freq="1h", tz="UTC")
+    df = pd.DataFrame(
+        {
+            "Timestamp": ts,
+            "High": [10.0, 14.0, 11.0, 16.0, 15.0],
+            "Low": [5.0, 6.0, 6.0, 6.0, 7.0],
+            "IsSynthetic": [0, 0, 0, 1, 0],
+        }
+    )
+
+    out = detect_sweeps(annotate_swings(df))
+
+    synth_row = out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T03:00:00Z")].iloc[0]
+    assert not synth_row["Sweep_H1_Up"]
+    assert not synth_row["Sweep_H1_Down"]
+    assert pd.isna(synth_row["Sweep_H1_Direction"])
+    assert pd.isna(synth_row["Sweep_H1_ReferenceLevel"])
+    assert pd.isna(synth_row["Sweep_H1_ReferenceTs"])
