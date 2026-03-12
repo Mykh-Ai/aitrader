@@ -418,6 +418,15 @@ Actual pipeline computation order (see `analyzer/pipeline.py`):
 5. Failed Breaks — forward-in-time failed-break confirmation from sweep state
 6. Absorption / Context Features — rolling-ratio context layer
 7. Event Normalization — normalized event table from materialized columns
+8. Setup Candidates — extract from failed-break events, enrich with context snapshot
+9. Setup Outcomes — forward-looking MFE/MAE/CloseReturn per setup
+10. Setup Report — grouped statistics by setup type, direction, lifecycle, outcome
+11. Context Report — context-bucketed statistics by flag families and numeric tertiles
+12. Rankings — score and rank groups against overall baseline
+13. Selections — classify into SELECT/REVIEW/REJECT
+14. Shortlist — filter to top candidates, assign ShortlistRank
+15. Shortlist Explanations — derive categorical bands and composite ExplanationCode
+16. Research Summary — final deterministic research surface
 
 Notes:
 
@@ -425,19 +434,20 @@ Notes:
 - Failed-break detection requires sweep columns to be materialized first.
 - Absorption layer operates independently of swing/sweep logic.
 - Event normalization reads all materialized feature columns.
+- Steps 8–16 (Phase 2) consume Phase 1 outputs and build the research pipeline.
 
 Planned (not yet in pipeline):
 
 - Session context features
 - Confidence scoring (Block 5)
 - CVD divergence features
-- Setup extraction
 
 ---
 
 # 0. Output Format — LOCKED
 
-Analyzer produces two datasets.
+Analyzer produces 11 output datasets. Current format is CSV.
+For the full list see section 7.1. The primary datasets are:
 
 ## Feature Table
 
@@ -471,7 +481,7 @@ Derived metrics are defined in Section 1.
 
 One row per detected event.
 
-Columns:
+Current implemented columns (see "Implemented Event Field Semantics" above):
 
 Timestamp
 EventType
@@ -480,22 +490,20 @@ PriceLevel
 SourceTF
 ReferenceSwingTs
 ReferenceSwingPrice
-Confidence
-MetaJson
+Confidence          (NA in current implementation)
+MetaJson            (NA in current implementation)
 
 ### Confidence
 
-Confidence is a qualitative classification of event strength.
+Confidence is planned as a qualitative classification of event strength.
 
-Allowed values:
-
+Planned values (not yet implemented):
 
 low
 medium
 high
 
-
-This allows filtering events by quality during backtesting.
+This will allow filtering events by quality during backtesting once Block 5 is implemented.
 
 ---
 
@@ -2299,60 +2307,83 @@ Current format: CSV. Parquet — planned for a later phase (типізація, 
 
 ## 7.2 Feature Table Contract
 
+> **Implementation note:** The column list below is the **planned full schema** from the
+> original spec design (Blocks 1–5). The **currently implemented** feature columns are
+> documented in `analyzer/schema.py` → `FEATURE_COLUMNS_IMPLEMENTED`. Key differences:
+> the implemented pipeline uses PascalCase column names (e.g. `SwingHigh_H1_Price`,
+> `Sweep_H1_Up`, `FailedBreak_H1_Down`, `RelVolume_20`, `AbsorptionScore_v1`), and
+> some planned columns below (distance_to_swing_*_atr, is_sell_absorption,
+> is_buy_absorption, session, cluster prep) are not yet materialized.
+> The authoritative current column list is `FEATURE_COLUMNS_IMPLEMENTED` in code.
+
 Один рядок = одна 1-minute свічка.
 
 ### Primary key
 
-    ts  (bar close timestamp, UTC, unique)
+    Timestamp  (bar open timestamp, UTC, unique)
 
 ### Rules
 
-    - ts must be unique (no duplicate rows)
-    - ts is bar close timestamp in UTC
+    - Timestamp must be unique (no duplicate rows)
+    - Timestamp is bar open timestamp in UTC
     - no gaps allowed (minutes with no trades are emitted as synthetic candles and marked IsSynthetic=1)
     - columns order: raw fields first, then derived metrics
 
-### Column list (повний, відповідає Blocks 1-5)
+### Column list (planned full schema, Blocks 1-5)
 
 Raw (з aggregator):
 
-    ts, open, high, low, close,
-    volume, agg_trades, buy_qty, sell_qty, vwap,
-    open_interest, funding_rate, liq_buy_qty, liq_sell_qty, is_synthetic
+    Timestamp, Open, High, Low, Close,
+    Volume, AggTrades, BuyQty, SellQty, VWAP,
+    OpenInterest, FundingRate, LiqBuyQty, LiqSellQty, IsSynthetic
 
-Base metrics (Block 1):
+Base metrics (Block 1) — **implemented:**
 
-    delta, cvd, delta_pct,
-    bar_range, body_size, upper_wick, lower_wick,
-    close_location, body_to_range, upper_wick_to_range, lower_wick_to_range,
-    oi_change, liq_total
+    Delta, CVD, DeltaPct,
+    BarRange, BodySize, UpperWick, LowerWick,
+    CloseLocation, BodyToRange, UpperWickToRange, LowerWickToRange,
+    OI_Change, LiqTotal
 
-Swing context (Block 2):
+Swing context (Block 2) — **partially implemented:**
 
-    nearest_swing_high_h1, nearest_swing_low_h1,
-    distance_to_swing_high_h1_pct, distance_to_swing_low_h1_pct,
-    distance_to_swing_high_h1_atr, distance_to_swing_low_h1_atr,
-    nearest_swing_high_h4, nearest_swing_low_h4,
-    distance_to_swing_high_h4_pct, distance_to_swing_low_h4_pct,
-    distance_to_swing_high_h4_atr, distance_to_swing_low_h4_atr
+    SwingHigh_H1_Price, SwingHigh_H1_ConfirmedAt,
+    SwingLow_H1_Price, SwingLow_H1_ConfirmedAt,
+    SwingHigh_H4_Price, SwingHigh_H4_ConfirmedAt,
+    SwingLow_H4_Price, SwingLow_H4_ConfirmedAt
 
-Sweep context (Block 3):
+    Planned but not yet implemented:
+    distance_to_swing_*_pct, distance_to_swing_*_atr
 
-    is_sweep_high, is_sweep_low,
+Sweep context (Block 3) — **partially implemented:**
+
+    Sweep_H1_Up, Sweep_H1_Down, Sweep_H1_Direction,
+    Sweep_H1_ReferenceLevel, Sweep_H1_ReferenceTs,
+    Sweep_H4_Up, Sweep_H4_Down, Sweep_H4_Direction,
+    Sweep_H4_ReferenceLevel, Sweep_H4_ReferenceTs,
+    FailedBreak_H1_Up, FailedBreak_H1_Down, FailedBreak_H1_Direction,
+    FailedBreak_H1_ReferenceLevel, FailedBreak_H1_ReferenceSweepTs, FailedBreak_H1_ConfirmedTs,
+    FailedBreak_H4_Up, FailedBreak_H4_Down, FailedBreak_H4_Direction,
+    FailedBreak_H4_ReferenceLevel, FailedBreak_H4_ReferenceSweepTs, FailedBreak_H4_ConfirmedTs
+
+    Planned but not yet implemented:
     is_wick_rejection_high, is_wick_rejection_low,
-    sweep_high_ref_price, sweep_low_ref_price,
     bars_since_last_sweep, distance_to_last_sweep_atr
 
-Cluster prep (v1.1 future-proof, Block 3.14):
+Cluster prep (v1.1 future-proof, Block 3.14) — **not yet implemented:**
 
     nearby_swing_count_h1, nearby_swing_count_h4,
     nearest_next_swing_distance_atr
 
-Absorption (Block 4):
+Absorption (Block 4) — **implemented (context features v1):**
 
-    is_sell_absorption, is_buy_absorption
+    RelVolume_20, DeltaAbsRatio_20, OIChangeAbsRatio_20, LiqTotalRatio_20,
+    CtxRelVolumeSpike_v1, CtxDeltaSpike_v1, CtxOISpike_v1, CtxLiqSpike_v1,
+    CtxWickReclaim_v1, AbsorptionScore_v1
 
-Session context (Block 1):
+    Planned but not yet implemented:
+    is_sell_absorption, is_buy_absorption (full detector)
+
+Session context (Block 1) — **not yet implemented:**
 
     session, minutes_from_eu_open, minutes_from_us_open
 
