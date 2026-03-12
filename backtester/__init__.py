@@ -22,6 +22,17 @@ from .ledger import (
     validate_trade_ledger,
     write_trade_ledger_csv,
 )
+from .metrics import (
+    DRAWDOWN_COLUMNS,
+    EQUITY_CURVE_COLUMNS,
+    EXIT_REASON_SUMMARY_COLUMNS,
+    TRADE_METRICS_COLUMNS,
+    MetricsArtifacts,
+    MetricsContractError,
+    build_trade_metrics_artifacts,
+    write_trade_metrics_csvs,
+)
+
 
 __all__ = [
     "RULESET_COLUMNS",
@@ -40,4 +51,12 @@ __all__ = [
     "build_trade_ledger",
     "validate_trade_ledger",
     "write_trade_ledger_csv",
+    "TRADE_METRICS_COLUMNS",
+    "EQUITY_CURVE_COLUMNS",
+    "DRAWDOWN_COLUMNS",
+    "EXIT_REASON_SUMMARY_COLUMNS",
+    "MetricsArtifacts",
+    "MetricsContractError",
+    "build_trade_metrics_artifacts",
+    "write_trade_metrics_csvs",
 ]
