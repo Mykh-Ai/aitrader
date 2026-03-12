@@ -180,6 +180,20 @@ The following rules are enforced in current code (see also Section 6 for full sp
 6. **Rolling baselines are right-aligned** — `absorption.py` uses `rolling(window=20, min_periods=1)`
    with no centering. No future bars contaminate any rolling calculation.
 
+7. **Synthetic bars cannot define structure** — Swing detection operates on
+   `df[df["IsSynthetic"] == 0]` only. Synthetic rows cannot define swings,
+   trigger sweeps, or confirm failed breaks.
+
+8. **TF bar completeness thresholds** — H1 bars require at least 45 real 1m rows
+   (`MIN_REAL_BARS_H1 = 45`); H4 bars require at least 180 (`MIN_REAL_BARS_H4 = 180`).
+   Incomplete TF bars are excluded from swing detection entirely (center, neighbors,
+   and confirmation).
+
+9. **Failed-break gap reset** — If the time difference between consecutive rows
+   exceeds `MAX_STATE_GAP_MINUTES = 3`, the internal pending state in
+   `failed_breaks.py` is reset. This prevents structural misinterpretation
+   after reconnects, packet loss, or data gaps (fail-closed).
+
 ---
 
 ## Future Scope Boundary
@@ -607,6 +621,45 @@ Session features НЕ використовуються в Block 5 (confidence).
 > **Implementation note:** Current implementation (`analyzer/swings.py`) uses
 > strict 3-bar local extremum for **both H1 and H4**. No ATR impulse filter is applied
 > in Phase 1. ATR-based validation is planned for v1.1.
+
+### Structural swing detection
+
+Swing detection is performed on a structure-only subset of the dataset:
+
+```python
+structure_df = df[df["IsSynthetic"] == 0]
+```
+
+Only rows originating from real market data participate in structural analysis.
+Synthetic rows (`IsSynthetic == 1`) remain in the dataset for continuity and
+rolling metrics, but cannot define market structure.
+
+Confirmed swing levels detected on this structure subset are then attached
+back to the full dataframe so that downstream layers (context, setups,
+execution research) can access them.
+
+### Timeframe completeness policy
+
+Resampled H1 and H4 structure bars must meet minimum real-row completeness
+thresholds before they are eligible for swing detection.
+
+```python
+MIN_REAL_BARS_H1 = 45   # out of 60 possible 1m rows
+MIN_REAL_BARS_H4 = 180  # out of 240 possible 1m rows
+```
+
+Bars that do not satisfy these thresholds are considered structurally
+incomplete and are excluded from the swing-detection process.
+
+Such bars cannot serve as:
+
+- swing center
+- left neighbor
+- right neighbor
+- confirmation source
+
+This fail-closed policy prevents sparse data buckets or ingestion artifacts
+from generating false structural events.
 
 ### Swing definition (current implementation)
 

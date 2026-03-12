@@ -99,39 +99,34 @@ tests/fixtures/
 
 ### Structural safety guards
 
-### Synthetic bars and structural safety
+### Structural swing detection
 
-The Analyzer preserves all rows in the dataset, including synthetic bars
-(`IsSynthetic == 1`). Synthetic bars are required for:
-
-- rolling metrics
-- context features
-- volume/OI continuity
-- research reproducibility
-
-However, synthetic bars are **not allowed to define market structure**.
-
-Structural logic (swings, sweeps, failed-break confirmations) operates with
-fail-closed rules:
-
-- synthetic bars cannot define swing structure
-- synthetic bars cannot trigger sweep events
-- synthetic bars cannot confirm failed-break reclaim logic
-
-Implementation detail:
+Swing detection is performed on a structure-only subset of the dataset:
 
 ```python
 structure_df = df[df["IsSynthetic"] == 0]
 ```
 
-Swing detection is performed on this structure-only subset, and confirmed
-levels are then attached back to the full dataframe.
+Only real (traded) rows participate in structural analysis. Synthetic rows
+(`IsSynthetic == 1`) remain in the dataset for continuity and rolling metrics,
+but cannot define market structure, trigger sweeps, or confirm failed breaks.
 
-This design ensures that structural events are derived only from traded bars,
-while synthetic rows remain available for contextual metrics and dataset continuity.
+Confirmed swing levels are attached back to the full dataframe so that
+downstream layers can access them.
 
-This prevents synthetic carry-forward bars or data-pipeline artifacts from
-creating false structural events.
+### Timeframe completeness policy
+
+Resampled H1 and H4 bars must meet minimum real-row completeness thresholds
+before they are eligible for swing detection:
+
+```python
+MIN_REAL_BARS_H1 = 45   # out of 60 possible 1m rows
+MIN_REAL_BARS_H4 = 180  # out of 240 possible 1m rows
+```
+
+Incomplete bars cannot serve as swing center, left neighbor, right neighbor,
+or confirmation source. This fail-closed policy prevents sparse data buckets
+or ingestion artifacts from generating false structural events.
 
 ### Gap safety policy
 
