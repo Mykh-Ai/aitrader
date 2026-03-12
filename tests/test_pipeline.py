@@ -171,3 +171,125 @@ def test_fixture_files_exist_and_loadable():
 
     for filename in expected:
         assert (fixtures_dir / filename).exists()
+
+
+def test_pipeline_end_to_end_contract_consistency_non_mocked(tmp_path):
+    rows = []
+    start = pd.Timestamp("2025-01-01T00:00:00Z")
+
+    special = {
+        "2025-01-01T03:04:00+00:00": (121, 118, 121, 200, 150, 50, 1040, 4, 1),
+        "2025-01-01T03:06:00+00:00": (119, 117, 119, 80, 30, 50, 1035, 1, 3),
+        "2025-01-01T03:08:00+00:00": (122, 118, 122, 300, 250, 50, 1050, 5, 0),
+        "2025-01-01T03:10:00+00:00": (119, 116, 118, 90, 20, 70, 1040, 1, 4),
+        "2025-01-01T03:12:00+00:00": (123, 117, 123, 400, 350, 50, 1060, 6, 0),
+        "2025-01-01T03:14:00+00:00": (119, 115, 117, 70, 10, 60, 1055, 1, 5),
+        "2025-01-01T03:16:00+00:00": (124, 120, 124, 180, 120, 60, 1065, 2, 1),
+        "2025-01-01T03:18:00+00:00": (119, 119, 119, 100, 50, 50, 1065, 1, 1),
+    }
+
+    for i in range(131):
+        ts = start + pd.Timedelta(minutes=2 * i)
+        hour = ts.hour
+
+        high = 105
+        low = 95
+        close = 100
+        open_ = 100
+        volume = 100 + i
+        buy_qty = 60 + (i % 10)
+        sell_qty = 40 + (i % 7)
+        open_interest = 1000 + i * 0.5
+        liq_buy_qty = 1 + (i % 3)
+        liq_sell_qty = 1 + (i % 4)
+
+        if hour == 0:
+            high = 100 - (i % 3)
+            low = 90 + (i % 2)
+            close = 95 + (i % 2)
+        elif hour == 1:
+            high = 110
+            low = 85
+            close = 100
+            if ts.minute == 20:
+                high = 120
+                low = 80
+                close = 110
+        elif hour == 2:
+            high = 110 - (i % 2)
+            low = 85 + (i % 3)
+            close = 100 - (i % 2)
+        elif hour >= 3:
+            high = 111
+            low = 96
+            close = 100
+
+        key = ts.isoformat()
+        if key in special:
+            (
+                high,
+                low,
+                close,
+                volume,
+                buy_qty,
+                sell_qty,
+                open_interest,
+                liq_buy_qty,
+                liq_sell_qty,
+            ) = special[key]
+            open_ = close
+
+        rows.append(
+            {
+                "Timestamp": ts.isoformat().replace("+00:00", "Z"),
+                "Open": open_,
+                "High": high,
+                "Low": low,
+                "Close": close,
+                "Volume": volume,
+                "AggTrades": 10,
+                "BuyQty": buy_qty,
+                "SellQty": sell_qty,
+                "VWAP": (high + low + close) / 3,
+                "OpenInterest": open_interest,
+                "FundingRate": 0.0001,
+                "LiqBuyQty": liq_buy_qty,
+                "LiqSellQty": liq_sell_qty,
+                "IsSynthetic": 0,
+            }
+        )
+
+    fixture_path = tmp_path / "contract_non_mocked_raw.csv"
+    pd.DataFrame(rows).to_csv(fixture_path, index=False)
+
+    result = run(fixture_path, tmp_path)
+
+    assert not result["setups"].empty
+    assert not result["outcomes"].empty
+    assert not result["report"].empty
+
+    assert len(result["setups"]) == len(result["outcomes"])
+    assert set(result["setups"]["SetupId"]) == set(result["outcomes"]["SetupId"])
+
+    baseline = result["report"].loc[
+        (result["report"]["GroupType"] == "overall")
+        & (result["report"]["GroupValue"] == "ALL")
+    ]
+    assert len(baseline) == 1
+
+    assert not (
+        (result["rankings"]["GroupType"] == "overall")
+        & (result["rankings"]["GroupValue"] == "ALL")
+    ).any()
+
+    for name in [
+        "analyzer_setups.csv",
+        "analyzer_setup_outcomes.csv",
+        "analyzer_setup_report.csv",
+        "analyzer_setup_context_report.csv",
+        "analyzer_setup_rankings.csv",
+    ]:
+        assert (tmp_path / name).exists()
+
+    assert not result["rankings"].empty
+    assert set(result["rankings"]["SourceReport"].unique()) <= {"report", "context_report"}
