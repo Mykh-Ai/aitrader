@@ -6,7 +6,7 @@ from analyzer.failed_breaks import FAILED_BREAK_FEATURE_COLUMNS, detect_failed_b
 
 
 def _empty_sweeps_df(periods: int = 6) -> pd.DataFrame:
-    ts = pd.date_range("2025-01-01T00:00:00Z", periods=periods, freq="1h", tz="UTC")
+    ts = pd.date_range("2025-01-01T00:00:00Z", periods=periods, freq="1min", tz="UTC")
     df = pd.DataFrame(
         {
             "Timestamp": ts,
@@ -141,3 +141,42 @@ def test_h1_h4_failed_break_plumbing_are_independent():
 
     for col in FAILED_BREAK_FEATURE_COLUMNS:
         assert col in out.columns
+
+
+def test_synthetic_row_cannot_confirm_failed_break():
+    df = _empty_sweeps_df(5)
+    df["IsSynthetic"] = [0, 0, 1, 0, 0]
+    df.loc[1, "Sweep_H1_Up"] = True
+    df.loc[1, "Sweep_H1_Direction"] = "up"
+    df.loc[1, "Sweep_H1_ReferenceLevel"] = 100.0
+    df.loc[1, "Sweep_H1_ReferenceTs"] = df.loc[1, "Timestamp"]
+    df["Close"] = [99.0, 101.0, 99.0, 99.0, 99.0]
+
+    out = detect_failed_breaks(df)
+
+    assert not out.loc[2, "FailedBreak_H1_Up"]
+    assert out.loc[3, "FailedBreak_H1_Up"]
+
+
+def test_failed_break_pending_state_resets_after_large_timestamp_gap():
+    df = _empty_sweeps_df(5)
+    df["Timestamp"] = pd.to_datetime(
+        [
+            "2025-01-01T00:00:00Z",
+            "2025-01-01T00:01:00Z",
+            "2025-01-01T00:02:00Z",
+            "2025-01-01T00:10:00Z",
+            "2025-01-01T00:11:00Z",
+        ],
+        utc=True,
+    )
+
+    df.loc[1, "Sweep_H1_Up"] = True
+    df.loc[1, "Sweep_H1_Direction"] = "up"
+    df.loc[1, "Sweep_H1_ReferenceLevel"] = 100.0
+    df.loc[1, "Sweep_H1_ReferenceTs"] = df.loc[1, "Timestamp"]
+    df["Close"] = [99.0, 101.0, 101.0, 99.0, 98.0]
+
+    out = detect_failed_breaks(df)
+
+    assert not out["FailedBreak_H1_Up"].any()

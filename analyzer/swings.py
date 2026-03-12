@@ -91,9 +91,14 @@ def annotate_swings(df: pd.DataFrame) -> pd.DataFrame:
     """
     out = df.copy()
 
+    structure_df = out
+    if "IsSynthetic" in out.columns:
+        is_synth = pd.to_numeric(out["IsSynthetic"], errors="coerce").fillna(0).astype(int)
+        structure_df = out.loc[is_synth == 0]
+
     tf_specs = [("1h", "H1"), ("4h", "H4")]
     for freq, tf_label in tf_specs:
-        bars = _build_tf_bars(out, freq)
+        bars = _build_tf_bars(structure_df, freq)
         high_confirmed = _confirmed_swings(bars, "high", freq)
         low_confirmed = _confirmed_swings(bars, "low", freq)
 
