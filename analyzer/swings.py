@@ -16,16 +16,48 @@ SWING_FEATURE_COLUMNS = [
     "SwingLow_H4_ConfirmedAt",
 ]
 
+MIN_REAL_BARS_H1 = 45
+MIN_REAL_BARS_H4 = 180
 
-def _build_tf_bars(df: pd.DataFrame, freq: str) -> pd.DataFrame:
+
+def _infer_base_seconds(df: pd.DataFrame) -> float | None:
+    ts = pd.Series(pd.to_datetime(df["Timestamp"], utc=True, errors="coerce")).dropna()
+    if len(ts) < 2:
+        return None
+    deltas = ts.sort_values().diff().dropna().dt.total_seconds()
+    if deltas.empty:
+        return None
+    positive = deltas[deltas > 0]
+    if positive.empty:
+        return None
+    return float(positive.median())
+
+
+def _min_real_rows_for_freq(freq: str, base_seconds: float | None) -> int:
+    if base_seconds is None:
+        return 0
+
+    tf_seconds = float(to_offset(freq).nanos / 1_000_000_000)
+    if base_seconds > 60:
+        return 0
+
+    expected_rows = tf_seconds / base_seconds
+    min_rows_by_freq = {"1h": MIN_REAL_BARS_H1, "4h": MIN_REAL_BARS_H4}
+    configured_for_1m = min_rows_by_freq[freq]
+    completeness_ratio = configured_for_1m / (tf_seconds / 60.0)
+    return int(max(1, expected_rows * completeness_ratio))
+
+
+def _build_tf_bars(df: pd.DataFrame, freq: str, min_real_rows: int = 0) -> pd.DataFrame:
     bars = (
         df.set_index("Timestamp")
         .resample(freq, label="left", closed="left")
-        .agg(High=("High", "max"), Low=("Low", "min"), Rows=("High", "count"))
+        .agg(High=("High", "max"), Low=("Low", "min"), RealRows=("High", "count"))
         .dropna(subset=["High", "Low"])
         .reset_index()
     )
-    return bars.loc[bars["Rows"] > 0, ["Timestamp", "High", "Low"]].reset_index(drop=True)
+    eligible = bars["RealRows"] >= min_real_rows
+    return bars.loc[eligible, ["Timestamp", "High", "Low", "RealRows"]].reset_index(drop=True)
 
 
 def _confirmed_swings(bars: pd.DataFrame, swing_kind: str, freq: str) -> pd.DataFrame:
@@ -96,9 +128,12 @@ def annotate_swings(df: pd.DataFrame) -> pd.DataFrame:
         is_synth = pd.to_numeric(out["IsSynthetic"], errors="coerce").fillna(0).astype(int)
         structure_df = out.loc[is_synth == 0]
 
+    base_seconds = _infer_base_seconds(structure_df)
+
     tf_specs = [("1h", "H1"), ("4h", "H4")]
     for freq, tf_label in tf_specs:
-        bars = _build_tf_bars(structure_df, freq)
+        min_real_rows = _min_real_rows_for_freq(freq, base_seconds)
+        bars = _build_tf_bars(structure_df, freq, min_real_rows=min_real_rows)
         high_confirmed = _confirmed_swings(bars, "high", freq)
         low_confirmed = _confirmed_swings(bars, "low", freq)
 
