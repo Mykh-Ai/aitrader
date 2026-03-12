@@ -2,12 +2,13 @@
 
 Version: 1.0
 Phase 1 Status: **Implemented**
+Phase 2 Status: **Implemented**
 
 ---
 
-## Phase 1 Implementation Status
+## Implementation Status
 
-### Implemented (Phase 1 complete)
+### Implemented (Phase 1 — Facts engine)
 
 | Layer | Module | Status |
 |-------|--------|--------|
@@ -22,13 +23,22 @@ Phase 1 Status: **Implemented**
 | Output helpers | `analyzer/io.py` | ✅ |
 | Pipeline orchestration | `analyzer/pipeline.py` | ✅ |
 
-### Planned (Phase 2+)
+### Implemented (Phase 2 — Setup research pipeline)
+
+| Layer | Module | Status |
+|-------|--------|--------|
+| Setup candidate extraction | `analyzer/setups.py` | ✅ |
+| Forward-looking outcome metrics | `analyzer/outcomes.py` | ✅ |
+| Grouped setup report | `analyzer/reports.py` | ✅ |
+| Context-bucketed statistics | `analyzer/context_reports.py` | ✅ |
+| Setup group rankings | `analyzer/rankings.py` | ✅ |
+
+### Planned (Phase 3+)
 
 | Layer | Status |
 |-------|--------|
 | Session context features (`session`, `minutes_from_eu_open`, `minutes_from_us_open`) | 🔜 Planned |
 | Confidence scoring (Block 5) | 🔜 Planned |
-| Setup / candidate extraction | 🔜 Phase 2 |
 | Statistical edge validation | 🔜 Phase 3 |
 | Ruleset selection | 🔜 Phase 3 |
 | Live execution decisions | 🔜 Phase 4 |
@@ -54,10 +64,22 @@ detect_absorption()     absorption.py             — rolling-ratio context feat
         ↓
 build_events()          events.py                 — normalize to event table
         ↓
-save_dataframe()        io.py                     — write analyzer_features.csv + analyzer_events.csv
+extract_setup_candidates()  setups.py             — setup candidates from failed-break events
+        ↓
+build_setup_outcomes()      outcomes.py           — forward-looking outcome metrics per setup
+        ↓
+build_setup_report()        reports.py            — grouped setup statistics
+        ↓
+build_setup_context_report() context_reports.py   — context-bucketed statistics
+        ↓
+build_setup_rankings()      rankings.py           — score and rank setup groups vs baseline
+        ↓
+save_dataframe()        io.py                     — write 7 output CSVs
 ```
 
 ### Layer responsibilities
+
+#### Phase 1 — Facts engine
 
 **schema.py** — Defines `REQUIRED_RAW_COLUMNS`, `NUMERIC_RAW_COLUMNS`, `FEATURE_COLUMNS_IMPLEMENTED`,
 `FEATURE_COLUMNS_PLANNED`, `EVENT_COLUMNS`, and `SchemaValidationError`.
@@ -100,8 +122,35 @@ Output is sorted deterministically by `[Timestamp, SourceTF, EventType, Side]`.
 
 **io.py** — `ensure_output_dir()`, `save_dataframe()` (CSV). Current output format is CSV.
 
-**pipeline.py** — `run(input_path, output_dir)` wires the full sequence and returns a metadata
-dict with in-memory DataFrames and output file paths.
+**pipeline.py** — `run(input_path, output_dir)` wires the full 12-step sequence and returns a metadata
+dict with 7 in-memory DataFrames and 7 output file paths.
+
+#### Phase 2 — Setup research pipeline
+
+**setups.py** — Extracts setup candidates from `FAILED_BREAK_DOWN` → `FAILED_BREAK_RECLAIM_LONG`
+and `FAILED_BREAK_UP` → `FAILED_BREAK_RECLAIM_SHORT` events. Enriches each setup with a context
+snapshot from the setup bar (AbsorptionScore_v1, 5 context flags, 4 numeric ratios).
+Annotates lifecycle (PENDING → INVALIDATED or EXPIRED) over `SETUP_TTL_BARS = 12` bars.
+SetupId is a deterministic hash of `event_type|source_tf|reference_event_ts|anchor_ts|level`.
+
+**outcomes.py** — Computes forward-looking outcome metrics per setup over a `OUTCOME_HORIZON_BARS = 12`
+bar horizon: MFE_Pct (best favorable excursion), MAE_Pct (worst adverse excursion),
+CloseReturn_Pct (return at horizon end). Tracks BestHigh, BestLow, FinalClose.
+OutcomeStatus: `NO_FORWARD_BARS` (insufficient data), `PARTIAL_HORIZON` (< 12 bars available),
+`FULL_HORIZON` (complete 12-bar window).
+
+**reports.py** — Aggregates setup/outcome statistics grouped by: overall, SetupType, Direction,
+LifecycleStatus, OutcomeStatus. Computes count, MFE/MAE/CloseReturn means, medians,
+and standard deviations per group.
+
+**context_reports.py** — Aggregates statistics by context flag families (5 binary flags:
+CtxRelVolumeSpike_v1, CtxDeltaSpike_v1, CtxOISpike_v1, CtxLiqSpike_v1, CtxWickReclaim_v1)
+and numeric feature tertile buckets (5 families: RelVolume_20, DeltaAbsRatio_20,
+OIChangeAbsRatio_20, LiqTotalRatio_20, AbsorptionScore_v1 — each bucketed LOW/MID/HIGH).
+
+**rankings.py** — Scores and ranks setup groups against the overall baseline using a composite
+RankingScore. Labels each group as `TOP`, `NEUTRAL`, `WEAK`, or `LOW_SAMPLE`
+(minimum sample threshold = 5).
 
 ---
 
@@ -198,9 +247,8 @@ The following rules are enforced in current code (see also Section 6 for full sp
 
 ## Future Scope Boundary
 
-The following are **not** part of the implemented Phase 1 spec:
+The following are **not** part of the implemented Phase 1 + Phase 2 spec:
 
-- Setup extraction / candidate generation
 - Statistical edge validation (win rate, R-multiple distribution)
 - Ruleset selection and strategy optimization
 - Live execution decisions, order sizing, stop placement
@@ -1556,9 +1604,9 @@ swing-distance filter inside detection logic
 
 # 5. Event Labeling / Confidence — LOCKED
 
-> **Implementation status:** Confidence scoring is **not yet implemented** in Phase 1.
+> **Implementation status:** Confidence scoring is **not yet implemented**.
 > All event rows currently carry `Confidence = NA` and `MetaJson = NA`.
-> The logic described in sections 5.1–5.13 is the planned Phase 2 contract.
+> The logic described in sections 5.1–5.13 is planned for a future phase.
 
 ## Контекст
 
@@ -2154,7 +2202,10 @@ Block 6 гарантує:
 # 7. Analyzer Output Contracts — LOCKED
 
 > **Implementation status:** The Phase 1 pipeline writes CSV output
-> (`analyzer_features.csv`, `analyzer_events.csv`) via `analyzer/io.py`.
+> Currently outputs 7 CSV files via `analyzer/io.py`:
+> `analyzer_features.csv`, `analyzer_events.csv`, `analyzer_setups.csv`,
+> `analyzer_setup_outcomes.csv`, `analyzer_setup_report.csv`,
+> `analyzer_setup_context_report.csv`, `analyzer_setup_rankings.csv`.
 > The Parquet format described in section 7.1 is planned for a later phase.
 > The event table schema in sections 7.3–7.8 (`event_id`, `status`, `parent_event_id`, etc.)
 > describes the planned downstream contract; the currently implemented event columns are
@@ -2170,13 +2221,17 @@ Block 6 гарантує:
 
 ## 7.1 Output Files
 
-Analyzer створює два primary datasets:
+Analyzer створює 7 output datasets:
 
-    features_1m.parquet
-    events.parquet
+    analyzer_features.csv         — one row per 1m bar, all computed features
+    analyzer_events.csv           — one row per detected structural event
+    analyzer_setups.csv           — one row per setup candidate
+    analyzer_setup_outcomes.csv   — one row per setup with forward metrics
+    analyzer_setup_report.csv     — grouped setup statistics
+    analyzer_setup_context_report.csv — context-bucketed statistics
+    analyzer_setup_rankings.csv   — scored and ranked setup groups
 
-Parquet — primary формат (типізація, стиснення, швидке читання).
-CSV export — опціональний, для ручної інспекції.
+Current format: CSV. Parquet — planned for a later phase (типізація, стиснення, швидке читання).
 
 ---
 
