@@ -4,6 +4,11 @@ BTC research and analysis system built toward algorithmic trading.
 Currently at Phase 2: raw data collection + Analyzer facts engine + setup research pipeline.
 Target execution: Binance Spot Margin BTC/USDC (isolated, max 2x) — planned Phase 4.
 
+**Trading hypothesis:** Liquidity grab + failed break reclaim. Price sweeps a structural
+swing level (collecting stops), then reclaims back. If the reclaim is confirmed by volume
+spike + delta divergence — this is a mean-reversion entry after liquidity, not momentum.
+Failed break is the first implemented setup type; additional types are planned.
+
 ## System Architecture
 
 ```
@@ -47,7 +52,7 @@ The Analyzer is a **facts engine + research pipeline**. It:
 
 - Computes derived features and metrics from raw 1m feed
 - Detects and normalizes structural events (swings, sweeps, failed breaks)
-- Extracts and enriches setup candidates from failed-break events
+- Extracts and enriches setup candidates (currently from failed-break events; additional setup types planned)
 - Computes forward-looking outcome metrics (MFE, MAE, close return)
 - Builds grouped research reports and context-bucketed statistics
 - Ranks setup groups against an overall baseline
@@ -104,6 +109,22 @@ Package: `analyzer/`
 |--------|---------------|
 | `io.py` | Output helpers: ensure output directory exists, save DataFrames to CSV |
 | `pipeline.py` | Orchestration entrypoint: wires the full layer sequence and saves all artifacts |
+
+### Data lineage
+
+```
+raw CSV → features (one row per 1m bar)
+features → events (structural events)
+features + events → setups (setup candidates from failed breaks — first implemented type)
+features + setups → outcomes (forward metrics: MFE, MAE, CloseReturn)
+setups + outcomes → report (grouped stats)
+setups + outcomes → context_report (bucketed stats)
+report + context_report → rankings (scored vs baseline)
+rankings → selections (SELECT/REVIEW/REJECT)
+rankings + selections → shortlist (top candidates ranked)
+shortlist → shortlist_explanations (categorical bands + code)
+shortlist + shortlist_explanations → research_summary (final surface)
+```
 
 ### Tests
 
@@ -335,7 +356,7 @@ result = run("feed/2024-03-15.csv", output_dir="output/")
 #         output/analyzer_setup_selections.csv
 #         output/analyzer_setup_shortlist.csv
 #         output/analyzer_setup_shortlist_explanations.csv
-output/analyzer_research_summary.csv
+#         output/analyzer_research_summary.csv
 
 features                = result["features"]                # pd.DataFrame — one row per 1m bar
 events                  = result["events"]                  # pd.DataFrame — one row per detected event
@@ -349,8 +370,11 @@ shortlist               = result["shortlist"]               # pd.DataFrame — r
 shortlist_explanations  = result["shortlist_explanations"]  # pd.DataFrame — explanation bands per shortlist row
 research_summary        = result["research_summary"]        # pd.DataFrame — final research summary surface
 
-shortlist_explanations_path = result["shortlist_explanations_path"]  # Path — analyzer_setup_shortlist_explanations.csv
-research_summary_path       = result["research_summary_path"]        # Path — analyzer_research_summary.csv
+# Path keys also available for each artifact:
+# result["features_path"], result["events_path"], result["setups_path"],
+# result["outcomes_path"], result["report_path"], result["context_report_path"],
+# result["rankings_path"], result["selections_path"], result["shortlist_path"],
+# result["shortlist_explanations_path"], result["research_summary_path"]
 ```
 
 Requires `pandas`. Tests: `pytest tests/`.
