@@ -97,6 +97,71 @@ tests/fixtures/
 
 `docs/Spec_v1.0.md` is the normative Analyzer contract. Tests are written against the spec.
 
+### Structural safety guards
+
+### Synthetic bars and structural safety
+
+The Analyzer preserves all rows in the dataset, including synthetic bars
+(`IsSynthetic == 1`). Synthetic bars are required for:
+
+- rolling metrics
+- context features
+- volume/OI continuity
+- research reproducibility
+
+However, synthetic bars are **not allowed to define market structure**.
+
+Structural logic (swings, sweeps, failed-break confirmations) operates with
+fail-closed rules:
+
+- synthetic bars cannot define swing structure
+- synthetic bars cannot trigger sweep events
+- synthetic bars cannot confirm failed-break reclaim logic
+
+Implementation detail:
+
+```python
+structure_df = df[df["IsSynthetic"] == 0]
+```
+
+Swing detection is performed on this structure-only subset, and confirmed
+levels are then attached back to the full dataframe.
+
+This design ensures that structural events are derived only from traded bars,
+while synthetic rows remain available for contextual metrics and dataset continuity.
+
+This prevents synthetic carry-forward bars or data-pipeline artifacts from
+creating false structural events.
+
+### Gap safety policy
+
+Stateful logic (such as failed-break confirmation) is protected from large
+timestamp discontinuities.
+
+If the time difference between consecutive rows exceeds:
+
+```python
+MAX_STATE_GAP_MINUTES = 3
+```
+
+the internal pending state is reset.
+
+This is a fail-closed safety mechanism designed to prevent structural
+misinterpretation after:
+
+- reconnects
+- packet loss
+- data gaps
+- delayed ingestion
+
+### Research note
+
+The value of `MAX_STATE_GAP_MINUTES` is currently a conservative safety choice.
+It may be adjusted after sufficient dataset collection and empirical analysis.
+
+The goal at this stage is structural data integrity rather than maximal
+event capture.
+
 ## Repository Structure
 
 ```
