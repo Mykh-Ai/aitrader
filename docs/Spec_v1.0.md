@@ -32,6 +32,9 @@ Phase 2 Status: **Implemented**
 | Grouped setup report | `analyzer/reports.py` | ✅ |
 | Context-bucketed statistics | `analyzer/context_reports.py` | ✅ |
 | Setup group rankings | `analyzer/rankings.py` | ✅ |
+| Research candidate selections | `analyzer/selections.py` | ✅ |
+| Shortlist export view | `analyzer/shortlists.py` | ✅ |
+| Shortlist explanations | `analyzer/shortlist_explanations.py` | ✅ |
 
 ### Planned (Phase 3+)
 
@@ -74,7 +77,13 @@ build_setup_context_report() context_reports.py   — context-bucketed statistic
         ↓
 build_setup_rankings()      rankings.py           — score and rank setup groups vs baseline
         ↓
-save_dataframe()        io.py                     — write 7 output CSVs
+build_setup_selections()    selections.py         — classify groups into SELECT/REVIEW/REJECT
+        ↓
+build_setup_shortlist()     shortlists.py         — filter and rank top candidates for review
+        ↓
+build_setup_shortlist_explanations() shortlist_explanations.py — derive explanation bands + code
+        ↓
+save_dataframe()        io.py                     — write 10 output CSVs
 ```
 
 ### Layer responsibilities
@@ -122,8 +131,8 @@ Output is sorted deterministically by `[Timestamp, SourceTF, EventType, Side]`.
 
 **io.py** — `ensure_output_dir()`, `save_dataframe()` (CSV). Current output format is CSV.
 
-**pipeline.py** — `run(input_path, output_dir)` wires the full 12-step sequence and returns a metadata
-dict with 7 in-memory DataFrames and 7 output file paths.
+**pipeline.py** — `run(input_path, output_dir)` wires the full 15-step sequence and returns a metadata
+dict with 10 in-memory DataFrames and 10 output file paths.
 
 #### Phase 2 — Setup research pipeline
 
@@ -151,6 +160,24 @@ OIChangeAbsRatio_20, LiqTotalRatio_20, AbsorptionScore_v1 — each bucketed LOW/
 **rankings.py** — Scores and ranks setup groups against the overall baseline using a composite
 RankingScore. Labels each group as `TOP`, `NEUTRAL`, `WEAK`, or `LOW_SAMPLE`
 (minimum sample threshold = 5).
+
+**selections.py** — Classifies each ranking row into a deterministic `SelectionDecision`
+(`SELECT`, `REVIEW`, `REJECT`) with a `SelectionReason`. Threshold logic:
+`SELECT` requires `RankingScore >= 0.05`, `SampleCount >= 5`, `MinSamplePassed`,
+and `Delta_PositiveCloseReturnRate > 0`. `REVIEW` requires positive score and sufficient sample.
+All other rows are `REJECT` (either `LOW_SAMPLE` or `NON_POSITIVE_EDGE`).
+This is a research triage layer — not a trading decision.
+
+**shortlists.py** — Filters selections to `SELECT` + `REVIEW` rows only. Joins against rankings
+for validation. Sorts by selection priority (SELECT before REVIEW), then by RankingScore descending,
+SampleCount descending, and natural key ascending. Assigns sequential `ShortlistRank`.
+This is an export/review view — not execution logic.
+
+**shortlist_explanations.py** — Derives human-readable categorical bands per shortlist row:
+`ScoreBand` (STRONG/MODERATE/WEAK_POSITIVE/NON_POSITIVE), `SampleBand` (LARGE/MEDIUM/SMALL),
+`DeltaDirection` and `PositiveRateDirection` (UP/FLAT/DOWN). Builds a composite pipe-delimited
+`ExplanationCode` joining all classification fields. Explanation is deterministic and compact —
+not free-form text, not trading advice.
 
 ---
 
@@ -242,6 +269,12 @@ The following rules are enforced in current code (see also Section 6 for full sp
    exceeds `MAX_STATE_GAP_MINUTES = 3`, the internal pending state in
    `failed_breaks.py` is reset. This prevents structural misinterpretation
    after reconnects, packet loss, or data gaps (fail-closed).
+
+10. **First-visibility materialization** — `ConfirmedAt` is the semantic confirmation
+    time. In the full dataframe, confirmed swing state is first materialized on
+    the first real row with `Timestamp >= ConfirmedAt`. This eliminates
+    first-visibility drift between the computed confirmation time and the row
+    where downstream layers can actually observe the swing.
 
 ---
 
@@ -738,6 +771,19 @@ Examples:
     → ConfirmedAt = 08:00  (= 00:00 + 2 × 4h)
 
 Until ConfirmedAt the swing does NOT exist for any downstream layer.
+
+### First-visibility materialization
+
+`ConfirmedAt` is the semantic structural confirmation time. In the full
+dataframe, confirmed swing state is first materialized on the first real
+row with `Timestamp >= ConfirmedAt`.
+
+Combined with synthetic-bar exclusion (Rule 7) and TF completeness
+thresholds (Rule 8), this closes three classes of structural contamination:
+
+- **Synthetic contamination** — synthetic rows cannot define or confirm structure
+- **Sparse TF bucket contamination** — incomplete H1/H4 bars are excluded entirely
+- **First-visibility drift** — swing state appears only at the first real row after confirmation
 
 ### Lookahead rule
 
@@ -2202,10 +2248,12 @@ Block 6 гарантує:
 # 7. Analyzer Output Contracts — LOCKED
 
 > **Implementation status:** The Phase 1 pipeline writes CSV output
-> Currently outputs 7 CSV files via `analyzer/io.py`:
+> Currently outputs 10 CSV files via `analyzer/io.py`:
 > `analyzer_features.csv`, `analyzer_events.csv`, `analyzer_setups.csv`,
 > `analyzer_setup_outcomes.csv`, `analyzer_setup_report.csv`,
-> `analyzer_setup_context_report.csv`, `analyzer_setup_rankings.csv`.
+> `analyzer_setup_context_report.csv`, `analyzer_setup_rankings.csv`,
+> `analyzer_setup_selections.csv`, `analyzer_setup_shortlist.csv`,
+> `analyzer_setup_shortlist_explanations.csv`.
 > The Parquet format described in section 7.1 is planned for a later phase.
 > The event table schema in sections 7.3–7.8 (`event_id`, `status`, `parent_event_id`, etc.)
 > describes the planned downstream contract; the currently implemented event columns are
@@ -2221,15 +2269,18 @@ Block 6 гарантує:
 
 ## 7.1 Output Files
 
-Analyzer створює 7 output datasets:
+Analyzer створює 10 output datasets:
 
-    analyzer_features.csv         — one row per 1m bar, all computed features
-    analyzer_events.csv           — one row per detected structural event
-    analyzer_setups.csv           — one row per setup candidate
-    analyzer_setup_outcomes.csv   — one row per setup with forward metrics
-    analyzer_setup_report.csv     — grouped setup statistics
-    analyzer_setup_context_report.csv — context-bucketed statistics
-    analyzer_setup_rankings.csv   — scored and ranked setup groups
+    analyzer_features.csv                    — one row per 1m bar, all computed features
+    analyzer_events.csv                      — one row per detected structural event
+    analyzer_setups.csv                      — one row per setup candidate
+    analyzer_setup_outcomes.csv              — one row per setup with forward metrics
+    analyzer_setup_report.csv                — grouped setup statistics
+    analyzer_setup_context_report.csv        — context-bucketed statistics
+    analyzer_setup_rankings.csv              — scored and ranked setup groups
+    analyzer_setup_selections.csv            — SELECT/REVIEW/REJECT per ranked group
+    analyzer_setup_shortlist.csv             — ranked shortlist of top candidates
+    analyzer_setup_shortlist_explanations.csv — explanation bands + composite code per shortlist row
 
 Current format: CSV. Parquet — planned for a later phase (типізація, стиснення, швидке читання).
 
