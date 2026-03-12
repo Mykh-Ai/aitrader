@@ -73,3 +73,23 @@ def test_h1_h4_plumbing_and_delayed_confirmation():
     assert row["SwingHigh_H4_ConfirmedAt"] == h4_confirm_ts
 
     assert out["SwingHigh_H1_ConfirmedAt"].notna().any()
+
+
+def test_synthetic_bar_cannot_be_swing_center_for_structure():
+    ts = pd.date_range("2025-01-01T00:00:00Z", periods=5, freq="1h", tz="UTC")
+    df = pd.DataFrame(
+        {
+            "Timestamp": ts,
+            "High": [10.0, 20.0, 11.0, 10.0, 9.0],
+            "Low": [5.0, 6.0, 6.0, 5.0, 5.0],
+            "IsSynthetic": [0, 1, 0, 0, 0],
+        }
+    )
+
+    out = annotate_swings(df)
+
+    synthetic_confirm_ts = pd.Timestamp("2025-01-01T03:00:00Z")
+    synthetic_confirm_row = out.loc[out["Timestamp"] == synthetic_confirm_ts].iloc[0]
+    assert pd.isna(synthetic_confirm_row["SwingHigh_H1_Price"])
+    assert pd.isna(synthetic_confirm_row["SwingHigh_H1_ConfirmedAt"])
+    assert not (out["SwingHigh_H1_Price"] == 20.0).any()

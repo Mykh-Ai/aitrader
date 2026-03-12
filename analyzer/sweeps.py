@@ -33,8 +33,12 @@ def _annotate_tf_sweeps(out: pd.DataFrame, tf_label: str) -> pd.DataFrame:
     high_level = pd.to_numeric(out[high_price_col], errors="coerce")
     low_level = pd.to_numeric(out[low_price_col], errors="coerce")
 
-    raw_up = high_level.notna() & (out["High"] > high_level)
-    raw_down = low_level.notna() & (out["Low"] < low_level)
+    synthetic_mask = pd.Series(False, index=out.index)
+    if "IsSynthetic" in out.columns:
+        synthetic_mask = pd.to_numeric(out["IsSynthetic"], errors="coerce").fillna(0).astype(int) == 1
+
+    raw_up = high_level.notna() & (out["High"] > high_level) & ~synthetic_mask
+    raw_down = low_level.notna() & (out["Low"] < low_level) & ~synthetic_mask
 
     ambiguous = raw_up & raw_down
     up = raw_up & ~ambiguous
