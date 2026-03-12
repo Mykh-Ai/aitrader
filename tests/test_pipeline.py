@@ -70,6 +70,7 @@ def test_pipeline_smoke_writes_outputs_with_valid_report_baseline(tmp_path, monk
     assert not result["selections"].empty
     assert "shortlist" in result
     assert "shortlist_explanations" in result
+    assert "research_summary" in result
     assert result["features_path"].exists()
     assert result["events_path"].exists()
     assert result["setups_path"].exists()
@@ -80,6 +81,7 @@ def test_pipeline_smoke_writes_outputs_with_valid_report_baseline(tmp_path, monk
     assert result["selections_path"].exists()
     assert result["shortlist_path"].exists()
     assert result["shortlist_explanations_path"].exists()
+    assert result["research_summary_path"].exists()
     assert result["setups_path"].name == "analyzer_setups.csv"
     assert result["outcomes_path"].name == "analyzer_setup_outcomes.csv"
     assert result["report_path"].name == "analyzer_setup_report.csv"
@@ -88,6 +90,7 @@ def test_pipeline_smoke_writes_outputs_with_valid_report_baseline(tmp_path, monk
     assert result["selections_path"].name == "analyzer_setup_selections.csv"
     assert result["shortlist_path"].name == "analyzer_setup_shortlist.csv"
     assert result["shortlist_explanations_path"].name == "analyzer_setup_shortlist_explanations.csv"
+    assert result["research_summary_path"].name == "analyzer_research_summary.csv"
 
 
 def test_pipeline_output_contains_implemented_feature_columns(tmp_path, monkeypatch):
@@ -300,6 +303,7 @@ def test_pipeline_end_to_end_contract_consistency_non_mocked(tmp_path):
         "analyzer_setup_selections.csv",
         "analyzer_setup_shortlist.csv",
         "analyzer_setup_shortlist_explanations.csv",
+        "analyzer_research_summary.csv",
     ]:
         assert (tmp_path / name).exists()
 
@@ -307,5 +311,6 @@ def test_pipeline_end_to_end_contract_consistency_non_mocked(tmp_path):
     assert not result["selections"].empty
     assert "shortlist" in result
     assert "shortlist_explanations" in result
+    assert "research_summary" in result
     assert set(result["rankings"]["SourceReport"].unique()) <= {"report", "context_report"}
     assert len(result["selections"]) == len(result["rankings"])
