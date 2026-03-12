@@ -16,6 +16,7 @@ from .outcomes import build_setup_outcomes
 from .selections import build_setup_selections
 from .reports import build_setup_report
 from .setups import extract_setup_candidates
+from .shortlist_explanations import build_setup_shortlist_explanations
 from .shortlists import build_setup_shortlist
 from .sweeps import detect_sweeps
 from .swings import annotate_swings
@@ -40,6 +41,7 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
     rankings = build_setup_rankings(report, context_report)
     selections = build_setup_selections(rankings)
     shortlist = build_setup_shortlist(rankings, selections)
+    shortlist_explanations = build_setup_shortlist_explanations(shortlist)
 
     out_dir = ensure_output_dir(output_dir)
     features_path = save_dataframe(features, out_dir / "analyzer_features.csv")
@@ -51,6 +53,10 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
     rankings_path = save_dataframe(rankings, out_dir / "analyzer_setup_rankings.csv")
     selections_path = save_dataframe(selections, out_dir / "analyzer_setup_selections.csv")
     shortlist_path = save_dataframe(shortlist, out_dir / "analyzer_setup_shortlist.csv")
+    shortlist_explanations_path = save_dataframe(
+        shortlist_explanations,
+        out_dir / "analyzer_setup_shortlist_explanations.csv",
+    )
 
     return {
         "features": features,
@@ -62,6 +68,7 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
         "rankings": rankings,
         "selections": selections,
         "shortlist": shortlist,
+        "shortlist_explanations": shortlist_explanations,
         "features_path": features_path,
         "events_path": events_path,
         "setups_path": setups_path,
@@ -71,4 +78,5 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
         "rankings_path": rankings_path,
         "selections_path": selections_path,
         "shortlist_path": shortlist_path,
+        "shortlist_explanations_path": shortlist_explanations_path,
     }
