@@ -22,6 +22,7 @@ Binance Futures API (fstream / fapi)
    Setup Research Pipeline       ← Phase 2: IMPLEMENTED
    setups → outcomes → reports
    → context reports → rankings
+   → selections → shortlist → explanations
         │
    Backtester                    ← Phase 3: PLANNED
    6-month validation
@@ -35,7 +36,7 @@ Binance Futures API (fstream / fapi)
 | Phase | Status | Description |
 |-------|--------|-------------|
 | 1. Raw feed + Analyzer facts engine | ✅ Implemented | 1m collector live; Analyzer computes all features and events |
-| 2. Setup research pipeline | ✅ Implemented | Setup extraction, outcomes, reports, context analysis, rankings |
+| 2. Setup research pipeline | ✅ Implemented | Setup extraction, outcomes, reports, context analysis, rankings, selections, shortlist, explanations |
 | 3. Backtesting | 🔜 Planned | 6-month strategy validation |
 | 4. Execution | 🔜 Planned | Live trading via Binance Spot Margin API |
 
@@ -49,6 +50,9 @@ The Analyzer is a **facts engine + research pipeline**. It:
 - Computes forward-looking outcome metrics (MFE, MAE, close return)
 - Builds grouped research reports and context-bucketed statistics
 - Ranks setup groups against an overall baseline
+- Classifies ranked groups into research candidate selections (SELECT/REVIEW/REJECT)
+- Exports a deterministic shortlist of top candidates for review
+- Generates structured shortlist explanations with categorical bands and composite codes
 
 All output is **research-only**. The Analyzer does **not**:
 
@@ -56,6 +60,9 @@ All output is **research-only**. The Analyzer does **not**:
 - Size positions or place orders
 - Perform strategy optimization or ruleset selection
 - Act as executor or interface with the exchange
+
+The selection, shortlist, and explanation layers are research triage tools —
+they surface candidates for human review, not automated trade decisions.
 
 ## Analyzer — Module Architecture
 
@@ -65,7 +72,7 @@ Package: `analyzer/`
 
 | Module | Responsibility |
 |--------|---------------|
-| `schema.py` | Schema contracts: required column lists, feature column registry, `EVENT_COLUMNS`, `SETUP_COLUMNS`, `OUTCOME_COLUMNS`, `REPORT_COLUMNS`, `CONTEXT_REPORT_COLUMNS`, `RANKING_COLUMNS` |
+| `schema.py` | Schema contracts: required column lists, feature column registry, `EVENT_COLUMNS`, `SETUP_COLUMNS`, `OUTCOME_COLUMNS`, `REPORT_COLUMNS`, `CONTEXT_REPORT_COLUMNS`, `RANKING_COLUMNS`, `SELECTION_COLUMNS`, `SHORTLIST_COLUMNS`, `SHORTLIST_EXPLANATION_COLUMNS` |
 | `loader.py` | Load and validate raw aggregator CSV: parse UTC timestamps, enforce required columns, coerce numerics, normalize `IsSynthetic`, reject duplicates |
 | `base_metrics.py` | Compute per-bar derived metrics: Delta, CVD, DeltaPct, BarRange, BodySize, UpperWick, LowerWick, CloseLocation, BodyToRange, wick ratios, OI_Change, LiqTotal |
 | `swings.py` | Detect H1/H4 structural fractal swings with confirmation delay; annotate feature table with `SwingHigh_*_Price`, `SwingHigh_*_ConfirmedAt`, `SwingLow_*` columns |
@@ -83,6 +90,9 @@ Package: `analyzer/`
 | `reports.py` | Aggregate setup/outcome statistics grouped by: overall, SetupType, Direction, LifecycleStatus, OutcomeStatus |
 | `context_reports.py` | Aggregate statistics by context flag families (binary) and numeric feature tertile buckets (LOW/MID/HIGH) |
 | `rankings.py` | Score and rank setup groups against overall baseline; label each group as TOP/NEUTRAL/WEAK/LOW_SAMPLE |
+| `selections.py` | Classify ranked groups into SELECT/REVIEW/REJECT decisions with deterministic threshold logic; research triage only |
+| `shortlists.py` | Filter to SELECT+REVIEW rows, sort by priority and score, assign ShortlistRank; export/review view only |
+| `shortlist_explanations.py` | Derive categorical bands (ScoreBand, SampleBand, DeltaDirection, PositiveRateDirection) and composite ExplanationCode per shortlist row |
 
 **Infrastructure:**
 
@@ -110,6 +120,9 @@ tests/
 ├── test_reports.py
 ├── test_context_reports.py
 ├── test_rankings.py
+├── test_selections.py
+├── test_shortlists.py
+├── test_shortlist_explanations.py
 └── test_pipeline.py
 ```
 
@@ -140,6 +153,19 @@ but cannot define market structure, trigger sweeps, or confirm failed breaks.
 
 Confirmed swing levels are attached back to the full dataframe so that
 downstream layers can access them.
+
+### First-visibility materialization
+
+`ConfirmedAt` is the semantic structural confirmation time. In the full
+dataframe, confirmed swing state is first materialized on the first real
+row with `Timestamp >= ConfirmedAt`.
+
+Combined with synthetic-bar exclusion and TF completeness thresholds, this
+closes three classes of structural contamination:
+
+- **Synthetic contamination** — synthetic rows cannot define or confirm structure
+- **Sparse TF bucket contamination** — incomplete H1/H4 bars are excluded entirely
+- **First-visibility drift** — swing state appears only at the first real row after confirmation
 
 ### Timeframe completeness policy
 
@@ -204,6 +230,9 @@ Aitrader/
 │   ├── reports.py
 │   ├── context_reports.py
 │   ├── rankings.py
+│   ├── selections.py
+│   ├── shortlists.py
+│   ├── shortlist_explanations.py
 │   ├── io.py
 │   └── pipeline.py
 ├── tests/                      # Unit tests for Analyzer
@@ -297,14 +326,20 @@ result = run("feed/2024-03-15.csv", output_dir="output/")
 #         output/analyzer_setup_report.csv
 #         output/analyzer_setup_context_report.csv
 #         output/analyzer_setup_rankings.csv
+#         output/analyzer_setup_selections.csv
+#         output/analyzer_setup_shortlist.csv
+#         output/analyzer_setup_shortlist_explanations.csv
 
-features       = result["features"]        # pd.DataFrame — one row per 1m bar
-events         = result["events"]          # pd.DataFrame — one row per detected event
-setups         = result["setups"]          # pd.DataFrame — one row per setup candidate
-outcomes       = result["outcomes"]        # pd.DataFrame — one row per setup with forward metrics
-report         = result["report"]          # pd.DataFrame — grouped setup statistics
-context_report = result["context_report"]  # pd.DataFrame — context-bucketed statistics
-rankings       = result["rankings"]        # pd.DataFrame — scored and ranked setup groups
+features                = result["features"]                # pd.DataFrame — one row per 1m bar
+events                  = result["events"]                  # pd.DataFrame — one row per detected event
+setups                  = result["setups"]                  # pd.DataFrame — one row per setup candidate
+outcomes                = result["outcomes"]                # pd.DataFrame — one row per setup with forward metrics
+report                  = result["report"]                  # pd.DataFrame — grouped setup statistics
+context_report          = result["context_report"]          # pd.DataFrame — context-bucketed statistics
+rankings                = result["rankings"]                # pd.DataFrame — scored and ranked setup groups
+selections              = result["selections"]              # pd.DataFrame — SELECT/REVIEW/REJECT per group
+shortlist               = result["shortlist"]               # pd.DataFrame — ranked shortlist for review
+shortlist_explanations  = result["shortlist_explanations"]  # pd.DataFrame — explanation bands per shortlist row
 ```
 
 Requires `pandas`. Tests: `pytest tests/`.
