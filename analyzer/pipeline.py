@@ -15,6 +15,7 @@ from .rankings import build_setup_rankings
 from .outcomes import build_setup_outcomes
 from .selections import build_setup_selections
 from .reports import build_setup_report
+from .research_summary import build_research_summary
 from .setups import extract_setup_candidates
 from .shortlist_explanations import build_setup_shortlist_explanations
 from .shortlists import build_setup_shortlist
@@ -42,6 +43,7 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
     selections = build_setup_selections(rankings)
     shortlist = build_setup_shortlist(rankings, selections)
     shortlist_explanations = build_setup_shortlist_explanations(shortlist)
+    research_summary = build_research_summary(shortlist, shortlist_explanations)
 
     out_dir = ensure_output_dir(output_dir)
     features_path = save_dataframe(features, out_dir / "analyzer_features.csv")
@@ -57,6 +59,7 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
         shortlist_explanations,
         out_dir / "analyzer_setup_shortlist_explanations.csv",
     )
+    research_summary_path = save_dataframe(research_summary, out_dir / "analyzer_research_summary.csv")
 
     return {
         "features": features,
@@ -69,6 +72,7 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
         "selections": selections,
         "shortlist": shortlist,
         "shortlist_explanations": shortlist_explanations,
+        "research_summary": research_summary,
         "features_path": features_path,
         "events_path": events_path,
         "setups_path": setups_path,
@@ -79,4 +83,5 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
         "selections_path": selections_path,
         "shortlist_path": shortlist_path,
         "shortlist_explanations_path": shortlist_explanations_path,
+        "research_summary_path": research_summary_path,
     }
