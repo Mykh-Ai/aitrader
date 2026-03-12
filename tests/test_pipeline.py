@@ -67,6 +67,7 @@ def test_pipeline_smoke_writes_outputs_with_valid_report_baseline(tmp_path, monk
     assert not result["report"].empty
     assert result["context_report"].empty
     assert not result["rankings"].empty
+    assert not result["selections"].empty
     assert result["features_path"].exists()
     assert result["events_path"].exists()
     assert result["setups_path"].exists()
@@ -74,11 +75,13 @@ def test_pipeline_smoke_writes_outputs_with_valid_report_baseline(tmp_path, monk
     assert result["report_path"].exists()
     assert result["context_report_path"].exists()
     assert result["rankings_path"].exists()
+    assert result["selections_path"].exists()
     assert result["setups_path"].name == "analyzer_setups.csv"
     assert result["outcomes_path"].name == "analyzer_setup_outcomes.csv"
     assert result["report_path"].name == "analyzer_setup_report.csv"
     assert result["context_report_path"].name == "analyzer_setup_context_report.csv"
     assert result["rankings_path"].name == "analyzer_setup_rankings.csv"
+    assert result["selections_path"].name == "analyzer_setup_selections.csv"
 
 
 def test_pipeline_output_contains_implemented_feature_columns(tmp_path, monkeypatch):
@@ -288,8 +291,11 @@ def test_pipeline_end_to_end_contract_consistency_non_mocked(tmp_path):
         "analyzer_setup_report.csv",
         "analyzer_setup_context_report.csv",
         "analyzer_setup_rankings.csv",
+        "analyzer_setup_selections.csv",
     ]:
         assert (tmp_path / name).exists()
 
     assert not result["rankings"].empty
+    assert not result["selections"].empty
     assert set(result["rankings"]["SourceReport"].unique()) <= {"report", "context_report"}
+    assert len(result["selections"]) == len(result["rankings"])
