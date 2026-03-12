@@ -19,6 +19,8 @@ FAILED_BREAK_FEATURE_COLUMNS = [
     "FailedBreak_H4_ConfirmedTs",
 ]
 
+MAX_STATE_GAP_MINUTES = 3
+
 
 def _init_failed_break_columns(out: pd.DataFrame, tf_label: str) -> None:
     out[f"FailedBreak_{tf_label}_Up"] = False
@@ -46,13 +48,32 @@ def _annotate_tf_failed_breaks(out: pd.DataFrame, tf_label: str) -> None:
     pending_direction: str | None = None
     pending_level: float | None = None
     pending_sweep_ts = pd.NaT
+    previous_ts = pd.NaT
 
     close = pd.to_numeric(out["Close"], errors="coerce")
     sweep_level = pd.to_numeric(out[sweep_level_col], errors="coerce")
+    ts = pd.to_datetime(out["Timestamp"], utc=True)
+
+    synthetic_mask = pd.Series(False, index=out.index)
+    if "IsSynthetic" in out.columns:
+        synthetic_mask = pd.to_numeric(out["IsSynthetic"], errors="coerce").fillna(0).astype(int) == 1
 
     for idx in out.index:
+        current_ts = ts.loc[idx]
+        if pd.notna(previous_ts) and pd.notna(current_ts):
+            gap_minutes = (current_ts - previous_ts).total_seconds() / 60.0
+            if gap_minutes > MAX_STATE_GAP_MINUTES:
+                pending_direction = None
+                pending_level = None
+                pending_sweep_ts = pd.NaT
+
         # Confirmation always evaluates only previously pending state.
-        if pending_direction == "up" and pd.notna(close.loc[idx]) and pending_level is not None:
+        if (
+            not synthetic_mask.loc[idx]
+            and pending_direction == "up"
+            and pd.notna(close.loc[idx])
+            and pending_level is not None
+        ):
             if close.loc[idx] < pending_level:
                 out.at[idx, up_col] = True
                 out.at[idx, direction_col] = "up"
@@ -62,7 +83,12 @@ def _annotate_tf_failed_breaks(out: pd.DataFrame, tf_label: str) -> None:
                 pending_direction = None
                 pending_level = None
                 pending_sweep_ts = pd.NaT
-        elif pending_direction == "down" and pd.notna(close.loc[idx]) and pending_level is not None:
+        elif (
+            not synthetic_mask.loc[idx]
+            and pending_direction == "down"
+            and pd.notna(close.loc[idx])
+            and pending_level is not None
+        ):
             if close.loc[idx] > pending_level:
                 out.at[idx, down_col] = True
                 out.at[idx, direction_col] = "down"
@@ -76,10 +102,17 @@ def _annotate_tf_failed_breaks(out: pd.DataFrame, tf_label: str) -> None:
         # Current bar sweeps become pending only for subsequent bars.
         current_dir = out.at[idx, sweep_dir_col]
         current_level = sweep_level.loc[idx]
-        if isinstance(current_dir, str) and current_dir in {"up", "down"} and pd.notna(current_level):
+        if (
+            not synthetic_mask.loc[idx]
+            and isinstance(current_dir, str)
+            and current_dir in {"up", "down"}
+            and pd.notna(current_level)
+        ):
             pending_direction = current_dir
             pending_level = float(current_level)
             pending_sweep_ts = out.at[idx, "Timestamp"]
+
+        previous_ts = current_ts
 
     out[ref_sweep_ts_col] = pd.to_datetime(out[ref_sweep_ts_col], utc=True)
     out[confirmed_ts_col] = pd.to_datetime(out[confirmed_ts_col], utc=True)
