@@ -170,3 +170,26 @@ def test_synthetic_row_cannot_trigger_sweep_even_if_price_crosses_level():
     assert pd.isna(synth_row["Sweep_H1_Direction"])
     assert pd.isna(synth_row["Sweep_H1_ReferenceLevel"])
     assert pd.isna(synth_row["Sweep_H1_ReferenceTs"])
+
+
+def test_no_sweep_before_real_row_anchor_when_confirmation_lands_on_synthetic_segment():
+    ts = pd.date_range("2025-01-01T00:00:00Z", periods=6, freq="1h", tz="UTC")
+    df = pd.DataFrame(
+        {
+            "Timestamp": ts,
+            "High": [10.0, 14.0, 11.0, 20.0, 21.0, 22.0],
+            "Low": [5.0, 6.0, 6.0, 6.0, 7.0, 7.0],
+            "IsSynthetic": [0, 0, 0, 1, 1, 0],
+        }
+    )
+
+    out = detect_sweeps(annotate_swings(df))
+
+    # Swing at 01:00 is confirmed at 03:00, but 03:00 and 04:00 are synthetic.
+    assert pd.isna(out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T03:00:00Z"), "SwingHigh_H1_Price"]).iloc[0]
+    assert pd.isna(out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T04:00:00Z"), "SwingHigh_H1_Price"]).iloc[0]
+
+    # First visibility is on the first real row >= confirm_ts, so first eligible sweep is 05:00.
+    assert not out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T03:00:00Z"), "Sweep_H1_Up"].iloc[0]
+    assert not out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T04:00:00Z"), "Sweep_H1_Up"].iloc[0]
+    assert out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T05:00:00Z"), "Sweep_H1_Up"].iloc[0]
