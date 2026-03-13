@@ -190,7 +190,13 @@ def _build_trade_metrics_summary(ledger_df: pd.DataFrame) -> pd.DataFrame:
     )
 
     rows: list[TradeMetricsRow] = []
-    scopes = (("ALL_TRADES", ledger_df), ("RESOLVED_ONLY", resolved_df))
+    scopes: list[tuple[str, pd.DataFrame]] = [
+        ("ALL_TRADES", ledger_df),
+        ("RESOLVED_ONLY", resolved_df),
+    ]
+    for ruleset_id in ledger_df["ruleset_id"].astype(str).drop_duplicates().tolist():
+        if ruleset_id not in ("ALL_TRADES", "RESOLVED_ONLY"):
+            scopes.append((ruleset_id, ledger_df[ledger_df["ruleset_id"].astype(str) == ruleset_id]))
     for scope_name, scope_df in scopes:
         avg_holding, med_holding = _safe_holding_stats(scope_df)
         win_rate, average_win, average_loss, payoff_ratio, expectancy = _return_metrics(
@@ -215,7 +221,7 @@ def _build_trade_metrics_summary(ledger_df: pd.DataFrame) -> pd.DataFrame:
             notes=(
                 f"scope={scope_name}; includes unresolved counts explicitly; {missing_return_note}"
                 if scope_name == "ALL_TRADES"
-                else f"scope={scope_name}; resolved subset only; {missing_return_note}"
+                else f"scope={scope_name}; {'resolved subset only' if scope_name == 'RESOLVED_ONLY' else 'per-ruleset subset'}; {missing_return_note}"
             ),
         )
         rows.append(row)
