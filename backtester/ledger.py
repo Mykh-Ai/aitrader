@@ -29,6 +29,8 @@ LEDGER_COLUMNS = [
     "cost_model_id",
     "same_bar_policy_id",
     "replay_semantics_version",
+    "trade_return_pct",
+    "trade_pnl",
     "notes",
 ]
 
@@ -46,6 +48,11 @@ REQUIRED_EVENT_COLUMNS = (
     "same_bar_outcome",
     "cost_model_id",
     "replay_semantics_version",
+    "close_reason",
+    "close_reason_category",
+    "close_resolved",
+    "close_price_raw",
+    "close_price_effective",
     "notes",
 )
 
@@ -54,6 +61,8 @@ UNRESOLVED_EXIT_REASONS = {
     "UNRESOLVED",
     "DEFERRED",
     "NO_EXIT_RESOLVED_YET",
+    "SAME_BAR_UNRESOLVED",
+    "SAME_BAR_DEFERRED",
 }
 
 
@@ -85,6 +94,8 @@ class TradeLedgerRow:
     cost_model_id: str
     same_bar_policy_id: str
     replay_semantics_version: str
+    trade_return_pct: float | None
+    trade_pnl: float | None
     notes: str
 
 
@@ -106,65 +117,30 @@ def _normalize_events(events_df: pd.DataFrame) -> pd.DataFrame:
     return out.sort_values(sort_columns, kind="mergesort").reset_index(drop=True)
 
 
-def _derive_exit(close_event: pd.Series | None, expiry_event: pd.Series | None) -> tuple[str, str, pd.Timestamp | None, float | None, float | None, str]:
+def _derive_exit(close_event: pd.Series | None, expiry_event: pd.Series | None) -> tuple[str, str, pd.Timestamp | None, float | None, float | None]:
     if close_event is None:
-        if expiry_event is not None and "EXPIR" in str(expiry_event.get("state_after", "")).upper():
-            return (
-                "EXPIRY_CLOSE",
-                "EXPIRY",
-                expiry_event["timestamp"],
-                expiry_event.get("price_raw"),
-                expiry_event.get("price_effective"),
-                "derived_from_expiry_state_after",
-            )
-        return "NO_EXIT_RESOLVED_YET", "UNRESOLVED", None, None, None, ""
+        return "NO_EXIT_RESOLVED_YET", "UNRESOLVED", None, None, None
 
-    same_bar_outcome = str(close_event.get("same_bar_outcome", "NONE")).strip().upper()
-    close_notes = str(close_event.get("notes", ""))
+    close_resolved = bool(close_event.get("close_resolved", False))
+    close_reason = str(close_event.get("close_reason", "")).strip() or "NO_EXIT_RESOLVED_YET"
+    close_category = str(close_event.get("close_reason_category", "UNRESOLVED")).strip().upper()
 
-    if same_bar_outcome == "STOP_WINS":
-        return (
-            "SAME_BAR_STOP_WINS_POLICY",
-            "STOP",
-            close_event["timestamp"],
-            close_event.get("price_raw"),
-            close_event.get("price_effective"),
-            "",
-        )
-    if same_bar_outcome == "TARGET_WINS":
-        return (
-            "SAME_BAR_TARGET_WINS_POLICY",
-            "TARGET",
-            close_event["timestamp"],
-            close_event.get("price_raw"),
-            close_event.get("price_effective"),
-            "",
-        )
-    if same_bar_outcome in {"UNRESOLVED", "DEFERRED"}:
-        return same_bar_outcome, "UNRESOLVED", None, None, None, ""
+    if not close_resolved or close_category == "UNRESOLVED":
+        return close_reason, "UNRESOLVED", None, None, None
 
-    if "not_resolved" in close_notes:
-        return "UNRESOLVED", "UNRESOLVED", None, None, None, ""
+    exit_ts = close_event["timestamp"]
+    exit_raw = close_event.get("close_price_raw")
+    exit_effective = close_event.get("close_price_effective")
 
-    state_after = str(close_event.get("state_after", "")).upper()
-    if "EXPIR" in state_after:
-        return (
-            "EXPIRY_CLOSE",
-            "EXPIRY",
-            close_event["timestamp"],
-            close_event.get("price_raw"),
-            close_event.get("price_effective"),
-            "",
-        )
+    if pd.isna(exit_raw):
+        exit_raw = close_event.get("price_raw")
+    if pd.isna(exit_effective):
+        exit_effective = close_event.get("price_effective")
 
-    return (
-        "RULE_CLOSE",
-        "RULE_CLOSE",
-        close_event["timestamp"],
-        close_event.get("price_raw"),
-        close_event.get("price_effective"),
-        "",
-    )
+    if close_category == "EXPIRY" and expiry_event is not None:
+        exit_ts = expiry_event["timestamp"] if pd.notna(expiry_event["timestamp"]) else exit_ts
+
+    return close_reason, close_category, exit_ts, exit_raw, exit_effective
 
 
 def _parse_numeric(value: Any) -> float | None:
@@ -172,6 +148,35 @@ def _parse_numeric(value: Any) -> float | None:
         return None
     return float(value)
 
+
+
+
+def _compute_trade_result(
+    *,
+    direction: str,
+    entry_price_effective: float | None,
+    entry_price_raw: float | None,
+    exit_price_effective: float | None,
+    exit_price_raw: float | None,
+    exit_reason_category: str,
+) -> tuple[float | None, float | None]:
+    if exit_reason_category == "UNRESOLVED":
+        return None, None
+
+    entry = entry_price_effective if entry_price_effective is not None else entry_price_raw
+    exit_price = exit_price_effective if exit_price_effective is not None else exit_price_raw
+    if entry is None or exit_price is None or entry == 0:
+        return None, None
+
+    side = str(direction).upper()
+    if side == "LONG":
+        ret = (exit_price - entry) / entry
+    elif side == "SHORT":
+        ret = (entry - exit_price) / entry
+    else:
+        return None, None
+    pnl = exit_price - entry if side == "LONG" else entry - exit_price
+    return float(ret), float(pnl)
 
 def _materialize_trade_rows(events_df: pd.DataFrame) -> list[TradeLedgerRow]:
     rows: list[TradeLedgerRow] = []
@@ -201,7 +206,7 @@ def _materialize_trade_rows(events_df: pd.DataFrame) -> list[TradeLedgerRow]:
 
             close_event = close_eval.iloc[-1] if not close_eval.empty else None
             expiry_event = expiry_eval.iloc[-1] if not expiry_eval.empty else None
-            exit_reason, exit_category, exit_ts, exit_raw, exit_effective, extra_note = _derive_exit(
+            exit_reason, exit_category, exit_ts, exit_raw, exit_effective = _derive_exit(
                 close_event,
                 expiry_event,
             )
@@ -231,10 +236,21 @@ def _materialize_trade_rows(events_df: pd.DataFrame) -> list[TradeLedgerRow]:
             window_notes = [str(n) for n in window["notes"].dropna().tolist() if str(n).strip()]
             if window_notes:
                 notes = " | ".join(window_notes)
-            if extra_note:
-                notes = f"{notes} | {extra_note}" if notes else extra_note
 
             trade_id = f"TRADE_{ruleset_id}_{setup_id}" if len(activation_indexes) == 1 else f"TRADE_{ruleset_id}_{setup_id}_{ordinal}"
+
+            entry_price_raw = _parse_numeric(activation.get("price_raw"))
+            entry_price_effective = _parse_numeric(activation.get("price_effective"))
+            exit_price_raw = _parse_numeric(exit_raw)
+            exit_price_effective = _parse_numeric(exit_effective)
+            trade_return_pct, trade_pnl = _compute_trade_result(
+                direction=str(activation["direction"]),
+                entry_price_effective=entry_price_effective,
+                entry_price_raw=entry_price_raw,
+                exit_price_effective=exit_price_effective,
+                exit_price_raw=exit_price_raw,
+                exit_reason_category=exit_category,
+            )
 
             row = TradeLedgerRow(
                 trade_id=trade_id,
@@ -243,20 +259,22 @@ def _materialize_trade_rows(events_df: pd.DataFrame) -> list[TradeLedgerRow]:
                 direction=str(activation["direction"]),
                 entry_signal_ts=(None if pd.isna(signal_ts) else signal_ts),
                 entry_activation_ts=entry_ts,
-                entry_price_raw=_parse_numeric(activation.get("price_raw")),
-                entry_price_effective=_parse_numeric(activation.get("price_effective")),
+                entry_price_raw=entry_price_raw,
+                entry_price_effective=entry_price_effective,
                 initial_stop_price=_parse_numeric(stop_eval.iloc[-1]["price_raw"]) if not stop_eval.empty else None,
                 initial_target_price=_parse_numeric(target_eval.iloc[-1]["price_raw"]) if not target_eval.empty else None,
                 expiry_ts=(None if expiry_event is None else expiry_event["timestamp"]),
                 exit_ts=exit_ts,
-                exit_price_raw=_parse_numeric(exit_raw),
-                exit_price_effective=_parse_numeric(exit_effective),
+                exit_price_raw=exit_price_raw,
+                exit_price_effective=exit_price_effective,
                 exit_reason=exit_reason,
                 exit_reason_category=exit_category,
                 holding_bars=holding_bars,
                 cost_model_id=str(activation["cost_model_id"]),
                 same_bar_policy_id=str(activation["same_bar_policy_id"]),
                 replay_semantics_version=str(activation["replay_semantics_version"]),
+                trade_return_pct=trade_return_pct,
+                trade_pnl=trade_pnl,
                 notes=notes,
             )
             rows.append(row)

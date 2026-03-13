@@ -53,7 +53,7 @@ def _features_df() -> pd.DataFrame:
     )
 
 
-def _setups_df(force_collision: bool = False) -> pd.DataFrame:
+def _setups_df(force_collision: bool = False, force_expiry_close: bool = False) -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
@@ -64,6 +64,7 @@ def _setups_df(force_collision: bool = False) -> pd.DataFrame:
                 "SetupBarTs": "2024-01-01T00:00:00Z",
                 "ReferenceEventType": "FAILED_BREAK_DOWN",
                 "ForceSameBarCollision": force_collision,
+                "ForceExpiryClose": force_expiry_close,
             }
         ]
     )
@@ -89,11 +90,15 @@ def _rulesets_df(cost_model_id: str = "COST_MODEL_ZERO_SKELETON_ONLY") -> pd.Dat
     )
 
 
-def _inputs(force_collision: bool = False, cost_model_id: str = "COST_MODEL_ZERO_SKELETON_ONLY") -> ReplayInputs:
+def _inputs(
+    force_collision: bool = False,
+    force_expiry_close: bool = False,
+    cost_model_id: str = "COST_MODEL_ZERO_SKELETON_ONLY",
+) -> ReplayInputs:
     return ReplayInputs(
         raw_df=_raw_df(),
         features_df=_features_df(),
-        setups_df=_setups_df(force_collision=force_collision),
+        setups_df=_setups_df(force_collision=force_collision, force_expiry_close=force_expiry_close),
         rulesets_df=_rulesets_df(cost_model_id=cost_model_id),
     )
 
@@ -255,3 +260,68 @@ def test_manifest_contains_required_metadata_fields():
     assert "cost_model_ids" in manifest
     assert "generated_at_utc" in manifest
     assert "git_commit" in manifest
+
+
+def test_close_resolved_emits_explicit_structured_fields_for_same_bar_stop():
+    class StopWinsPolicy:
+        def resolve(self, *, ruleset_row: pd.Series, setup_row: pd.Series, bar_row: pd.Series) -> str:
+            return "STOP_WINS"
+
+    events, _ = run_replay_engine(
+        _inputs(force_collision=True),
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models=_cost_models(),
+        same_bar_policies={"SAME_BAR_CONSERVATIVE_V0_1": StopWinsPolicy()},
+    )
+    close_row = events.loc[events["event_type"] == "CLOSE_RESOLVED"].iloc[0]
+    assert close_row["close_reason"] == "SAME_BAR_STOP_WINS_POLICY"
+    assert close_row["close_reason_category"] == "STOP"
+    assert close_row["close_resolved"] == True
+    assert close_row["same_bar_outcome"] == "STOP_WINS"
+
+
+def test_close_resolved_emits_explicit_structured_fields_for_same_bar_target():
+    class TargetWinsPolicy:
+        def resolve(self, *, ruleset_row: pd.Series, setup_row: pd.Series, bar_row: pd.Series) -> str:
+            return "TARGET_WINS"
+
+    events, _ = run_replay_engine(
+        _inputs(force_collision=True),
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models=_cost_models(),
+        same_bar_policies={"SAME_BAR_CONSERVATIVE_V0_1": TargetWinsPolicy()},
+    )
+    close_row = events.loc[events["event_type"] == "CLOSE_RESOLVED"].iloc[0]
+    assert close_row["close_reason"] == "SAME_BAR_TARGET_WINS_POLICY"
+    assert close_row["close_reason_category"] == "TARGET"
+    assert close_row["close_resolved"] == True
+
+
+def test_expiry_close_emits_explicit_structured_close_truth():
+    events, _ = run_replay_engine(
+        _inputs(force_expiry_close=True),
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models=_cost_models(),
+    )
+    close_row = events.loc[events["event_type"] == "CLOSE_RESOLVED"].iloc[0]
+    assert close_row["close_reason"] == "EXPIRY_CLOSE"
+    assert close_row["close_reason_category"] == "EXPIRY"
+    assert close_row["close_resolved"] == True
+    assert close_row["close_price_raw"] == 102.0
+
+
+def test_same_bar_unresolved_emits_structured_unresolved_not_notes_only():
+    class UnresolvedPolicy:
+        def resolve(self, *, ruleset_row: pd.Series, setup_row: pd.Series, bar_row: pd.Series) -> str:
+            return "UNRESOLVED"
+
+    events, _ = run_replay_engine(
+        _inputs(force_collision=True),
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models=_cost_models(),
+        same_bar_policies={"SAME_BAR_CONSERVATIVE_V0_1": UnresolvedPolicy()},
+    )
+    close_row = events.loc[events["event_type"] == "CLOSE_RESOLVED"].iloc[0]
+    assert close_row["close_reason"] == "SAME_BAR_UNRESOLVED"
+    assert close_row["close_reason_category"] == "UNRESOLVED"
+    assert close_row["close_resolved"] == False

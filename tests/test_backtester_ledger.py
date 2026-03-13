@@ -53,28 +53,33 @@ def _features_df() -> pd.DataFrame:
     )
 
 
-def _setups_df(force_collision: bool = False) -> pd.DataFrame:
+def _setups_df(
+    force_collision: bool = False,
+    force_expiry_close: bool = False,
+    direction: str = "LONG",
+) -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
                 "SetupId": "S1",
                 "SetupType": "FAILED_BREAK_RECLAIM_LONG",
-                "Direction": "LONG",
+                "Direction": direction,
                 "DetectedAt": "2024-01-01T00:00:00Z",
                 "SetupBarTs": "2024-01-01T00:00:00Z",
                 "ReferenceEventType": "FAILED_BREAK_DOWN",
                 "ForceSameBarCollision": force_collision,
+                "ForceExpiryClose": force_expiry_close,
             }
         ]
     )
 
 
-def _rulesets_df() -> pd.DataFrame:
+def _rulesets_df(direction: str = "LONG") -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
                 "ruleset_id": "RULESET_001",
-                "direction": "LONG",
+                "direction": direction,
                 "setup_type": "FAILED_BREAK_RECLAIM_LONG",
                 "entry_timing": "SIGNAL_BAR_CLOSE__ENTRY_NEXT_BAR_OPEN",
                 "entry_price_convention": "NEXT_BAR_OPEN",
@@ -89,12 +94,21 @@ def _rulesets_df() -> pd.DataFrame:
     )
 
 
-def _engine_events(force_collision: bool = False, policy: object | None = None) -> pd.DataFrame:
+def _engine_events(
+    force_collision: bool = False,
+    force_expiry_close: bool = False,
+    policy: object | None = None,
+    direction: str = "LONG",
+) -> pd.DataFrame:
     inputs = ReplayInputs(
         raw_df=_raw_df(),
         features_df=_features_df(),
-        setups_df=_setups_df(force_collision=force_collision),
-        rulesets_df=_rulesets_df(),
+        setups_df=_setups_df(
+            force_collision=force_collision,
+            force_expiry_close=force_expiry_close,
+            direction=direction,
+        ),
+        rulesets_df=_rulesets_df(direction=direction),
     )
     policies = None
     if policy is not None:
@@ -157,7 +171,7 @@ def test_same_bar_honesty_unresolved_same_bar_outcome_remains_unresolved():
 
     ledger = build_trade_ledger(_engine_events(force_collision=True, policy=UnresolvedPolicy()))
     row = ledger.iloc[0]
-    assert row["exit_reason"] == "UNRESOLVED"
+    assert row["exit_reason"] == "SAME_BAR_UNRESOLVED"
     assert row["exit_reason_category"] == "UNRESOLVED"
     assert pd.isna(row["exit_ts"])
 
@@ -201,3 +215,39 @@ def test_write_trade_ledger_csv(tmp_path: Path):
 
     assert out.name == "backtest_trades.csv"
     assert out.exists()
+
+
+def test_ledger_consumes_explicit_close_fields_not_notes_for_resolved_exit():
+    class StopWinsPolicy:
+        def resolve(self, *, ruleset_row: pd.Series, setup_row: pd.Series, bar_row: pd.Series) -> str:
+            return "STOP_WINS"
+
+    events = _engine_events(force_collision=True, policy=StopWinsPolicy())
+    events.loc[events["event_type"] == "CLOSE_RESOLVED", "notes"] = "misleading_notes_should_not_drive_exit"
+    ledger = build_trade_ledger(events)
+    row = ledger.iloc[0]
+    assert row["exit_reason"] == "SAME_BAR_STOP_WINS_POLICY"
+    assert row["exit_reason_category"] == "STOP"
+
+
+def test_trade_result_contract_resolved_long_short_and_unresolved():
+    class TargetWinsPolicy:
+        def resolve(self, *, ruleset_row: pd.Series, setup_row: pd.Series, bar_row: pd.Series) -> str:
+            return "TARGET_WINS"
+
+    class UnresolvedPolicy:
+        def resolve(self, *, ruleset_row: pd.Series, setup_row: pd.Series, bar_row: pd.Series) -> str:
+            return "UNRESOLVED"
+
+    long_row = build_trade_ledger(_engine_events(force_collision=True, policy=TargetWinsPolicy(), direction="LONG")).iloc[0]
+    short_row = build_trade_ledger(_engine_events(force_collision=True, policy=TargetWinsPolicy(), direction="SHORT")).iloc[0]
+    unresolved_row = build_trade_ledger(_engine_events(force_collision=True, policy=UnresolvedPolicy(), direction="LONG")).iloc[0]
+
+    assert long_row["trade_return_pct"] == pytest.approx((103.0 - 101.0) / 101.0)
+    assert long_row["trade_pnl"] == pytest.approx(2.0)
+
+    assert short_row["trade_return_pct"] == pytest.approx((101.0 - 99.5) / 101.0)
+    assert short_row["trade_pnl"] == pytest.approx(1.5)
+
+    assert pd.isna(unresolved_row["trade_return_pct"])
+    assert pd.isna(unresolved_row["trade_pnl"])
