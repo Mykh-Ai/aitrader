@@ -193,6 +193,91 @@ def test_explicit_semantics_columns_override_baseline_mapping():
     assert rulesets.loc[0, "eligible_event_types"] == "FAILED_BREAK_UP"
 
 
+def test_research_summary_context_group_with_explicit_semantics_is_formalizable():
+    shortlist = pd.DataFrame(
+        [
+            {
+                "SourceReport": "context_report",
+                "GroupType": "AbsorptionScore_v1",
+                "GroupValue": "LOW",
+                "SelectionDecision": "REVIEW",
+            }
+        ]
+    )
+    research_summary = pd.DataFrame(
+        [
+            {
+                "SourceReport": "context_report",
+                "GroupType": "AbsorptionScore_v1",
+                "GroupValue": "LOW",
+                "SelectionDecision": "REVIEW",
+                "Direction": "BOTH",
+                "SetupType": "FAILED_BREAK_RECLAIM",
+                "EligibleEventTypes": "FAILED_BREAK_DOWN|FAILED_BREAK_UP",
+            }
+        ]
+    )
+
+    rulesets, _ = build_backtest_rulesets(
+        shortlist,
+        research_summary,
+        source_formalization_mode="RESEARCH_SUMMARY_FIRST",
+    )
+
+    assert rulesets.loc[0, "direction"] == "BOTH"
+    assert rulesets.loc[0, "setup_type"] == "FAILED_BREAK_RECLAIM"
+    assert rulesets.loc[0, "eligible_event_types"] == "FAILED_BREAK_DOWN|FAILED_BREAK_UP"
+
+
+def test_research_summary_first_filters_non_formalizable_rows_via_flag():
+    shortlist = pd.DataFrame(
+        [
+            {
+                "SourceReport": "context_report",
+                "GroupType": "AbsorptionScore_v1",
+                "GroupValue": "LOW",
+                "SelectionDecision": "REVIEW",
+            },
+            {
+                "SourceReport": "report",
+                "GroupType": "SetupType",
+                "GroupValue": "FAILED_BREAK_RECLAIM_SHORT",
+                "SelectionDecision": "SELECT",
+            },
+        ]
+    )
+    research_summary = pd.DataFrame(
+        [
+            {
+                "SourceReport": "context_report",
+                "GroupType": "AbsorptionScore_v1",
+                "GroupValue": "LOW",
+                "SelectionDecision": "REVIEW",
+                "FormalizationEligible": False,
+            },
+            {
+                "SourceReport": "report",
+                "GroupType": "SetupType",
+                "GroupValue": "FAILED_BREAK_RECLAIM_SHORT",
+                "SelectionDecision": "SELECT",
+                "FormalizationEligible": True,
+                "Direction": "SHORT",
+                "SetupType": "FAILED_BREAK_RECLAIM_SHORT",
+                "EligibleEventTypes": "FAILED_BREAK_UP",
+            },
+        ]
+    )
+
+    rulesets, _ = build_backtest_rulesets(
+        shortlist,
+        research_summary,
+        source_formalization_mode="RESEARCH_SUMMARY_FIRST",
+    )
+
+    assert len(rulesets) == 1
+    assert rulesets.loc[0, "source_candidate_group"] == "report|SetupType|FAILED_BREAK_RECLAIM_SHORT"
+
+
 def test_notes_are_neutral_and_include_source_mode_not_hardcoded_constants_text():
     rulesets, _ = build_backtest_rulesets(
         _shortlist_df(),
