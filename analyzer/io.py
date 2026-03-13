@@ -17,5 +17,5 @@ def ensure_output_dir(output_dir: str | Path) -> Path:
 def save_dataframe(df: pd.DataFrame, path: str | Path) -> Path:
     """Save dataframe to CSV and return output path."""
     path = Path(path)
-    df.to_csv(path, index=False)
+    df.to_csv(path, index=False, encoding="utf-8")
     return path

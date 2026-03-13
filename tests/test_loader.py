@@ -95,3 +95,16 @@ def test_loader_empty_required_numeric_values_fail_clearly(tmp_path):
 
     with pytest.raises(SchemaValidationError, match="Invalid numeric raw values in column 'Volume'"):
         load_raw_csv(src)
+
+
+def test_loader_reads_utf8_csv_explicitly(tmp_path):
+    src = tmp_path / "utf8.csv"
+    src.write_text(
+        "Timestamp,Open,High,Low,Close,Volume,AggTrades,BuyQty,SellQty,VWAP,OpenInterest,FundingRate,LiqBuyQty,LiqSellQty,IsSynthetic\n"
+        "2025-01-01T00:00:00Z,1,2,0,1,1,1,1,0,1,1,0,0,0,0\n",
+        encoding="utf-8",
+    )
+
+    df = load_raw_csv(src)
+    assert len(df) == 1
+    assert df.iloc[0]["Close"] == 1
