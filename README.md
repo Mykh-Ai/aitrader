@@ -377,6 +377,28 @@ research_summary        = result["research_summary"]        # pd.DataFrame — f
 # result["shortlist_explanations_path"], result["research_summary_path"]
 ```
 
+### Analyzer — daily operational run
+
+At the current project stage, Analyzer is intended to run as a separate daily cron job.
+Aggregator continuously writes raw UTC-day CSV files to `feed/YYYY-MM-DD.csv`.
+Analyzer should run once per day after UTC rollover and process yesterday's completed UTC file.
+
+Example: at `2026-03-14 00:05 UTC`, Analyzer input should be `feed/2026-03-13.csv`.
+
+Cron is the default operational path for the current phase.
+Manual Analyzer runs are only for development, debugging, validation, or troubleshooting.
+
+Minimum recommended pre-run checks:
+
+- yesterday raw CSV exists
+- today's new UTC CSV already exists
+- yesterday file is non-empty
+- yesterday file contains the expected CSV header
+- target analyzer run directory is unique
+
+These are operational recommendations for the current runtime mode, not claims about already enforced code-level checks unless documented elsewhere.
+A future continuously running container/service mode is possible later, but it is outside the current scope and is not the current deployment contract.
+
 Requires `pandas`. Tests: `pytest tests/`.
 
 ### Environment variables
