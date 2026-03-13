@@ -206,6 +206,38 @@ def test_run_daily_success(tmp_path):
     assert "artifact_row_counts" in manifest
 
 
+
+
+def _mock_pipeline_run_empty_day(input_path, output_dir):
+    """Mock pipeline.run для валідного empty-day SUCCESS."""
+    import pandas as pd
+
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for name in EXPECTED_ARTIFACTS:
+        pd.DataFrame(columns=["col"]).to_csv(out_dir / name, index=False)
+    return {"features": pd.DataFrame(columns=["col"]) }
+
+
+def test_run_daily_success_with_empty_day_artifacts(tmp_path):
+    """Empty day з валідними порожніми артефактами завершується SUCCESS."""
+    feed_dir = tmp_path / "feed"
+    feed_dir.mkdir()
+    runs_root = tmp_path / "analyzer_runs"
+
+    feed_file = _make_feed_file(feed_dir, "2025-01-01")
+
+    with patch("analyzer.run_daily.pipeline.run", side_effect=_mock_pipeline_run_empty_day):
+        result = run_daily(feed_file, runs_root)
+
+    assert result["status"] == "SUCCESS"
+    with open(result["manifest_path"], encoding="utf-8") as f:
+        manifest = json.load(f)
+    assert manifest["status"] == "SUCCESS"
+    assert manifest["input_bar_count"] == 0
+    assert set(manifest["artifact_row_counts"]) == set(EXPECTED_ARTIFACTS)
+    assert set(manifest["artifact_row_counts"].values()) == {0}
+
 def test_run_daily_repeated_runs_increment(tmp_path):
     """Повторні runs для тієї ж дати інкрементують seq."""
     feed_dir = tmp_path / "feed"

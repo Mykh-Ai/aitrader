@@ -359,9 +359,11 @@ def test_context_report_empty_is_allowed_if_report_has_baseline_and_candidates()
     assert set(rankings["SourceReport"]) == {"report"}
 
 
-def test_both_inputs_empty_fail_loudly():
-    with pytest.raises(ValueError, match="non-empty report_df"):
-        build_setup_rankings(
-            pd.DataFrame(columns=REQUIRED_COLUMNS),
-            pd.DataFrame(columns=REQUIRED_COLUMNS),
-        )
+def test_both_inputs_empty_return_empty_rankings_with_exact_schema():
+    rankings = build_setup_rankings(
+        pd.DataFrame(columns=REQUIRED_COLUMNS),
+        pd.DataFrame(columns=REQUIRED_COLUMNS),
+    )
+
+    assert list(rankings.columns) == RANKING_COLUMNS
+    assert rankings.empty
