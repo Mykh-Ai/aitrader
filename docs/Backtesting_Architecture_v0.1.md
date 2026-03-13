@@ -66,6 +66,13 @@ Implemented Phase 3 package layout:
 - **Outputs:** Canonical ruleset table (`backtest_rulesets.csv`) + ruleset metadata for engine.
 - **Non-responsibilities:** Replay simulation, cost execution, trade metrics, validation decisions.
 
+Research-summary bridge contract (v0.1 hardening):
+- `analyzer_research_summary.csv` may contain rich research rows that are not replayable hypotheses.
+- Ruleset formalization must consume rows marked `FormalizationEligible = TRUE`.
+- Replay semantics columns (`Direction`, `SetupType`, `EligibleEventTypes`) are required only for eligible rows.
+- Non-eligible rows preserve research lineage but are intentionally excluded from ruleset generation.
+- No-setups fallback is explicit: `SetupType` rows with `_LONG`/`_SHORT` suffix may remain eligible; `Direction` rows must fail loud because setup-family lineage is unavailable.
+
 ### `backtester/engine.py`
 - **Responsibility:** Time-ordered replay of bars/events using versioned replay semantics and cost model hooks.
 - **Inputs:** Features/events/setup-level observables, canonical rulesets, replay semantics version, cost model version.

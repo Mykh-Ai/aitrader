@@ -137,7 +137,12 @@ Package: `analyzer/`
 | `selections.py` | Classify ranked groups into SELECT/REVIEW/REJECT decisions with deterministic threshold logic; research triage only |
 | `shortlists.py` | Filter to SELECT+REVIEW rows, sort by priority and score, assign ShortlistRank; export/review view only |
 | `shortlist_explanations.py` | Derive categorical bands (ScoreBand, SampleBand, DeltaDirection, PositiveRateDirection) and composite ExplanationCode per shortlist row |
-| `research_summary.py` | Build deterministic final research summary rows from shortlist + shortlist explanations; map research priority and enforce strict one-to-one joins |
+| `research_summary.py` | Build deterministic final research summary rows from shortlist + shortlist explanations; map research priority, add bridge fields (`FormalizationEligible`, `Direction`, `SetupType`, `EligibleEventTypes`), and enforce strict one-to-one joins |
+
+Bridge contract note (Analyzer → Backtester):
+- `FormalizationEligible=TRUE` rows are formalization-ready for Backtester rulesets.
+- `FormalizationEligible=FALSE` rows are research-only lineage rows and must retain null replay semantics fields.
+- Without `setups_df`, `SetupType` rows with explicit `_LONG`/`_SHORT` suffix remain formalizable; `Direction` rows fail loud because setup-family lineage is unavailable.
 
 **Infrastructure:**
 
