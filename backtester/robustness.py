@@ -33,6 +33,11 @@ REGIME_COLUMNS_PRIORITY = ("regime", "volatility_regime", "session")
 MIN_RESOLVED_FOR_OOS = 6
 MIN_RESOLVED_FOR_WALKFORWARD = 9
 WALKFORWARD_WINDOWS = 3
+MIN_OOS_SEGMENT_OBS = 2
+MIN_REGIME_OBS_PER_LABEL = 3
+
+CRITICAL_CHECKS = ("oos", "walkforward", "regime")
+MAX_CRITICAL_NOT_EVALUATED_FOR_ROBUST = 1
 
 
 class RobustnessContractError(ValueError):
@@ -106,24 +111,43 @@ def _evaluate_oos(resolved_returns_df: pd.DataFrame) -> tuple[str, str, str, str
 
     split_idx = int(len(resolved_returns_df) * 0.7)
     split_idx = max(1, min(split_idx, len(resolved_returns_df) - 1))
-    is_mean = float(resolved_returns_df.iloc[:split_idx]["_return_value"].mean())
-    oos_mean = float(resolved_returns_df.iloc[split_idx:]["_return_value"].mean())
+    is_slice = resolved_returns_df.iloc[:split_idx]
+    oos_slice = resolved_returns_df.iloc[split_idx:]
+    if len(is_slice) < MIN_OOS_SEGMENT_OBS or len(oos_slice) < MIN_OOS_SEGMENT_OBS:
+        return (
+            "NOT_EVALUATED",
+            "",
+            f"IS/OOS slices each require >={MIN_OOS_SEGMENT_OBS} observations",
+            "oos not evaluated: deterministic split produced under-supported IS/OOS slices",
+        )
 
-    if is_mean > 0 and oos_mean > 0:
-        if oos_mean >= 0.5 * is_mean:
+    is_mean = float(is_slice["_return_value"].mean())
+    oos_mean = float(oos_slice["_return_value"].mean())
+    is_pos_rate = float((is_slice["_return_value"] > 0).mean())
+    oos_pos_rate = float((oos_slice["_return_value"] > 0).mean())
+
+    degradation_ratio = np.nan
+    if is_mean > 0:
+        degradation_ratio = oos_mean / is_mean
+
+    if is_mean > 0:
+        if oos_mean <= 0 or oos_pos_rate < 0.40:
+            status = "FRAGILE"
+        elif degradation_ratio >= 0.60 and oos_pos_rate >= 0.50:
             status = "ROBUST"
         else:
             status = "UNSTABLE"
-    elif is_mean > 0 and oos_mean <= 0:
-        status = "FRAGILE"
-    elif is_mean <= 0 and oos_mean > 0:
-        status = "UNSTABLE"
     else:
         status = "UNSTABLE"
 
-    value = f"is_mean={is_mean:.8f};oos_mean={oos_mean:.8f};split=70/30"
+    ratio_repr = "nan" if np.isnan(degradation_ratio) else f"{degradation_ratio:.8f}"
+    value = (
+        f"is_mean={is_mean:.8f};oos_mean={oos_mean:.8f};"
+        f"is_pos_rate={is_pos_rate:.4f};oos_pos_rate={oos_pos_rate:.4f};"
+        f"degradation_ratio={ratio_repr};split=70/30"
+    )
     note = f"oos evaluated from chronological resolved trades; {value}"
-    return status, value, "mean return sign/consistency", note
+    return status, value, "sign, degradation, and minimum-sample consistency", note
 
 
 def _evaluate_walkforward(resolved_returns_df: pd.DataFrame) -> tuple[str, str, str, str]:
@@ -141,16 +165,16 @@ def _evaluate_walkforward(resolved_returns_df: pd.DataFrame) -> tuple[str, str, 
     positive = sum(m > 0 for m in means)
     non_positive = sum(m <= 0 for m in means)
 
-    if positive == len(means):
+    if positive == len(means) and means[-1] >= 0.5 * means[0]:
         status = "ROBUST"
-    elif means[0] > 0 and non_positive >= 2:
+    elif means[0] > 0 and all(m <= 0 for m in means[1:]) and float(np.mean(means[1:])) < 0:
         status = "FRAGILE"
     else:
         status = "UNSTABLE"
 
     value = "window_means=" + "|".join(f"{m:.8f}" for m in means)
     note = f"walk-forward evaluated with deterministic {WALKFORWARD_WINDOWS} chronological windows; {value}"
-    return status, value, "all windows consistent positive => ROBUST", note
+    return status, value, "window stability with local-pocket collapse detection", note
 
 
 def _attach_regime_labels(scope_ledger_df: pd.DataFrame, rulesets_df: pd.DataFrame | None) -> tuple[pd.DataFrame, str | None]:
@@ -182,9 +206,14 @@ def _evaluate_regime(resolved_returns_df: pd.DataFrame, regime_col: str | None) 
         return "NOT_EVALUATED", "", ">=2 regimes with resolved returns", "regime not evaluated: no resolved rows with explicit regime labels"
 
     grouped = work.groupby(regime_col, sort=True)["_return_value"].agg(["count", "mean"]).reset_index()
-    grouped = grouped[grouped["count"] >= 2].reset_index(drop=True)
+    grouped = grouped[grouped["count"] >= MIN_REGIME_OBS_PER_LABEL].reset_index(drop=True)
     if len(grouped) < 2:
-        return "NOT_EVALUATED", "", ">=2 regimes with >=2 observations each", "regime not evaluated: insufficient regime coverage"
+        return (
+            "NOT_EVALUATED",
+            "",
+            f">=2 regimes with >={MIN_REGIME_OBS_PER_LABEL} observations each",
+            "regime not evaluated: insufficient regime coverage",
+        )
 
     means = grouped["mean"].tolist()
     pos = sum(m > 0 for m in means)
@@ -193,9 +222,11 @@ def _evaluate_regime(resolved_returns_df: pd.DataFrame, regime_col: str | None) 
     total_count = int(grouped["count"].sum())
     concentration = max_count / total_count if total_count else 1.0
 
-    if pos == len(means):
+    if pos == len(means) and concentration <= 0.75:
         status = "ROBUST"
     elif pos >= 1 and non_pos >= 1 and concentration > 0.70:
+        status = "FRAGILE"
+    elif pos == 0:
         status = "FRAGILE"
     else:
         status = "UNSTABLE"
@@ -219,27 +250,43 @@ def _evaluate_perturbation(perturbation_df: pd.DataFrame | None, scope: str) -> 
     if scoped.empty:
         return "NOT_EVALUATED", "", "scope coverage in perturbation artifact", "perturbation not evaluated: no rows for scope"
 
-    statuses = sorted({str(v) for v in scoped["status"].dropna().tolist()})
-    if statuses == ["ROBUST"]:
-        status = "ROBUST"
-    elif "FRAGILE" in statuses:
+    statuses = [str(v) for v in scoped["status"].dropna().tolist()]
+    if not statuses:
+        return "NOT_EVALUATED", "", "non-empty status rows", "perturbation not evaluated: scope has no usable status rows"
+    if any(s not in SUB_STATUSES for s in statuses):
+        return "NOT_EVALUATED", "", f"status in {SUB_STATUSES}", "perturbation not evaluated: artifact has unsupported status values"
+
+    fragile_count = sum(s == "FRAGILE" for s in statuses)
+    robust_count = sum(s == "ROBUST" for s in statuses)
+    unstable_count = sum(s == "UNSTABLE" for s in statuses)
+
+    if fragile_count > 0:
         status = "FRAGILE"
+    elif robust_count == len(statuses):
+        status = "ROBUST"
     else:
         status = "UNSTABLE"
 
-    return status, ",".join(statuses), "descriptive only (no search/tuning)", "perturbation status consumed from explicit artifact only"
+    value = (
+        f"rows={len(statuses)};robust={robust_count};"
+        f"unstable={unstable_count};fragile={fragile_count}"
+    )
+    return status, value, "descriptive only (no search/tuning)", "perturbation status consumed from explicit artifact only"
 
 
-def _combine_final_status(sub_statuses: list[str]) -> str:
-    for status in sub_statuses:
+def _combine_final_status(status_by_check: Mapping[str, str]) -> str:
+    for status in status_by_check.values():
         _require_sub_status(status)
 
-    evaluated = [s for s in sub_statuses if s != "NOT_EVALUATED"]
+    critical_not_evaluated = sum(status_by_check.get(check) == "NOT_EVALUATED" for check in CRITICAL_CHECKS)
+    evaluated = [s for s in status_by_check.values() if s != "NOT_EVALUATED"]
     if not evaluated:
         return "UNSTABLE"
     if any(s == "FRAGILE" for s in evaluated):
         return "FRAGILE"
     if any(s == "UNSTABLE" for s in evaluated):
+        return "UNSTABLE"
+    if critical_not_evaluated > MAX_CRITICAL_NOT_EVALUATED_FOR_ROBUST:
         return "UNSTABLE"
     return "ROBUST"
 
@@ -297,7 +344,14 @@ def build_robustness_artifacts(
 
         perturb_status, perturb_value, perturb_threshold, perturb_note = _evaluate_perturbation(perturbation_df, scope)
 
-        final_status = _combine_final_status([oos_status, walk_status, regime_status, perturb_status])
+        final_status = _combine_final_status(
+            {
+                "oos": oos_status,
+                "walkforward": walk_status,
+                "regime": regime_status,
+                "perturbation": perturb_status,
+            }
+        )
 
         notes = (
             f"return_basis={'none' if return_column is None else return_column}; "
