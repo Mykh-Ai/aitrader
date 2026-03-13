@@ -31,6 +31,8 @@ LEDGER_COLUMNS = [
     "cost_model_id",
     "same_bar_policy_id",
     "replay_semantics_version",
+    "trade_return_pct",
+    "trade_pnl",
     "notes",
 ]
 
@@ -58,6 +60,8 @@ def _ledger_df() -> pd.DataFrame:
             "cost_model_id": "ZERO",
             "same_bar_policy_id": "SBP",
             "replay_semantics_version": "REPLAY_V0_1",
+            "trade_return_pct": None,
+            "trade_pnl": None,
             "notes": "",
         },
         {
@@ -81,6 +85,8 @@ def _ledger_df() -> pd.DataFrame:
             "cost_model_id": "ZERO",
             "same_bar_policy_id": "SBP",
             "replay_semantics_version": "REPLAY_V0_1",
+            "trade_return_pct": None,
+            "trade_pnl": None,
             "notes": "",
         },
         {
@@ -104,12 +110,27 @@ def _ledger_df() -> pd.DataFrame:
             "cost_model_id": "ZERO",
             "same_bar_policy_id": "SBP",
             "replay_semantics_version": "REPLAY_V0_1",
+            "trade_return_pct": None,
+            "trade_pnl": None,
             "notes": "",
         },
     ]
     df = pd.DataFrame(rows, columns=LEDGER_COLUMNS)
     for col in ["entry_signal_ts", "entry_activation_ts", "expiry_ts", "exit_ts"]:
         df[col] = pd.to_datetime(df[col], utc=True)
+    return df
+
+
+def _ledger_with_explicit_returns(*, include_return_pct: bool = True, include_pnl: bool = True) -> pd.DataFrame:
+    df = _ledger_df()
+    if include_return_pct:
+        df["trade_return_pct"] = [0.03, -0.02, None]
+    else:
+        df["trade_return_pct"] = None
+    if include_pnl:
+        df["trade_pnl"] = [30.0, -20.0, None]
+    else:
+        df["trade_pnl"] = None
     return df
 
 
@@ -155,12 +176,14 @@ def test_structural_metrics_and_exit_reason_distribution_are_correct():
 
 
 def test_curve_honesty_basis_explicit_and_drawdown_basis_matches_equity():
-    artifacts = build_trade_metrics_artifacts(_ledger_df())
+    artifacts = build_trade_metrics_artifacts(_ledger_with_explicit_returns())
 
-    assert set(artifacts.equity_curve["equity_basis"]) == {"RESOLVED_TRADE_COUNT"}
-    assert set(artifacts.drawdown["drawdown_basis"]) == {"RESOLVED_TRADE_COUNT"}
+    assert set(artifacts.equity_curve["equity_basis"]) == {"TRADE_RETURN_PCT_CUMSUM"}
+    assert set(artifacts.drawdown["drawdown_basis"]) == {"TRADE_RETURN_PCT_CUMSUM"}
     assert (artifacts.drawdown["drawdown_value"] >= 0).all()
     assert artifacts.drawdown["sequence"].tolist() == [1, 2]
+    assert artifacts.equity_curve["equity_step_value"].tolist() == pytest.approx([0.03, 0.01])
+    assert artifacts.drawdown["drawdown_value"].tolist() == pytest.approx([0.0, 0.02])
 
 
 def test_unsupported_return_metrics_are_not_invented_and_are_explicitly_noted():
@@ -172,6 +195,39 @@ def test_unsupported_return_metrics_are_not_invented_and_are_explicitly_noted():
     assert artifacts.trade_metrics["payoff_ratio"].isna().all()
     assert artifacts.trade_metrics["expectancy"].isna().all()
     assert artifacts.trade_metrics["notes"].str.contains("return metrics omitted", regex=False).all()
+
+
+def test_summary_return_metrics_use_explicit_trade_return_pct_and_exclude_unresolved():
+    artifacts = build_trade_metrics_artifacts(_ledger_with_explicit_returns())
+
+    all_scope = artifacts.trade_metrics.loc[artifacts.trade_metrics["scope"] == "ALL_TRADES"].iloc[0]
+    resolved_scope = artifacts.trade_metrics.loc[artifacts.trade_metrics["scope"] == "RESOLVED_ONLY"].iloc[0]
+
+    assert all_scope["win_rate"] == pytest.approx(0.5)
+    assert all_scope["average_win"] == pytest.approx(0.03)
+    assert all_scope["average_loss"] == pytest.approx(-0.02)
+    assert all_scope["payoff_ratio"] == pytest.approx(1.5)
+    assert all_scope["expectancy"] == pytest.approx(0.005)
+    assert resolved_scope["expectancy"] == pytest.approx(0.005)
+    assert artifacts.trade_metrics["notes"].str.contains("explicit trade_return_pct", regex=False).all()
+
+
+def test_economic_basis_falls_back_to_trade_pnl_when_trade_return_pct_absent():
+    artifacts = build_trade_metrics_artifacts(_ledger_with_explicit_returns(include_return_pct=False, include_pnl=True))
+
+    assert set(artifacts.equity_curve["equity_basis"]) == {"TRADE_PNL_CUMSUM"}
+    assert set(artifacts.drawdown["drawdown_basis"]) == {"TRADE_PNL_CUMSUM"}
+    assert artifacts.equity_curve["equity_step_value"].tolist() == pytest.approx([30.0, 10.0])
+    all_scope = artifacts.trade_metrics.loc[artifacts.trade_metrics["scope"] == "ALL_TRADES"].iloc[0]
+    assert all_scope["expectancy"] == pytest.approx(5.0)
+
+
+def test_honest_fallback_to_resolved_trade_count_when_no_economic_result_fields():
+    artifacts = build_trade_metrics_artifacts(_ledger_df())
+
+    assert set(artifacts.equity_curve["equity_basis"]) == {"RESOLVED_TRADE_COUNT"}
+    assert set(artifacts.drawdown["drawdown_basis"]) == {"RESOLVED_TRADE_COUNT"}
+    assert artifacts.equity_curve["notes"].str.contains("not monetary equity", regex=False).all()
 
 
 def test_missing_required_metrics_field_fails_loudly():
