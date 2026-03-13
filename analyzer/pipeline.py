@@ -43,7 +43,7 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
     selections = build_setup_selections(rankings)
     shortlist = build_setup_shortlist(rankings, selections)
     shortlist_explanations = build_setup_shortlist_explanations(shortlist)
-    research_summary = build_research_summary(shortlist, shortlist_explanations)
+    research_summary = build_research_summary(shortlist, shortlist_explanations, setups)
 
     out_dir = ensure_output_dir(output_dir)
     features_path = save_dataframe(features, out_dir / "analyzer_features.csv")
