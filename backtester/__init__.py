@@ -49,6 +49,14 @@ from .robustness import (
     write_robustness_csvs,
 )
 
+from .promotion import (
+    PROMOTION_COLUMNS,
+    PROMOTION_DETAIL_COLUMNS,
+    PromotionArtifacts,
+    PromotionContractError,
+    build_promotion_artifacts,
+    write_promotion_csvs,
+)
 
 __all__ = [
     "RULESET_COLUMNS",
@@ -87,4 +95,10 @@ __all__ = [
     "RobustnessContractError",
     "build_robustness_artifacts",
     "write_robustness_csvs",
+    "PROMOTION_COLUMNS",
+    "PROMOTION_DETAIL_COLUMNS",
+    "PromotionArtifacts",
+    "PromotionContractError",
+    "build_promotion_artifacts",
+    "write_promotion_csvs",
 ]
