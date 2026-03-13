@@ -63,6 +63,14 @@ _VALID_SOURCE_FORMALIZATION_MODES = {
     "INTERSECTION",
 }
 
+
+def _filter_formalization_eligible(df: pd.DataFrame) -> pd.DataFrame:
+    if "FormalizationEligible" not in df.columns:
+        return df
+
+    eligible_mask = df["FormalizationEligible"] == True
+    return df.loc[eligible_mask].copy()
+
 _DEFAULT_VARIANTS = ("BASE",)
 
 
@@ -268,6 +276,8 @@ def build_backtest_rulesets(
             how="inner",
             validate="one_to_one",
         )
+
+    shortlist = _filter_formalization_eligible(shortlist)
 
     shortlist = shortlist.sort_values(
         by=["SourceReport", "GroupType", "GroupValue", "SelectionDecision"],

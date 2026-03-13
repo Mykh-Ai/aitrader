@@ -22,6 +22,10 @@ RESEARCH_SUMMARY_COLUMNS = [
     "DeltaDirection",
     "PositiveRateDirection",
     "ExplanationCode",
+    "FormalizationEligible",
+    "Direction",
+    "SetupType",
+    "EligibleEventTypes",
 ]
 
 _NATURAL_KEY = ["ShortlistRank", "SourceReport", "GroupType", "GroupValue"]
@@ -55,6 +59,146 @@ _REQUIRED_SHORTLIST_EXPLANATION_COLUMNS = {
     "PositiveRateDirection",
     "ExplanationCode",
 }
+
+_REQUIRED_SETUPS_COLUMNS = {"SetupType", "Direction"}
+def _eligible_events_for_direction(direction: str) -> str:
+    if direction == "LONG":
+        return "FAILED_BREAK_DOWN"
+    if direction == "SHORT":
+        return "FAILED_BREAK_UP"
+    if direction == "BOTH":
+        return "FAILED_BREAK_DOWN|FAILED_BREAK_UP"
+    raise ValueError(f"Unsupported direction for research summary replay semantics: {direction}")
+
+
+def _derive_setup_family(setup_types: pd.Series) -> str:
+    families = set()
+    for setup_type in setup_types.dropna().astype(str):
+        upper = setup_type.upper()
+        if upper.endswith("_LONG"):
+            families.add(setup_type[: -len("_LONG")])
+        elif upper.endswith("_SHORT"):
+            families.add(setup_type[: -len("_SHORT")])
+        else:
+            families.add(setup_type)
+
+    if not families:
+        raise ValueError("Cannot derive replay setup family from empty setups_df")
+    if len(families) != 1:
+        raise ValueError(
+            "Cannot derive unique replay setup family for research summary semantics from setups_df: "
+            f"{sorted(families)}"
+        )
+    return next(iter(families))
+
+
+def _enrich_replay_semantics(merged_df: pd.DataFrame, setups_df: pd.DataFrame) -> pd.DataFrame:
+    missing = _REQUIRED_SETUPS_COLUMNS - set(setups_df.columns)
+    if missing:
+        raise KeyError(
+            "Missing required columns for research summary replay semantics enrichment in "
+            f"setups_df: {sorted(missing)}"
+        )
+
+    setup_family = _derive_setup_family(setups_df["SetupType"])
+    formalization_eligible_values: list[bool] = []
+    direction_values: list[str] = []
+    setup_type_values: list[str] = []
+    event_values: list[str] = []
+
+    for row in merged_df.itertuples(index=False):
+        group_type = str(row.GroupType)
+        group_value = str(row.GroupValue)
+        upper_group_value = group_value.upper()
+
+        if group_type == "Direction":
+            if upper_group_value not in {"LONG", "SHORT"}:
+                raise ValueError(
+                    "Unsupported Direction GroupValue for research summary replay semantics enrichment: "
+                    f"{group_value}"
+                )
+            formalization_eligible_values.append(True)
+            direction = upper_group_value
+            setup_type = setup_family
+        elif group_type == "SetupType":
+            formalization_eligible_values.append(True)
+            setup_type = group_value
+            if upper_group_value.endswith("_LONG"):
+                direction = "LONG"
+            elif upper_group_value.endswith("_SHORT"):
+                direction = "SHORT"
+            else:
+                raise ValueError(
+                    "Cannot derive replay direction from SetupType group without explicit _LONG/_SHORT suffix: "
+                    f"{group_value}"
+                )
+        else:
+            formalization_eligible_values.append(False)
+            direction = pd.NA
+            setup_type = pd.NA
+
+        if not formalization_eligible_values[-1]:
+            event_values.append(pd.NA)
+            direction_values.append(direction)
+            setup_type_values.append(setup_type)
+            continue
+
+        direction_values.append(direction)
+        setup_type_values.append(setup_type)
+        event_values.append(_eligible_events_for_direction(direction))
+
+    enriched = merged_df.copy()
+    enriched["FormalizationEligible"] = formalization_eligible_values
+    enriched["Direction"] = direction_values
+    enriched["SetupType"] = setup_type_values
+    enriched["EligibleEventTypes"] = event_values
+    return enriched
+
+
+def _enrich_without_setups_fail_loud_direction_rows(merged_df: pd.DataFrame) -> pd.DataFrame:
+    formalization_eligible_values: list[bool] = []
+    direction_values: list[str] = []
+    setup_type_values: list[str] = []
+    event_values: list[str] = []
+
+    for row in merged_df.itertuples(index=False):
+        group_type = str(row.GroupType)
+        group_value = str(row.GroupValue)
+        upper_group_value = group_value.upper()
+
+        if group_type == "Direction":
+            raise ValueError(
+                "Cannot enrich Direction research summary rows without non-empty setups_df "
+                "because SetupType lineage is unavailable"
+            )
+
+        if group_type == "SetupType":
+            if upper_group_value.endswith("_LONG"):
+                direction = "LONG"
+            elif upper_group_value.endswith("_SHORT"):
+                direction = "SHORT"
+            else:
+                raise ValueError(
+                    "Cannot derive replay direction from SetupType group without explicit _LONG/_SHORT suffix: "
+                    f"{group_value}"
+                )
+            formalization_eligible_values.append(True)
+            direction_values.append(direction)
+            setup_type_values.append(group_value)
+            event_values.append(_eligible_events_for_direction(direction))
+            continue
+
+        formalization_eligible_values.append(False)
+        direction_values.append(pd.NA)
+        setup_type_values.append(pd.NA)
+        event_values.append(pd.NA)
+
+    enriched = merged_df.copy()
+    enriched["FormalizationEligible"] = formalization_eligible_values
+    enriched["Direction"] = direction_values
+    enriched["SetupType"] = setup_type_values
+    enriched["EligibleEventTypes"] = event_values
+    return enriched
 
 
 def _empty_research_summary() -> pd.DataFrame:
@@ -133,7 +277,9 @@ def _derive_research_priority(selection_decision: pd.Series) -> pd.Series:
 
 
 def build_research_summary(
-    shortlist_df: pd.DataFrame, shortlist_explanations_df: pd.DataFrame
+    shortlist_df: pd.DataFrame,
+    shortlist_explanations_df: pd.DataFrame,
+    setups_df: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Build deterministic final research summary rows for Phase 2 outputs."""
     _validate_required_columns(shortlist_df, _REQUIRED_SHORTLIST_COLUMNS, "shortlist_df")
@@ -170,5 +316,10 @@ def build_research_summary(
             )
 
     merged_df["ResearchPriority"] = _derive_research_priority(merged_df["SelectionDecision"])
+
+    if setups_df is None or setups_df.empty:
+        merged_df = _enrich_without_setups_fail_loud_direction_rows(merged_df)
+    else:
+        merged_df = _enrich_replay_semantics(merged_df, setups_df)
 
     return merged_df.loc[:, RESEARCH_SUMMARY_COLUMNS]
