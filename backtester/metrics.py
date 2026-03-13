@@ -24,6 +24,7 @@ TRADE_METRICS_COLUMNS = [
     "average_loss",
     "payoff_ratio",
     "expectancy",
+    "expectancy_basis",
     "notes",
 ]
 
@@ -88,6 +89,7 @@ class TradeMetricsRow:
     average_loss: float | None
     payoff_ratio: float | None
     expectancy: float | None
+    expectancy_basis: str | None
     notes: str
 
 
@@ -223,6 +225,7 @@ def _build_trade_metrics_summary(ledger_df: pd.DataFrame) -> pd.DataFrame:
             average_loss=average_loss,
             payoff_ratio=payoff_ratio,
             expectancy=expectancy,
+            expectancy_basis=return_column,
             notes=(
                 f"scope={scope_name}; includes unresolved counts explicitly; return metrics use resolved-only subset; {return_note}"
                 if scope_name == "ALL_TRADES"

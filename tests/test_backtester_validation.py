@@ -33,6 +33,7 @@ LEDGER_COLUMNS = [
     "replay_semantics_version",
     "trade_return_pct",
     "trade_pnl",
+    "trade_return_r",
     "notes",
 ]
 
@@ -78,6 +79,7 @@ def _make_trade(index: int, *, direction: str = "LONG", source_setup_id: str = "
         "replay_semantics_version": "REPLAY_V0_1",
         "trade_return_pct": None if exit_ts is None else (0.01 if exit_reason_category == "TARGET" else -0.01),
         "trade_pnl": None if exit_ts is None else (1.0 if exit_reason_category == "TARGET" else -1.0),
+        "trade_return_r": None if exit_ts is None else (1.0 if exit_reason_category == "TARGET" else -1.0),
         "notes": "",
     }
 
@@ -337,6 +339,46 @@ def test_long_short_asymmetry_uses_side_returns_when_available_and_remains_hones
     ].iloc[0]
     assert "side expectancy not evaluated" in asymmetry_note
 
+
+
+def test_return_basis_consistency_prefers_pct_then_pnl_then_r_across_metrics_and_validation():
+    ledger = _build_ledger([_make_trade(1), _make_trade(2), _make_trade(3)])
+
+    ledger_pct = ledger.copy()
+    ledger_pct["trade_return_pct"] = [0.03, -0.02, 0.01]
+    ledger_pct["trade_pnl"] = [3.0, -2.0, 1.0]
+    ledger_pct["trade_return_r"] = [1.5, -1.0, 0.5]
+    metrics_pct = build_trade_metrics_artifacts(ledger_pct)
+    validation_pct = build_validation_artifacts(
+        trade_ledger_df=ledger_pct,
+        trade_metrics_df=metrics_pct.trade_metrics,
+        drawdown_df=metrics_pct.drawdown,
+    )
+    pct_note = validation_pct.summary.loc[validation_pct.summary["scope"] == "ALL_TRADES", "notes"].iloc[0]
+    assert "basis=trade_return_pct" in pct_note
+
+    ledger_pnl = ledger_pct.copy()
+    ledger_pnl["trade_return_pct"] = None
+    metrics_pnl = build_trade_metrics_artifacts(ledger_pnl)
+    validation_pnl = build_validation_artifacts(
+        trade_ledger_df=ledger_pnl,
+        trade_metrics_df=metrics_pnl.trade_metrics,
+        drawdown_df=metrics_pnl.drawdown,
+    )
+    pnl_note = validation_pnl.summary.loc[validation_pnl.summary["scope"] == "ALL_TRADES", "notes"].iloc[0]
+    assert "basis=trade_pnl" in pnl_note
+
+    ledger_r = ledger_pct.copy()
+    ledger_r["trade_return_pct"] = None
+    ledger_r["trade_pnl"] = None
+    metrics_r = build_trade_metrics_artifacts(ledger_r)
+    validation_r = build_validation_artifacts(
+        trade_ledger_df=ledger_r,
+        trade_metrics_df=metrics_r.trade_metrics,
+        drawdown_df=metrics_r.drawdown,
+    )
+    r_note = validation_r.summary.loc[validation_r.summary["scope"] == "ALL_TRADES", "notes"].iloc[0]
+    assert "basis=trade_return_r" in r_note
 
 def test_write_validation_csvs(tmp_path: Path):
     ledger = _build_ledger([_make_trade(1), _make_trade(2)])

@@ -27,7 +27,7 @@ ROBUSTNESS_DETAIL_COLUMNS = ["scope", "check", "status", "value", "threshold", "
 
 SUB_STATUSES = ("ROBUST", "UNSTABLE", "FRAGILE", "NOT_EVALUATED")
 FINAL_STATUSES = ("ROBUST", "UNSTABLE", "FRAGILE")
-RETURN_COLUMNS_PRIORITY = ("trade_return_pct", "trade_return_r", "trade_pnl")
+RETURN_COLUMNS_PRIORITY = ("trade_return_pct", "trade_pnl", "trade_return_r")
 REGIME_COLUMNS_PRIORITY = ("regime", "volatility_regime", "session")
 
 MIN_RESOLVED_FOR_OOS = 6
@@ -75,7 +75,10 @@ class RobustnessArtifacts:
 
 def _find_return_column(df: pd.DataFrame) -> str | None:
     for col in RETURN_COLUMNS_PRIORITY:
-        if col in df.columns:
+        if col not in df.columns:
+            continue
+        series = pd.to_numeric(df[col], errors="coerce")
+        if series.notna().any():
             return col
     return None
 

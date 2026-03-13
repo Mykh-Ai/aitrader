@@ -41,7 +41,7 @@ REQUIRED_METRICS_COLUMNS = {
     "notes",
 }
 
-RETURN_COLUMNS_PRIORITY = ("trade_return_pct", "trade_return_r", "trade_pnl")
+RETURN_COLUMNS_PRIORITY = ("trade_return_pct", "trade_pnl", "trade_return_r")
 SOURCE_GROUP_COLUMNS_PRIORITY = (
     "source_report",
     "source_family",
@@ -109,14 +109,6 @@ def _extract_expectancy_basis(metrics_row: pd.Series) -> str | None:
         value = str(metrics_row.get(column, "")).strip()
         if value and value.upper() not in NON_ECONOMIC_DRAWDOWN_BASES:
             return value
-
-    notes = str(metrics_row.get("notes", ""))
-    markers = ("economic return field=", "computed from explicit ")
-    for marker in markers:
-        if marker in notes:
-            suffix = notes.split(marker, 1)[1].split(";", 1)[0].strip()
-            if suffix and suffix.lower() != "none":
-                return suffix
     return None
 
 
@@ -160,7 +152,10 @@ def _drawdown_status(drawdown_df: pd.DataFrame | None) -> tuple[str, str]:
 
 def _find_return_column(ledger_df: pd.DataFrame) -> str | None:
     for col in RETURN_COLUMNS_PRIORITY:
-        if col in ledger_df.columns:
+        if col not in ledger_df.columns:
+            continue
+        series = pd.to_numeric(ledger_df[col], errors="coerce")
+        if series.notna().any():
             return col
     return None
 
