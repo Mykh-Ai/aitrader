@@ -129,7 +129,7 @@ def test_overall_row_computes_expected_metrics():
     assert overall["Median_MAE_Pct"] == pytest.approx(-1.0)
     assert overall["Mean_CloseReturn_Pct"] == pytest.approx(1 / 3)
     assert overall["Median_CloseReturn_Pct"] == pytest.approx(0.5)
-    assert overall["PositiveCloseReturnRate"] == pytest.approx(0.5)
+    assert overall["PositiveCloseReturnRate"] == pytest.approx(2 / 3)
     assert overall["InvalidatedRate"] == pytest.approx(0.25)
     assert overall["ExpiredRate"] == pytest.approx(0.25)
     assert overall["PendingRate"] == pytest.approx(0.5)
@@ -170,3 +170,45 @@ def test_report_row_ordering_matches_contract():
         "OutcomeStatus",
         "OutcomeStatus",
     ]
+
+
+def test_positive_close_return_rate_ignores_null_close_returns():
+    setups_df = pd.DataFrame(
+        [
+            {"SetupId": "S1", "SetupType": "A", "Direction": "LONG", "LifecycleStatus": "PENDING"},
+            {"SetupId": "S2", "SetupType": "A", "Direction": "LONG", "LifecycleStatus": "PENDING"},
+            {"SetupId": "S3", "SetupType": "A", "Direction": "LONG", "LifecycleStatus": "PENDING"},
+        ]
+    )
+    outcomes_df = pd.DataFrame(
+        [
+            {"SetupId": "S1", "OutcomeStatus": "FULL_HORIZON", "MFE_Pct": 1.0, "MAE_Pct": -1.0, "CloseReturn_Pct": 1.0},
+            {"SetupId": "S2", "OutcomeStatus": "FULL_HORIZON", "MFE_Pct": 1.0, "MAE_Pct": -1.0, "CloseReturn_Pct": -1.0},
+            {"SetupId": "S3", "OutcomeStatus": "NO_FORWARD_BARS", "MFE_Pct": pd.NA, "MAE_Pct": pd.NA, "CloseReturn_Pct": pd.NA},
+        ]
+    )
+
+    report = build_setup_report(setups_df, outcomes_df)
+    overall = report.iloc[0]
+
+    assert overall["PositiveCloseReturnRate"] == pytest.approx(0.5)
+
+
+def test_positive_close_return_rate_is_nan_when_all_close_returns_are_null():
+    setups_df = pd.DataFrame(
+        [
+            {"SetupId": "S1", "SetupType": "A", "Direction": "LONG", "LifecycleStatus": "PENDING"},
+            {"SetupId": "S2", "SetupType": "A", "Direction": "LONG", "LifecycleStatus": "PENDING"},
+        ]
+    )
+    outcomes_df = pd.DataFrame(
+        [
+            {"SetupId": "S1", "OutcomeStatus": "NO_FORWARD_BARS", "MFE_Pct": pd.NA, "MAE_Pct": pd.NA, "CloseReturn_Pct": pd.NA},
+            {"SetupId": "S2", "OutcomeStatus": "NO_FORWARD_BARS", "MFE_Pct": pd.NA, "MAE_Pct": pd.NA, "CloseReturn_Pct": pd.NA},
+        ]
+    )
+
+    report = build_setup_report(setups_df, outcomes_df)
+    overall = report.iloc[0]
+
+    assert pd.isna(overall["PositiveCloseReturnRate"])
