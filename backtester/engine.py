@@ -36,6 +36,7 @@ REQUIRED_RULESET_REPLAY_FIELDS = (
     "replay_semantics_version",
 )
 SAME_BAR_OUTCOMES = ("STOP_WINS", "TARGET_WINS", "UNRESOLVED", "DEFERRED", "NONE")
+CLOSE_REASON_CATEGORIES = ("STOP", "TARGET", "EXPIRY", "UNRESOLVED")
 
 ENTRY_TIMING_BASELINE = "SIGNAL_BAR_CLOSE__ENTRY_NEXT_BAR_OPEN"
 ENTRY_PRICE_BASELINE = "NEXT_BAR_OPEN"
@@ -214,6 +215,11 @@ def _build_event(
     same_bar_outcome: str,
     cost_model_id: str,
     replay_semantics_version: str,
+    close_reason: str | None,
+    close_reason_category: str | None,
+    close_resolved: bool,
+    close_price_raw: float | None,
+    close_price_effective: float | None,
     notes: str,
 ) -> dict[str, Any]:
     return {
@@ -232,6 +238,11 @@ def _build_event(
         "same_bar_outcome": same_bar_outcome,
         "cost_model_id": cost_model_id,
         "replay_semantics_version": replay_semantics_version,
+        "close_reason": close_reason,
+        "close_reason_category": close_reason_category,
+        "close_resolved": close_resolved,
+        "close_price_raw": close_price_raw,
+        "close_price_effective": close_price_effective,
         "notes": notes,
     }
 
@@ -242,6 +253,16 @@ def _validate_same_bar_outcome(outcome: str, ruleset_id: str, setup_id: str) -> 
         raise ReplayContractError(
             f"Invalid same-bar outcome '{outcome}' for ruleset={ruleset_id}, setup={setup_id}. "
             f"Allowed values: {SAME_BAR_OUTCOMES}"
+        )
+    return normalized
+
+
+def _validate_close_reason_category(category: str, ruleset_id: str, setup_id: str) -> str:
+    normalized = str(category).strip().upper()
+    if normalized not in CLOSE_REASON_CATEGORIES:
+        raise ReplayContractError(
+            f"Invalid close_reason_category '{category}' for ruleset={ruleset_id}, setup={setup_id}. "
+            f"Allowed values: {CLOSE_REASON_CATEGORIES}"
         )
     return normalized
 
@@ -336,6 +357,11 @@ def run_replay_engine(
                         same_bar_outcome="NONE",
                         cost_model_id=cost_model_id,
                         replay_semantics_version=str(ruleset["replay_semantics_version"]),
+                        close_reason=None,
+                        close_reason_category=None,
+                        close_resolved=False,
+                        close_price_raw=None,
+                        close_price_effective=None,
                         notes="observability=signal_bar_close_only",
                     )
                     emit_event(
@@ -353,6 +379,11 @@ def run_replay_engine(
                         same_bar_outcome="NONE",
                         cost_model_id=cost_model_id,
                         replay_semantics_version=str(ruleset["replay_semantics_version"]),
+                        close_reason=None,
+                        close_reason_category=None,
+                        close_resolved=False,
+                        close_price_raw=None,
+                        close_price_effective=None,
                         notes="entry_timing=next_bar_open",
                     )
 
@@ -373,6 +404,11 @@ def run_replay_engine(
                             same_bar_outcome="NONE",
                             cost_model_id=cost_model_id,
                             replay_semantics_version=str(ruleset["replay_semantics_version"]),
+                            close_reason="ENTRY_EXPIRED_NO_NEXT_BAR",
+                            close_reason_category="EXPIRY",
+                            close_resolved=True,
+                            close_price_raw=None,
+                            close_price_effective=None,
                             notes="no_next_bar_available",
                         )
                         continue
@@ -419,6 +455,11 @@ def run_replay_engine(
                 same_bar_outcome="NONE",
                 cost_model_id=cost_model_id,
                 replay_semantics_version=str(ruleset["replay_semantics_version"]),
+                close_reason=None,
+                close_reason_category=None,
+                close_resolved=False,
+                close_price_raw=None,
+                close_price_effective=None,
                 notes="entry_price_convention=next_bar_open",
             )
 
@@ -437,6 +478,11 @@ def run_replay_engine(
                 same_bar_outcome="NONE",
                 cost_model_id=cost_model_id,
                 replay_semantics_version=str(ruleset["replay_semantics_version"]),
+                close_reason=None,
+                close_reason_category=None,
+                close_resolved=False,
+                close_price_raw=None,
+                close_price_effective=None,
                 notes="stop_evaluation_not_implemented_step2a",
             )
             emit_event(
@@ -454,13 +500,23 @@ def run_replay_engine(
                 same_bar_outcome="NONE",
                 cost_model_id=cost_model_id,
                 replay_semantics_version=str(ruleset["replay_semantics_version"]),
+                close_reason=None,
+                close_reason_category=None,
+                close_resolved=False,
+                close_price_raw=None,
+                close_price_effective=None,
                 notes="target_evaluation_not_implemented_step2a",
             )
 
             force_collision = bool(setup.get("ForceSameBarCollision", False))
+            force_expiry_close = bool(setup.get("ForceExpiryClose", False))
             close_state = "ENTRY_ACTIVE"
             same_bar_outcome = "NONE"
             close_notes = "close_not_resolved_step2a"
+            close_reason = "NO_EXIT_RESOLVED_YET"
+            close_reason_category = "UNRESOLVED"
+            close_resolved = False
+            close_price_raw = None
             if force_collision:
                 policy = same_bar_policies[same_bar_policy_id]
                 outcome = _validate_same_bar_outcome(
@@ -471,14 +527,43 @@ def run_replay_engine(
                 same_bar_outcome = outcome
                 close_state = "CLOSE_POLICY_ROUTED"
                 close_notes = "same_bar_collision_routed_to_policy"
+                if outcome == "STOP_WINS":
+                    close_reason = "SAME_BAR_STOP_WINS_POLICY"
+                    close_reason_category = "STOP"
+                    close_resolved = True
+                    close_price_raw = float(bar_row["Low"]) if direction.upper() == "LONG" else float(bar_row["High"])
+                elif outcome == "TARGET_WINS":
+                    close_reason = "SAME_BAR_TARGET_WINS_POLICY"
+                    close_reason_category = "TARGET"
+                    close_resolved = True
+                    close_price_raw = float(bar_row["High"]) if direction.upper() == "LONG" else float(bar_row["Low"])
+                elif outcome in {"UNRESOLVED", "DEFERRED"}:
+                    close_reason = f"SAME_BAR_{outcome}"
+                    close_reason_category = "UNRESOLVED"
+                    close_resolved = False
+
+            if force_expiry_close:
+                close_state = "CLOSED_EXPIRY"
+                close_notes = "expiry_close_forced"
+                close_reason = "EXPIRY_CLOSE"
+                close_reason_category = "EXPIRY"
+                close_resolved = True
+                close_price_raw = float(bar_row["Close"])
+
+            close_reason_category = _validate_close_reason_category(
+                close_reason_category,
+                str(ruleset["ruleset_id"]),
+                str(setup["SetupId"]),
+            )
 
             cost_close = cost_model.apply(
                 ruleset_row=ruleset,
                 event_type="CLOSE_RESOLVED",
                 timestamp=bar_ts,
-                price_raw=None,
+                price_raw=close_price_raw,
                 direction=direction,
             )
+            close_price_effective = cost_close["price_effective"] if close_price_raw is not None else None
             emit_event(
                 ruleset_id=str(ruleset["ruleset_id"]),
                 event_type="CLOSE_RESOLVED",
@@ -488,12 +573,17 @@ def run_replay_engine(
                 direction=direction,
                 state_before="ENTRY_ACTIVE",
                 state_after=close_state,
-                price_raw=None,
-                price_effective=cost_close["price_effective"],
+                price_raw=close_price_raw,
+                price_effective=close_price_effective,
                 same_bar_policy_id=same_bar_policy_id,
                 same_bar_outcome=same_bar_outcome,
                 cost_model_id=cost_model_id,
                 replay_semantics_version=str(ruleset["replay_semantics_version"]),
+                close_reason=close_reason,
+                close_reason_category=close_reason_category,
+                close_resolved=close_resolved,
+                close_price_raw=close_price_raw,
+                close_price_effective=close_price_effective,
                 notes=close_notes,
             )
             emit_event(
@@ -511,6 +601,11 @@ def run_replay_engine(
                 same_bar_outcome=same_bar_outcome,
                 cost_model_id=cost_model_id,
                 replay_semantics_version=str(ruleset["replay_semantics_version"]),
+                close_reason=None,
+                close_reason_category=None,
+                close_resolved=False,
+                close_price_raw=None,
+                close_price_effective=None,
                 notes=(
                     f"expiry_start_semantics={ruleset['expiry_start_semantics']}"
                     " (placeholder routing only)"
