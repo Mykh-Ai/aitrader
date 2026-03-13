@@ -66,7 +66,7 @@ REQUIRED_LEDGER_COLUMNS = {
     "holding_bars",
 }
 
-RETURN_COLUMNS_PRIORITY = ("trade_return_pct", "trade_return_r", "trade_pnl")
+RETURN_COLUMNS_PRIORITY = ("trade_return_pct", "trade_pnl", "trade_return_r")
 
 
 class MetricsContractError(ValueError):
@@ -150,8 +150,12 @@ def _safe_holding_stats(ledger_df: pd.DataFrame) -> tuple[float | None, float | 
 
 
 def _find_return_column(ledger_df: pd.DataFrame) -> str | None:
+    """Pick a deterministic economic return field with usable numeric values."""
     for column in RETURN_COLUMNS_PRIORITY:
-        if column in ledger_df.columns:
+        if column not in ledger_df.columns:
+            continue
+        series = pd.to_numeric(ledger_df[column], errors="coerce")
+        if series.notna().any():
             return column
     return None
 
@@ -183,7 +187,7 @@ def _build_trade_metrics_summary(ledger_df: pd.DataFrame) -> pd.DataFrame:
     resolved_df = ledger_df[_resolved_mask(ledger_df)].copy()
 
     return_column = _find_return_column(resolved_df)
-    missing_return_note = (
+    return_note = (
         "return metrics omitted: ledger has no explicit return/PnL contract field"
         if return_column is None
         else f"return metrics computed from explicit {return_column}"
@@ -199,8 +203,9 @@ def _build_trade_metrics_summary(ledger_df: pd.DataFrame) -> pd.DataFrame:
             scopes.append((ruleset_id, ledger_df[ledger_df["ruleset_id"].astype(str) == ruleset_id]))
     for scope_name, scope_df in scopes:
         avg_holding, med_holding = _safe_holding_stats(scope_df)
+        resolved_scope_df = scope_df[_resolved_mask(scope_df)]
         win_rate, average_win, average_loss, payoff_ratio, expectancy = _return_metrics(
-            scope_df,
+            resolved_scope_df,
             return_column,
         )
 
@@ -219,9 +224,9 @@ def _build_trade_metrics_summary(ledger_df: pd.DataFrame) -> pd.DataFrame:
             payoff_ratio=payoff_ratio,
             expectancy=expectancy,
             notes=(
-                f"scope={scope_name}; includes unresolved counts explicitly; {missing_return_note}"
+                f"scope={scope_name}; includes unresolved counts explicitly; return metrics use resolved-only subset; {return_note}"
                 if scope_name == "ALL_TRADES"
-                else f"scope={scope_name}; {'resolved subset only' if scope_name == 'RESOLVED_ONLY' else 'per-ruleset subset'}; {missing_return_note}"
+                else f"scope={scope_name}; {'resolved subset only' if scope_name == 'RESOLVED_ONLY' else 'per-ruleset subset'}; return metrics use resolved-only subset; {return_note}"
             ),
         )
         rows.append(row)
@@ -250,17 +255,34 @@ def _build_equity_curve(ledger_df: pd.DataFrame) -> pd.DataFrame:
     if resolved["exit_ts"].isna().any():
         raise MetricsContractError("Resolved trades must have non-null exit_ts for equity curve")
 
+    return_column = _find_return_column(resolved)
+    economic_basis: str | None = None
+    equity_series: pd.Series | None = None
+    if return_column is not None:
+        coerced = pd.to_numeric(resolved[return_column], errors="coerce")
+        if coerced.notna().all():
+            equity_series = coerced.cumsum()
+            economic_basis = f"{return_column.upper()}_CUMSUM"
+
     rows: list[EquityCurveRow] = []
     for idx, row in enumerate(resolved.itertuples(index=False), start=1):
+        if equity_series is not None and economic_basis is not None:
+            equity_step_value = float(equity_series.iloc[idx - 1])
+            equity_basis = economic_basis
+            note = f"economic equity from explicit {return_column} cumulative sum"
+        else:
+            equity_step_value = float(idx)
+            equity_basis = "RESOLVED_TRADE_COUNT"
+            note = "not monetary equity; cumulative resolved trade count"
         rows.append(
             EquityCurveRow(
                 sequence=idx,
                 trade_id=str(row.trade_id),
                 ruleset_id=str(row.ruleset_id),
                 exit_ts=row.exit_ts,
-                equity_step_value=float(idx),
-                equity_basis="RESOLVED_TRADE_COUNT",
-                notes="not monetary equity; cumulative resolved trade count",
+                equity_step_value=equity_step_value,
+                equity_basis=equity_basis,
+                notes=note,
             )
         )
 
