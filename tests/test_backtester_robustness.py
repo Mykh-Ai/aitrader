@@ -26,6 +26,7 @@ LEDGER_COLUMNS = [
     "same_bar_policy_id",
     "replay_semantics_version",
     "notes",
+    "trade_pnl",
     "trade_return_pct",
 ]
 
@@ -62,6 +63,7 @@ def _make_trade(index: int, *, ret: float | None = 0.01, resolved: bool = True, 
         "same_bar_policy_id": "SBP",
         "replay_semantics_version": "REPLAY_V0_1",
         "notes": "",
+        "trade_pnl": ret,
         "trade_return_pct": ret,
     }
     if regime is not None:
@@ -80,7 +82,9 @@ def test_determinism_same_inputs_identical_outputs():
 
 
 def test_oos_honesty_without_return_basis_is_not_evaluated():
-    ledger = _build_ledger([_make_trade(i, ret=0.01) for i in range(1, 8)]).drop(columns=["trade_return_pct"])
+    ledger = _build_ledger([_make_trade(i, ret=0.01) for i in range(1, 8)])
+    ledger["trade_return_pct"] = None
+    ledger["trade_pnl"] = None
     artifacts = build_robustness_artifacts(trade_ledger_df=ledger)
 
     row = artifacts.summary.loc[artifacts.summary["scope"] == "ALL_TRADES"].iloc[0]
@@ -105,6 +109,15 @@ def test_oos_consistent_is_oos_is_robust():
     assert row["oos_status"] == "ROBUST"
 
 
+def test_oos_positive_is_materially_degraded_is_unstable():
+    returns = [0.05, 0.04, 0.05, 0.04, 0.05, 0.01, 0.01, 0.01, 0.01, 0.01]
+    ledger = _build_ledger([_make_trade(i + 1, ret=r) for i, r in enumerate(returns)])
+    artifacts = build_robustness_artifacts(trade_ledger_df=ledger)
+
+    row = artifacts.summary.loc[artifacts.summary["scope"] == "ALL_TRADES"].iloc[0]
+    assert row["oos_status"] == "UNSTABLE"
+
+
 def test_walkforward_honesty_insufficient_observations_not_evaluated():
     ledger = _build_ledger([_make_trade(i, ret=0.02) for i in range(1, 7)])
     artifacts = build_robustness_artifacts(trade_ledger_df=ledger)
@@ -120,6 +133,24 @@ def test_walkforward_inconsistent_windows_deterministic_fragile():
 
     row = artifacts.summary.loc[artifacts.summary["scope"] == "ALL_TRADES"].iloc[0]
     assert row["walkforward_status"] == "FRAGILE"
+
+
+def test_walkforward_broadly_positive_windows_is_robust():
+    returns = [0.03, 0.03, 0.02, 0.03, 0.02, 0.02, 0.02, 0.02, 0.02]
+    ledger = _build_ledger([_make_trade(i + 1, ret=r) for i, r in enumerate(returns)])
+    artifacts = build_robustness_artifacts(trade_ledger_df=ledger)
+
+    row = artifacts.summary.loc[artifacts.summary["scope"] == "ALL_TRADES"].iloc[0]
+    assert row["walkforward_status"] == "ROBUST"
+
+
+def test_walkforward_mixed_windows_is_unstable():
+    returns = [0.03, 0.02, 0.01, 0.02, 0.01, -0.01, 0.02, 0.01, -0.01]
+    ledger = _build_ledger([_make_trade(i + 1, ret=r) for i, r in enumerate(returns)])
+    artifacts = build_robustness_artifacts(trade_ledger_df=ledger)
+
+    row = artifacts.summary.loc[artifacts.summary["scope"] == "ALL_TRADES"].iloc[0]
+    assert row["walkforward_status"] == "UNSTABLE"
 
 
 def test_regime_honesty_missing_label_not_evaluated():
@@ -152,12 +183,69 @@ def test_regime_with_explicit_label_is_evaluated_deterministically():
     assert row2["regime_status"] == "ROBUST"
 
 
+def test_regime_insufficient_per_regime_support_is_not_evaluated():
+    returns = [0.03, 0.02, 0.01, 0.03, 0.02]
+    ledger = _build_ledger([_make_trade(i + 1, ret=r) for i, r in enumerate(returns)])
+    ledger["regime"] = ["trend", "trend", "range", "range", "trend"]
+    artifacts = build_robustness_artifacts(trade_ledger_df=ledger)
+
+    row = artifacts.summary.loc[artifacts.summary["scope"] == "ALL_TRADES"].iloc[0]
+    assert row["regime_status"] == "NOT_EVALUATED"
+
+
+def test_regime_mixed_sign_and_high_concentration_is_fragile():
+    returns = [0.03, 0.02, 0.01, 0.04, 0.03, 0.02, 0.01, 0.02, -0.02, -0.01, -0.03]
+    ledger = _build_ledger([_make_trade(i + 1, ret=r) for i, r in enumerate(returns)])
+    ledger["regime"] = ["trend", "trend", "trend", "trend", "trend", "trend", "trend", "trend", "range", "range", "range"]
+    artifacts = build_robustness_artifacts(trade_ledger_df=ledger)
+
+    row = artifacts.summary.loc[artifacts.summary["scope"] == "ALL_TRADES"].iloc[0]
+    assert row["regime_status"] == "FRAGILE"
+
+
 def test_perturbation_honesty_no_surface_is_not_evaluated():
     ledger = _build_ledger([_make_trade(i, ret=0.02) for i in range(1, 10)])
     artifacts = build_robustness_artifacts(trade_ledger_df=ledger)
 
     row = artifacts.summary.loc[artifacts.summary["scope"] == "ALL_TRADES"].iloc[0]
     assert row["perturbation_status"] == "NOT_EVALUATED"
+
+
+def test_perturbation_explicit_surface_is_deterministic_status():
+    ledger = _build_ledger([_make_trade(i, ret=0.02) for i in range(1, 10)])
+    perturbation_df = pd.DataFrame(
+        [
+            {"scope": "ALL_TRADES", "status": "ROBUST"},
+            {"scope": "ALL_TRADES", "status": "UNSTABLE"},
+            {"scope": "RESOLVED_ONLY", "status": "ROBUST"},
+        ]
+    )
+    artifacts = build_robustness_artifacts(trade_ledger_df=ledger, perturbation_df=perturbation_df)
+
+    all_row = artifacts.summary.loc[artifacts.summary["scope"] == "ALL_TRADES"].iloc[0]
+    resolved_row = artifacts.summary.loc[artifacts.summary["scope"] == "RESOLVED_ONLY"].iloc[0]
+    assert all_row["perturbation_status"] == "UNSTABLE"
+    assert resolved_row["perturbation_status"] == "ROBUST"
+
+
+def test_coverage_hardening_prevents_final_robust_with_weak_critical_coverage():
+    ledger = _build_ledger([_make_trade(i, ret=0.02) for i in range(1, 10)])
+    perturbation_df = pd.DataFrame([{"scope": "ALL_TRADES", "status": "ROBUST"}])
+    artifacts = build_robustness_artifacts(trade_ledger_df=ledger, perturbation_df=perturbation_df)
+
+    row = artifacts.summary.loc[artifacts.summary["scope"] == "ALL_TRADES"].iloc[0]
+    assert row["oos_status"] == "ROBUST"
+    assert row["walkforward_status"] == "ROBUST"
+    assert row["regime_status"] == "NOT_EVALUATED"
+    assert row["robustness_status"] == "ROBUST"
+
+    short_ledger = _build_ledger([_make_trade(i, ret=0.02) for i in range(1, 6)])
+    artifacts_short = build_robustness_artifacts(trade_ledger_df=short_ledger, perturbation_df=perturbation_df)
+    short_row = artifacts_short.summary.loc[artifacts_short.summary["scope"] == "ALL_TRADES"].iloc[0]
+    assert short_row["oos_status"] == "NOT_EVALUATED"
+    assert short_row["walkforward_status"] == "NOT_EVALUATED"
+    assert short_row["regime_status"] == "NOT_EVALUATED"
+    assert short_row["robustness_status"] == "UNSTABLE"
 
 
 def test_unresolved_trades_explicitly_excluded_from_return_checks():
