@@ -1,7 +1,9 @@
 import pandas as pd
 import pytest
 
+import analyzer.selections as selections
 from analyzer.selections import SELECTION_COLUMNS, build_setup_selections
+from analyzer.thresholds import MIN_SAMPLE_COUNT as SHARED_MIN_SAMPLE_COUNT
 
 
 REQUIRED_RANKING_COLUMNS = [
@@ -192,3 +194,54 @@ def test_row_order_is_preserved_and_schema_matches_exact_order():
         ["report", "Direction", "SHORT"],
         ["report", "SetupType", "A"],
     ]
+
+
+def test_selection_boundary_behavior_for_4_5_6_is_preserved():
+    rankings_df = pd.DataFrame(
+        [
+            {
+                "SourceReport": "report",
+                "GroupType": "SetupType",
+                "GroupValue": "S4",
+                "SampleCount": 4,
+                "RankingScore": 0.1,
+                "RankingLabel": "LOW_SAMPLE",
+                "Delta_Mean_CloseReturn_Pct": 0.1,
+                "Delta_PositiveCloseReturnRate": 0.1,
+                "MinSamplePassed": False,
+            },
+            {
+                "SourceReport": "report",
+                "GroupType": "SetupType",
+                "GroupValue": "S5",
+                "SampleCount": 5,
+                "RankingScore": 0.1,
+                "RankingLabel": "TOP",
+                "Delta_Mean_CloseReturn_Pct": 0.1,
+                "Delta_PositiveCloseReturnRate": 0.1,
+                "MinSamplePassed": True,
+            },
+            {
+                "SourceReport": "report",
+                "GroupType": "SetupType",
+                "GroupValue": "S6",
+                "SampleCount": 6,
+                "RankingScore": 0.1,
+                "RankingLabel": "TOP",
+                "Delta_Mean_CloseReturn_Pct": 0.1,
+                "Delta_PositiveCloseReturnRate": 0.1,
+                "MinSamplePassed": True,
+            },
+        ]
+    )
+
+    selections_df = build_setup_selections(rankings_df)
+    decisions = dict(zip(selections_df["SampleCount"], selections_df["SelectionDecision"]))
+
+    assert decisions[4] == "REJECT"
+    assert decisions[5] == "SELECT"
+    assert decisions[6] == "SELECT"
+
+
+def test_selections_uses_shared_min_sample_threshold():
+    assert selections.MIN_SAMPLE_COUNT == SHARED_MIN_SAMPLE_COUNT == 5

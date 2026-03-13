@@ -99,6 +99,13 @@ def _numeric_median(series: pd.Series) -> float:
         return float("nan")
     return float(numeric.median())
 
+
+def _positive_close_return_rate(series: pd.Series) -> float:
+    numeric = pd.to_numeric(series, errors="coerce").dropna()
+    if numeric.empty:
+        return float("nan")
+    return float((numeric > 0).mean())
+
 def _summarize_group(group_df: pd.DataFrame, group_type: str, group_value: str) -> dict:
     sample_count = int(len(group_df))
     return {
@@ -111,7 +118,7 @@ def _summarize_group(group_df: pd.DataFrame, group_type: str, group_value: str) 
         "Median_MAE_Pct": _numeric_median(group_df["MAE_Pct"]),
         "Mean_CloseReturn_Pct": _numeric_mean(group_df["CloseReturn_Pct"]),
         "Median_CloseReturn_Pct": _numeric_median(group_df["CloseReturn_Pct"]),
-        "PositiveCloseReturnRate": (group_df["CloseReturn_Pct"] > 0).mean(),
+        "PositiveCloseReturnRate": _positive_close_return_rate(group_df["CloseReturn_Pct"]),
         "InvalidatedRate": (group_df["LifecycleStatus"] == "INVALIDATED").mean(),
         "ExpiredRate": (group_df["LifecycleStatus"] == "EXPIRED").mean(),
         "PendingRate": (group_df["LifecycleStatus"] == "PENDING").mean(),

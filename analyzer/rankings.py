@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pandas as pd
+from analyzer.thresholds import MIN_SAMPLE_COUNT
 
 RANKING_COLUMNS = [
     "SourceReport",
@@ -22,7 +23,6 @@ RANKING_COLUMNS = [
     "RankingLabel",
 ]
 
-MIN_SAMPLE_COUNT = 5
 
 _REQUIRED_INPUT_COLUMNS = {
     "GroupType",
