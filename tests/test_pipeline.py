@@ -4,7 +4,12 @@ import pandas as pd
 import pytest
 
 from analyzer.pipeline import run
+from analyzer.rankings import RANKING_COLUMNS
 from analyzer.schema import FEATURE_COLUMNS_IMPLEMENTED, FEATURE_COLUMNS_PLANNED
+from analyzer.selections import SELECTION_COLUMNS
+from analyzer.shortlist_explanations import SHORTLIST_EXPLANATION_COLUMNS
+from analyzer.shortlists import SHORTLIST_COLUMNS
+from analyzer.research_summary import RESEARCH_SUMMARY_COLUMNS
 
 
 RANKING_INPUT_COLUMNS = [
@@ -18,11 +23,30 @@ RANKING_INPUT_COLUMNS = [
 ]
 
 
-def test_pipeline_fails_loudly_when_report_is_empty(tmp_path):
+def test_pipeline_succeeds_with_valid_empty_day_outputs(tmp_path):
     fixture = Path(__file__).parent / "fixtures" / "sample_raw_minimal.csv"
 
-    with pytest.raises(ValueError, match="non-empty report_df"):
-        run(fixture, tmp_path)
+    result = run(fixture, tmp_path)
+
+    assert result["setups"].empty
+    assert result["outcomes"].empty
+    assert result["report"].empty
+    assert result["context_report"].empty
+
+    assert list(result["rankings"].columns) == RANKING_COLUMNS
+    assert result["rankings"].empty
+
+    assert list(result["selections"].columns) == SELECTION_COLUMNS
+    assert result["selections"].empty
+
+    assert list(result["shortlist"].columns) == SHORTLIST_COLUMNS
+    assert result["shortlist"].empty
+
+    assert list(result["shortlist_explanations"].columns) == SHORTLIST_EXPLANATION_COLUMNS
+    assert result["shortlist_explanations"].empty
+
+    assert list(result["research_summary"].columns) == RESEARCH_SUMMARY_COLUMNS
+    assert result["research_summary"].empty
 
 
 def test_pipeline_smoke_writes_outputs_with_valid_report_baseline(tmp_path, monkeypatch):
@@ -314,3 +338,73 @@ def test_pipeline_end_to_end_contract_consistency_non_mocked(tmp_path):
     assert "research_summary" in result
     assert set(result["rankings"]["SourceReport"].unique()) <= {"report", "context_report"}
     assert len(result["selections"]) == len(result["rankings"])
+
+
+def test_pipeline_succeeds_on_small_sample_when_numeric_context_buckets_are_not_possible(
+    tmp_path, monkeypatch
+):
+    fixture = Path(__file__).parent / "fixtures" / "sample_raw_minimal.csv"
+
+    small_setups = pd.DataFrame(
+        [
+            {
+                "SetupId": "S1",
+                "SetupType": "ABSORPTION_LONG",
+                "Direction": "LONG",
+                "LifecycleStatus": "PENDING",
+                "AbsorptionScore_v1": 1.0,
+                "CtxRelVolumeSpike_v1": 1,
+                "CtxDeltaSpike_v1": 0,
+                "CtxOISpike_v1": 1,
+                "CtxLiqSpike_v1": 0,
+                "CtxWickReclaim_v1": 1,
+                "RelVolume_20": 10.0,
+                "DeltaAbsRatio_20": 20.0,
+                "OIChangeAbsRatio_20": 30.0,
+                "LiqTotalRatio_20": 40.0,
+            },
+            {
+                "SetupId": "S2",
+                "SetupType": "SWEEP_SHORT",
+                "Direction": "SHORT",
+                "LifecycleStatus": "PENDING",
+                "AbsorptionScore_v1": 2.0,
+                "CtxRelVolumeSpike_v1": 0,
+                "CtxDeltaSpike_v1": 1,
+                "CtxOISpike_v1": 0,
+                "CtxLiqSpike_v1": 1,
+                "CtxWickReclaim_v1": 0,
+                "RelVolume_20": 10.0,
+                "DeltaAbsRatio_20": 20.0,
+                "OIChangeAbsRatio_20": 30.0,
+                "LiqTotalRatio_20": 40.0,
+            },
+        ]
+    )
+    small_outcomes = pd.DataFrame(
+        [
+            {
+                "SetupId": "S1",
+                "OutcomeStatus": "FULL_HORIZON",
+                "MFE_Pct": 1.0,
+                "MAE_Pct": -1.0,
+                "CloseReturn_Pct": 1.0,
+            },
+            {
+                "SetupId": "S2",
+                "OutcomeStatus": "PARTIAL_HORIZON",
+                "MFE_Pct": 2.0,
+                "MAE_Pct": -2.0,
+                "CloseReturn_Pct": -1.0,
+            },
+        ]
+    )
+
+    monkeypatch.setattr("analyzer.pipeline.extract_setup_candidates", lambda features, events: small_setups)
+    monkeypatch.setattr("analyzer.pipeline.build_setup_outcomes", lambda features, setups: small_outcomes)
+
+    result = run(fixture, tmp_path)
+
+    assert not result["context_report"].empty
+    assert "RelVolume_20" not in result["context_report"]["GroupType"].values
+    assert not result["rankings"].empty

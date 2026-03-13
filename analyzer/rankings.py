@@ -153,6 +153,8 @@ def build_setup_rankings(report_df: pd.DataFrame, context_report_df: pd.DataFram
     _validate_required_columns(context_report_df, "context_report_df")
 
     if report_df.empty:
+        if context_report_df.empty:
+            return _empty_rankings()
         raise ValueError("Expected non-empty report_df with an overall baseline row for ranking")
 
     baseline_row = _extract_baseline_row(report_df)

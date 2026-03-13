@@ -196,10 +196,7 @@ def _build_numeric_bucket_rows(merged: pd.DataFrame) -> list[dict]:
             )
 
         if series.nunique() < 3:
-            raise ValueError(
-                "Expected at least 3 distinct non-null values for numeric context bucket generation; "
-                f"column={numeric_column}, unique_values={int(series.nunique())}"
-            )
+            continue
 
         ranks = series.rank(method="first")
         buckets = pd.qcut(ranks, q=3, labels=_BUCKET_LABELS)
