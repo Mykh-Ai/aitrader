@@ -49,6 +49,14 @@ from .robustness import (
     write_robustness_csvs,
 )
 
+from .orchestrator import (
+    ORCHESTRATION_MANIFEST_NAME,
+    OrchestrationResult,
+    orchestrate_backtest,
+    result_as_dict,
+    run_backtester,
+)
+
 from .promotion import (
     PROMOTION_COLUMNS,
     PROMOTION_DETAIL_COLUMNS,
@@ -101,4 +109,9 @@ __all__ = [
     "PromotionContractError",
     "build_promotion_artifacts",
     "write_promotion_csvs",
+    "ORCHESTRATION_MANIFEST_NAME",
+    "OrchestrationResult",
+    "run_backtester",
+    "orchestrate_backtest",
+    "result_as_dict",
 ]
