@@ -1,7 +1,7 @@
 # Стратегія Ші v1.0 — AI Trader
 
 BTC research and analysis system built toward algorithmic trading.
-Currently at Phase 2: raw data collection + Analyzer facts engine + setup research pipeline.
+Currently at Phase 3 baseline: raw data collection + Analyzer research pipeline + Backtester baseline stack.
 Target execution: Binance Spot Margin BTC/USDC (isolated, max 2x) — planned Phase 4.
 
 **Trading hypothesis:** Liquidity grab + failed break reclaim. Price sweeps a structural
@@ -30,8 +30,8 @@ Binance Futures API (fstream / fapi)
    → selections → shortlist → explanations
    → research summary
         │
-   Backtester                    ← Phase 3: PLANNED
-   6-month validation
+   Backtester                    ← Phase 3: IMPLEMENTED (baseline)
+   deterministic replay + ledger + metrics + validation + robustness + promotion
         │
    Executor                      ← Phase 4: PLANNED
    Binance Spot Margin BTC/USDC (isolated, max 2x)
@@ -43,8 +43,44 @@ Binance Futures API (fstream / fapi)
 |-------|--------|-------------|
 | 1. Raw feed + Analyzer facts engine | ✅ Implemented | 1m collector live; Analyzer computes all features and events |
 | 2. Setup research pipeline | ✅ Implemented | Setup extraction, outcomes, reports, context analysis, rankings, selections, shortlist, explanations, final research summary |
-| 3. Backtesting | 🔜 Planned | 6-month strategy validation |
+| 3. Backtesting | ✅ Implemented (baseline) | Ruleset formalization, deterministic replay skeleton, trade ledger, metrics, validation, robustness, promotion, orchestration artifacts |
 | 4. Execution | 🔜 Planned | Live trading via Binance Spot Margin API |
+
+## Backtester — Phase 3 baseline
+
+Package: `backtester/`
+
+- Implemented modules: `rulesets.py`, `engine.py`, `ledger.py`, `metrics.py`, `validation.py`, `robustness.py`, `promotion.py`, `orchestrator.py`.
+- End-to-end orchestration entrypoint: `backtester/orchestrator.py` (`run_backtester`, `orchestrate_backtest`).
+- Boundary: consumes pre-generated Analyzer CSV artifacts; does not call `analyzer.pipeline.run()` implicitly.
+
+Current output artifacts include:
+
+- `backtest_rulesets.csv`
+- `backtest_engine_events.csv`
+- `backtest_run_manifest.json`
+- `backtest_trades.csv`
+- `backtest_trade_metrics.csv`
+- `backtest_equity_curve.csv`
+- `backtest_drawdown.csv`
+- `backtest_exit_reason_summary.csv`
+- `backtest_validation_summary.csv`
+- `backtest_validation_details.csv`
+- `backtest_robustness_summary.csv`
+- `backtest_robustness_details.csv`
+- `backtest_promotion_decisions.csv`
+- `backtest_promotion_details.csv`
+- `backtest_orchestration_manifest.json`
+
+Implemented baseline limitations (documented and explicit):
+
+- unresolved trade states are explicit (`NO_EXIT_RESOLVED_YET`, `UNRESOLVED`, `DEFERRED`)
+- ledger exit mapping is currently heuristic for unresolved/placeholder close paths
+- equity/drawdown basis is non-monetary by default (`RESOLVED_TRADE_COUNT`)
+- validation and robustness thresholds/splits are provisional heuristics
+- perturbation checks are external-surface only
+- regime robustness requires explicit regime labels
+- promotion decisions are research progression outputs only (not live-trading authorization)
 
 ## Analyzer — Scope
 

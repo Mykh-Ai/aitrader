@@ -1,14 +1,14 @@
 # Strategy Shi — Backtesting Architecture v0.1
 
-**Status:** Draft architecture companion (design-only)  
-**Phase:** 3 — Planned  
+**Status:** Implemented baseline architecture companion  
+**Phase:** 3 — Implemented baseline  
 **Companion to:** `docs/Backtesting_Spec_v0.1.md` (normative behavior), `docs/Spec_v1.0.md` (Analyzer contract)
 
 ---
 
 ## 1. Purpose
 
-This document defines the **module architecture**, **artifact flow**, and **interface contracts** for the planned Backtesting subsystem before implementation starts.
+This document defines the **module architecture**, **artifact flow**, and **interface contracts** for the implemented Backtesting baseline.
 
 Its role is to make boundaries explicit and prevent hidden assumptions around replay semantics, determinism, lookahead handling, and promotion decisions.
 
@@ -58,7 +58,7 @@ Backtester assumes Analyzer artifacts already satisfy Analyzer schema/time guara
 
 ## 4. Module architecture
 
-Planned Phase 3 package layout:
+Implemented Phase 3 package layout:
 
 ### `backtester/rulesets.py`
 - **Responsibility:** Deterministic ruleset schema and ruleset materialization from research candidates (e.g., shortlist/research summary mapping).
@@ -102,6 +102,12 @@ Planned Phase 3 package layout:
 - **Outputs:** `backtest_promotion_decisions.csv`.
 - **Non-responsibilities:** Computing replay facts, editing trade ledger, live execution triggers.
 
+### `backtester/orchestrator.py`
+- **Responsibility:** End-to-end Phase 3 orchestration over pre-generated Analyzer artifacts.
+- **Inputs:** Analyzer artifact directory + run controls (ruleset mode, variants, model ids, semantics version).
+- **Outputs:** Full baseline artifact set + `backtest_orchestration_manifest.json`.
+- **Non-responsibilities:** Analyzer generation, live execution authorization.
+
 ---
 
 ## 5. Artifact flow
@@ -117,19 +123,28 @@ High-level dataflow:
 `→ robustness`  
 `→ promotion decisions`
 
-Expected Phase 3 artifacts:
+Implemented baseline artifacts:
 
 - `backtest_rulesets.csv`
+- `backtest_engine_events.csv`
+- `backtest_run_manifest.json`
 - `backtest_trades.csv`
 - `backtest_trade_metrics.csv`
 - `backtest_equity_curve.csv`
 - `backtest_drawdown.csv`
+- `backtest_exit_reason_summary.csv`
 - `backtest_validation_summary.csv`
+- `backtest_validation_details.csv`
 - `backtest_robustness_summary.csv`
+- `backtest_robustness_details.csv`
 - `backtest_promotion_decisions.csv`
-- `backtest_run_manifest.json`
+- `backtest_promotion_details.csv`
+- `backtest_orchestration_manifest.json`
 
-`backtest_run_manifest.json` is the run-level reproducibility anchor (input artifact refs, versions, dataset range, policy versions, output hashes/paths).
+Manifest model is currently two-layered:
+
+- `backtest_run_manifest.json` — engine-level replay manifest.
+- `backtest_orchestration_manifest.json` — orchestration-level run manifest spanning rulesets→promotion.
 
 ---
 
@@ -144,31 +159,27 @@ To avoid module sprawl, major concerns are assigned as follows:
 - **Acceptance checks:** `validation.py`
 - **OOS / walk-forward / perturbation checks:** `robustness.py`
 - **Final promote/review/reject state:** `promotion.py`
+- **Run orchestration + boundary enforcement:** `orchestrator.py`
 
 Cross-module rule: downstream modules may derive summaries from upstream facts, but may not rewrite replay/ledger facts.
 
 ---
 
-## 7. Step 1 implementation boundary
+## 7. Implemented baseline boundary
 
-Implementation sequencing for Phase 3 is explicitly staged:
+All core waves are implemented in baseline form:
 
-### Step 1 (first implementation wave)
+- ruleset formalization,
+- replay event generation,
+- trade ledger materialization,
+- metrics artifacts,
+- validation artifacts,
+- robustness artifacts,
+- promotion artifacts,
+- end-to-end orchestration.
 
-- implement ruleset schema,
-- implement ruleset builder/mapping from Analyzer shortlist and research_summary artifacts (explicit source-lineage input boundary),
-- emit `backtest_rulesets.csv` + run manifest skeleton,
-- no replay engine yet,
-- no trade ledger/metrics/validation/robustness/promotion yet.
-
-### Later waves (planned)
-
-- **Step 2:** replay engine + cost-model contract + ledger output,
-- **Step 3:** metrics outputs (trade/equity/drawdown),
-- **Step 4:** validation and robustness modules,
-- **Step 5:** promotion decision layer.
-
-This ordering keeps first delivery focused on deterministic hypothesis formalization before simulation complexity.
+Remaining work is hardening/completeness (economic return surface, richer stop/target resolution,
+finalized thresholds), not absence of Phase 3 modules.
 
 ---
 
@@ -210,6 +221,21 @@ The following known constraints remain inherited and must be surfaced in interpr
 
 3. **Retrospective sweep bias caveat:** known caveat from current research surface.
    - Architecture impact: robustness/validation outputs must keep caveat visible in run summaries and promotion decisions.
+
+4. **Unresolved trade handling is explicit:** baseline ledger can emit
+   `NO_EXIT_RESOLVED_YET`, `UNRESOLVED`, `DEFERRED` with deterministic heuristic mapping.
+
+5. **Equity/drawdown basis is non-monetary by default:** baseline uses `RESOLVED_TRADE_COUNT` basis.
+
+6. **Validation and robustness thresholds are provisional heuristics:** status outputs are deterministic, but cutoffs/splits are interim.
+
+7. **Perturbation is external-surface only:** robustness consumes an explicit perturbation artifact if provided.
+
+8. **Regime robustness requires explicit labels:** otherwise regime check is `NOT_EVALUATED`.
+
+9. **Promotion is not live authorization:** promotion outputs are execution-design progression only.
+
+10. **Missing-scope promotion seam exists:** promotion may emit `robustness_status="MISSING"` and force `REVIEW` when robustness scope is absent.
 
 Phase 3 architecture does not redesign these limitations in v0.1; it records where they affect decision confidence.
 

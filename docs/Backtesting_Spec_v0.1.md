@@ -1,8 +1,8 @@
 # Стратегія Ші v1.0 — Backtesting_Spec_v0.1
 
-**Status:** Draft  
-**Phase:** 3 — Planned  
-**Purpose:** Formal backtesting contract before implementation
+**Status:** Implemented baseline contract (v0.1)  
+**Phase:** 3 — Implemented baseline  
+**Purpose:** Formal backtesting contract aligned to current implementation
 
 ---
 
@@ -21,6 +21,22 @@ Phase 3 defines the formal contract for:
 This document exists to prevent the Backtester from inheriting hidden assumptions, silent execution semantics, or lookahead leakage.
 
 Phase 3 begins only after Phase 2 research outputs already exist.
+
+### 1.1 Implemented baseline status (repo truth)
+
+The current repository contains an implemented baseline stack for all core Phase 3 modules:
+
+- `backtester/rulesets.py`
+- `backtester/engine.py`
+- `backtester/ledger.py`
+- `backtester/metrics.py`
+- `backtester/validation.py`
+- `backtester/robustness.py`
+- `backtester/promotion.py`
+- `backtester/orchestrator.py`
+
+This spec keeps the contract shape and explicitly marks which parts are baseline-implemented,
+which are provisional heuristics, and which remain future hardening work.
 
 ### Out of scope for this document
 Phase 3 is **not**:
@@ -332,8 +348,8 @@ Each cost model must define:
 
 Default v0.1 assumptions:
 
-- fees are always applied
-- slippage is always applied on entry and exit
+- baseline implementation may run with explicit hook id `COST_MODEL_ZERO_SKELETON_ONLY`
+- fee/slippage-enriched models remain supported as explicit hook extensions
 - no partial fills are modeled
 - no queue priority advantage is assumed
 - no optimistic fill assumption is allowed
@@ -364,7 +380,9 @@ The engine must:
 - consume bars in strict timestamp order
 - evaluate eligibility without lookahead
 - activate entries only when allowed by replay semantics
-- simulate stop, TP, trailing, invalidation, and expiry behavior
+- baseline implementation enforces signal materialization + next-bar-open activation and emits
+  explicit stop/target/expiry/close evaluation events, with placeholder notes where full
+  stop/target path resolution is not yet hardened
 - generate one immutable trade ledger row per completed trade
 - remain deterministic across repeated runs on identical inputs
 
@@ -522,13 +540,12 @@ The trade ledger is the immutable historical record of simulated trades.
 
 ### 8.1 Required columns
 
-Minimum required columns:
+Implemented baseline required columns:
 
 - `trade_id`
 - `ruleset_id`
 - `source_setup_id`
 - `direction`
-- `symbol`
 - `entry_signal_ts`
 - `entry_activation_ts`
 - `entry_price_raw`
@@ -540,18 +557,23 @@ Minimum required columns:
 - `exit_price_raw`
 - `exit_price_effective`
 - `exit_reason`
+- `exit_reason_category`
 - `holding_bars`
-- `gross_return_pct`
-- `net_return_pct`
-- `gross_r_multiple`
-- `net_r_multiple`
-- `mae_pct`
-- `mfe_pct`
-- `mae_r`
-- `mfe_r`
 - `cost_model_id`
 - `same_bar_policy_id`
+- `replay_semantics_version`
 - `notes`
+
+### 8.1A Baseline unresolved/heuristic exit seam
+
+Baseline ledger materialization keeps unresolved states explicit and fail-loud:
+
+- `NO_EXIT_RESOLVED_YET`
+- `UNRESOLVED`
+- `DEFERRED`
+
+Exit reason/category mapping is currently deterministic but heuristic for placeholder close paths
+(for example when close routing is present but full stop/target monetary resolution is not yet available).
 
 ### 8.2 Optional lineage fields
 
@@ -595,7 +617,7 @@ Phase 3 measures trade-level performance, not only setup-level outcomes.
 
 ### 9.1 Required v0.1 metric groups
 
-Minimum required metrics:
+Implemented baseline metrics:
 
 #### Trade count metrics
 - total trades
@@ -606,19 +628,12 @@ Minimum required metrics:
 - expired trades
 - invalidated trades
 
-#### Return metrics
-- average gross return
-- average net return
-- median net return
-- total net return
-- expectancy
-- payoff ratio
+#### Return metrics (conditional in baseline)
+- expectancy/payoff/win/loss stats are computed only when explicit return-like ledger fields exist
+- if no explicit return/PnL field exists, return metrics are marked as omitted in notes
 
 #### R-based metrics
-- average R
-- median R
-- R-multiple distribution
-- percent profitable in R terms
+- reserved for hardening phase once stable R-contract columns are materialized in ledger
 
 #### Path metrics
 - average MAE
@@ -631,6 +646,8 @@ Minimum required metrics:
 - equity curve
 - max drawdown
 - drawdown duration
+
+Baseline caveat: equity/drawdown are non-monetary by default (`RESOLVED_TRADE_COUNT` basis).
 
 ### 9.2 Extended metrics (allowed after v0.1 core)
 
@@ -699,6 +716,9 @@ In v0.1:
 
 This avoids false precision before sufficient sample accumulation.
 
+Current implementation uses explicit provisional heuristics for sample sufficiency,
+outlier dependence, long/short asymmetry, source concentration, and drawdown interpretation.
+
 Statistical significance methodology is not mandatory for the first replay-capable
 implementation, but it is not considered out of scope.
 
@@ -737,14 +757,20 @@ Each promotable ruleset should be tested with:
 - in-sample / out-of-sample split
 - walk-forward or rolling-window replay
 - regime split by major context state
-- mild parameter perturbation around baseline settings
+- mild parameter perturbation around baseline settings (in baseline: external artifact surface only)
 
 The exact walk-forward protocol is deferred in v0.1 specification details.
-Before robustness implementation is considered complete, the following must be fixed explicitly:
+Before robustness hardening is considered complete, the following must be fixed explicitly:
 
 - anchored vs sliding window mode
 - train / test window sizes
 - step size between windows
+
+Current implementation uses provisional deterministic heuristics (e.g., fixed chronological split,
+fixed walk-forward window count, minimum resolved-trade counts) and marks unavailable checks as
+`NOT_EVALUATED`.
+
+Regime evaluation is performed only when explicit regime labels are available.
 
 ### 11.3 Fragility criteria
 
@@ -838,6 +864,10 @@ explicitly recorded in the run manifest.
 
 They do **not** auto-authorize live execution.
 
+Implemented seam: if validation scope exists without matching robustness scope,
+promotion keeps deterministic non-promote behavior via `REVIEW` and may emit
+`robustness_status = "MISSING"` for that scope.
+
 ### 12.4 v0.1 threshold policy
 
 The promotion framework is **LOCKED** in v0.1.  
@@ -849,17 +879,23 @@ Exact numeric thresholds may remain provisional until enough data exists.
 
 Phase 3 should write explicit auditable artifacts.
 
-Recommended output set:
+Implemented baseline output set:
 
 - `backtest_rulesets.csv`
+- `backtest_engine_events.csv`
+- `backtest_run_manifest.json`
 - `backtest_trades.csv`
 - `backtest_trade_metrics.csv`
 - `backtest_equity_curve.csv`
 - `backtest_drawdown.csv`
+- `backtest_exit_reason_summary.csv`
 - `backtest_validation_summary.csv`
+- `backtest_validation_details.csv`
 - `backtest_robustness_summary.csv`
+- `backtest_robustness_details.csv`
 - `backtest_promotion_decisions.csv`
-- `backtest_run_manifest.json`
+- `backtest_promotion_details.csv`
+- `backtest_orchestration_manifest.json`
 
 ### 13.1 Run manifest
 
@@ -965,6 +1001,9 @@ Each must eventually be resolved explicitly before Phase 3 is considered product
 ---
 
 ## 17. Recommended Implementation Order
+
+Baseline implementation status: Steps 1–6 are present in code as a deterministic baseline.
+Remaining work is hardening/completeness, not module absence.
 
 Phase 3 should be built in this order.
 
