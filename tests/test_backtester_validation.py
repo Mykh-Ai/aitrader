@@ -3,7 +3,11 @@ from pathlib import Path
 import pandas as pd
 
 from backtester.metrics import build_trade_metrics_artifacts
-from backtester.validation import build_validation_artifacts, write_validation_csvs
+from backtester.validation import (
+    MAX_PASS_NOT_EVALUATED_CRITICAL,
+    build_validation_artifacts,
+    write_validation_csvs,
+)
 
 
 LEDGER_COLUMNS = [
@@ -27,6 +31,8 @@ LEDGER_COLUMNS = [
     "cost_model_id",
     "same_bar_policy_id",
     "replay_semantics_version",
+    "trade_return_pct",
+    "trade_pnl",
     "notes",
 ]
 
@@ -70,6 +76,8 @@ def _make_trade(index: int, *, direction: str = "LONG", source_setup_id: str = "
         "cost_model_id": "ZERO",
         "same_bar_policy_id": "SBP",
         "replay_semantics_version": "REPLAY_V0_1",
+        "trade_return_pct": None if exit_ts is None else (0.01 if exit_reason_category == "TARGET" else -0.01),
+        "trade_pnl": None if exit_ts is None else (1.0 if exit_reason_category == "TARGET" else -1.0),
         "notes": "",
     }
 
@@ -108,6 +116,7 @@ def test_sample_sufficiency_thresholds_are_deterministic():
 
 def test_expectancy_honesty_not_evaluated_and_pass_fail_when_explicit_metric_available():
     ledger = _build_ledger([_make_trade(1), _make_trade(2)])
+    ledger["trade_return_pct"] = [0.02, -0.01]
     metrics = build_trade_metrics_artifacts(ledger)
 
     base = build_validation_artifacts(
@@ -115,7 +124,7 @@ def test_expectancy_honesty_not_evaluated_and_pass_fail_when_explicit_metric_ava
         trade_metrics_df=metrics.trade_metrics,
         drawdown_df=metrics.drawdown,
     )
-    assert (base.summary["expectancy_status"] == "NOT_EVALUATED").all()
+    assert base.summary.loc[base.summary["scope"] == "ALL_TRADES", "expectancy_status"].iloc[0] == "PASS"
 
     pos_metrics = metrics.trade_metrics.copy()
     pos_metrics.loc[pos_metrics["scope"] == "ALL_TRADES", "expectancy"] = 0.1
@@ -139,13 +148,31 @@ def test_expectancy_honesty_not_evaluated_and_pass_fail_when_explicit_metric_ava
 def test_drawdown_honesty_non_economic_basis_is_not_evaluated():
     ledger = _build_ledger([_make_trade(1), _make_trade(2)])
     metrics = build_trade_metrics_artifacts(ledger)
+    non_economic_drawdown = metrics.drawdown.copy()
+    non_economic_drawdown["drawdown_basis"] = "RESOLVED_TRADE_COUNT"
     artifacts = build_validation_artifacts(
         trade_ledger_df=ledger,
         trade_metrics_df=metrics.trade_metrics,
-        drawdown_df=metrics.drawdown,
+        drawdown_df=non_economic_drawdown,
     )
 
     assert (artifacts.summary["drawdown_status"] == "NOT_EVALUATED").all()
+
+
+def test_drawdown_economic_basis_is_evaluated_and_thresholded():
+    ledger = _build_ledger([_make_trade(1), _make_trade(2), _make_trade(3)])
+    metrics = build_trade_metrics_artifacts(ledger)
+    economic_drawdown = metrics.drawdown.copy()
+    economic_drawdown["drawdown_basis"] = "TRADE_RETURN_PCT_CUMSUM"
+    economic_drawdown["drawdown_value"] = [0.03, 0.04, 0.05]
+
+    artifacts = build_validation_artifacts(
+        trade_ledger_df=ledger,
+        trade_metrics_df=metrics.trade_metrics,
+        drawdown_df=economic_drawdown,
+    )
+    all_row = artifacts.summary.loc[artifacts.summary["scope"] == "ALL_TRADES"].iloc[0]
+    assert all_row["drawdown_status"] == "PASS"
 
 
 def test_unresolved_trades_are_explicit_in_counts_and_notes():
@@ -195,8 +222,120 @@ def test_long_short_and_source_checks_not_evaluated_when_unsupported_or_zero_sid
         drawdown_df=supported_metrics.drawdown,
     )
     supported_row = supported.summary.loc[supported.summary["scope"] == "ALL_TRADES"].iloc[0]
-    assert supported_row["long_short_asymmetry_status"] == "PASS"
+    assert supported_row["long_short_asymmetry_status"] == "FAIL"
     assert supported_row["source_concentration_status"] == "PASS"
+
+
+def test_coverage_hardening_limits_final_status_when_critical_coverage_is_weak():
+    ledger = _build_ledger([
+        _make_trade(i, direction="LONG" if i % 2 else "SHORT", source_setup_id=f"S{i % 5}") for i in range(1, 25)
+    ])
+    ledger["trade_return_pct"] = 0.01
+    ledger["trade_pnl"] = 1.0
+    metrics = build_trade_metrics_artifacts(ledger)
+    metrics_trade = metrics.trade_metrics.copy()
+    metrics_trade["expectancy"] = None
+    artifacts = build_validation_artifacts(
+        trade_ledger_df=ledger,
+        trade_metrics_df=metrics_trade,
+        drawdown_df=None,
+    )
+    all_row = artifacts.summary.loc[artifacts.summary["scope"] == "ALL_TRADES"].iloc[0]
+    critical_not_evaluated = [
+        all_row["expectancy_status"],
+        all_row["drawdown_status"],
+        all_row["outlier_dependence_status"],
+        all_row["long_short_asymmetry_status"],
+        all_row["source_concentration_status"],
+    ].count("NOT_EVALUATED")
+    assert critical_not_evaluated > MAX_PASS_NOT_EVALUATED_CRITICAL
+    assert all_row["validation_status"] == "REVIEW"
+
+
+def test_source_concentration_prefers_explicit_surface_then_falls_back_to_source_setup_id():
+    ledger = _build_ledger([
+        _make_trade(1, source_setup_id="S1"),
+        _make_trade(2, source_setup_id="S1"),
+        _make_trade(3, source_setup_id="S1"),
+        _make_trade(4, source_setup_id="S2"),
+    ])
+    ledger["source_candidate_group"] = ["G1", "G2", "G1", "G2"]
+    metrics = build_trade_metrics_artifacts(ledger)
+    with_explicit = build_validation_artifacts(
+        trade_ledger_df=ledger,
+        trade_metrics_df=metrics.trade_metrics,
+        drawdown_df=metrics.drawdown,
+    )
+    explicit_row = with_explicit.summary.loc[with_explicit.summary["scope"] == "ALL_TRADES"].iloc[0]
+    assert explicit_row["source_concentration_status"] == "PASS"
+    assert "source_surface=source_candidate_group" in explicit_row["notes"]
+
+    fallback_ledger = ledger.drop(columns=["source_candidate_group"])
+    fallback = build_validation_artifacts(
+        trade_ledger_df=fallback_ledger,
+        trade_metrics_df=metrics.trade_metrics,
+        drawdown_df=metrics.drawdown,
+    )
+    fallback_row = fallback.summary.loc[fallback.summary["scope"] == "ALL_TRADES"].iloc[0]
+    assert fallback_row["source_concentration_status"] == "REVIEW"
+    assert "source_surface=source_setup_id" in fallback_row["notes"]
+
+
+def test_source_concentration_can_use_ruleset_lineage_surface_when_available():
+    ledger = _build_ledger([
+        _make_trade(1),
+        _make_trade(2),
+        _make_trade(3),
+        _make_trade(4),
+    ])
+    metrics = build_trade_metrics_artifacts(ledger)
+    rulesets_df = pd.DataFrame(
+        [
+            {"ruleset_id": "R1", "source_candidate_group": "GROUP_A"},
+        ]
+    )
+    artifacts = build_validation_artifacts(
+        trade_ledger_df=ledger,
+        trade_metrics_df=metrics.trade_metrics,
+        drawdown_df=metrics.drawdown,
+        rulesets_df=rulesets_df,
+    )
+    all_row = artifacts.summary.loc[artifacts.summary["scope"] == "ALL_TRADES"].iloc[0]
+    assert "source_surface=rulesets_df.source_candidate_group" in all_row["notes"]
+
+
+def test_long_short_asymmetry_uses_side_returns_when_available_and_remains_honest_when_unsupported():
+    balanced_counts_divergent_returns = _build_ledger([
+        _make_trade(1, direction="LONG"),
+        _make_trade(2, direction="LONG"),
+        _make_trade(3, direction="SHORT"),
+        _make_trade(4, direction="SHORT"),
+    ])
+    balanced_counts_divergent_returns["trade_return_pct"] = [0.03, 0.03, -0.03, -0.02]
+    metrics = build_trade_metrics_artifacts(balanced_counts_divergent_returns)
+    artifacts = build_validation_artifacts(
+        trade_ledger_df=balanced_counts_divergent_returns,
+        trade_metrics_df=metrics.trade_metrics,
+        drawdown_df=metrics.drawdown,
+    )
+    all_row = artifacts.summary.loc[artifacts.summary["scope"] == "ALL_TRADES"].iloc[0]
+    assert all_row["long_short_asymmetry_status"] == "FAIL"
+
+    unsupported = _build_ledger([
+        _make_trade(1, direction="LONG", resolved=False),
+        _make_trade(2, direction="SHORT", resolved=False),
+    ])
+    unsupported_metrics = build_trade_metrics_artifacts(unsupported)
+    unsupported_artifacts = build_validation_artifacts(
+        trade_ledger_df=unsupported,
+        trade_metrics_df=unsupported_metrics.trade_metrics,
+        drawdown_df=unsupported_metrics.drawdown,
+    )
+    details = unsupported_artifacts.details
+    asymmetry_note = details.loc[
+        (details["scope"] == "ALL_TRADES") & (details["check"] == "long_short_asymmetry"), "notes"
+    ].iloc[0]
+    assert "side expectancy not evaluated" in asymmetry_note
 
 
 def test_write_validation_csvs(tmp_path: Path):
