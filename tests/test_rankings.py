@@ -2,6 +2,7 @@ import pandas as pd
 import pytest
 
 from analyzer.rankings import MIN_SAMPLE_COUNT, RANKING_COLUMNS, build_setup_rankings
+from analyzer.thresholds import MIN_SAMPLE_COUNT as SHARED_MIN_SAMPLE_COUNT
 
 
 REQUIRED_COLUMNS = [
@@ -367,3 +368,57 @@ def test_both_inputs_empty_return_empty_rankings_with_exact_schema():
 
     assert list(rankings.columns) == RANKING_COLUMNS
     assert rankings.empty
+
+
+def test_min_sample_boundary_behavior_for_4_5_6_is_preserved():
+    report_df = pd.DataFrame(
+        [
+            {
+                "GroupType": "overall",
+                "GroupValue": "ALL",
+                "SampleCount": 10,
+                "Mean_MFE_Pct": 0.0,
+                "Mean_MAE_Pct": 0.0,
+                "Mean_CloseReturn_Pct": 0.0,
+                "PositiveCloseReturnRate": 0.5,
+            },
+            {
+                "GroupType": "SetupType",
+                "GroupValue": "S4",
+                "SampleCount": 4,
+                "Mean_MFE_Pct": 0.0,
+                "Mean_MAE_Pct": 0.0,
+                "Mean_CloseReturn_Pct": 0.0,
+                "PositiveCloseReturnRate": 0.5,
+            },
+            {
+                "GroupType": "Direction",
+                "GroupValue": "S5",
+                "SampleCount": 5,
+                "Mean_MFE_Pct": 0.0,
+                "Mean_MAE_Pct": 0.0,
+                "Mean_CloseReturn_Pct": 0.0,
+                "PositiveCloseReturnRate": 0.5,
+            },
+            {
+                "GroupType": "LifecycleStatus",
+                "GroupValue": "S6",
+                "SampleCount": 6,
+                "Mean_MFE_Pct": 0.0,
+                "Mean_MAE_Pct": 0.0,
+                "Mean_CloseReturn_Pct": 0.0,
+                "PositiveCloseReturnRate": 0.5,
+            },
+        ]
+    )
+
+    rankings = build_setup_rankings(report_df, pd.DataFrame(columns=REQUIRED_COLUMNS))
+    passed = dict(zip(rankings["SampleCount"], rankings["MinSamplePassed"]))
+
+    assert passed[4] is False
+    assert passed[5] is True
+    assert passed[6] is True
+
+
+def test_rankings_uses_shared_min_sample_threshold():
+    assert MIN_SAMPLE_COUNT == SHARED_MIN_SAMPLE_COUNT == 5
