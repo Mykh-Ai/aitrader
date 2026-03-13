@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 import pandas as pd
 
 OUTCOME_COLUMNS = [
@@ -22,6 +24,20 @@ OUTCOME_COLUMNS = [
 ]
 
 OUTCOME_HORIZON_BARS = 12
+
+
+def _validated_reference_level(reference_level: object) -> float:
+    numeric_reference_level = pd.to_numeric(reference_level, errors="coerce")
+    if pd.isna(numeric_reference_level):
+        raise ValueError(f"Invalid ReferenceLevel: {reference_level!r} (must be numeric, finite, and non-zero)")
+
+    reference_level_float = float(numeric_reference_level)
+    if not math.isfinite(reference_level_float) or reference_level_float == 0.0:
+        raise ValueError(
+            f"Invalid ReferenceLevel: {reference_level!r} "
+            "(must be numeric, finite, and non-zero)"
+        )
+    return reference_level_float
 
 
 def _empty_outcomes() -> pd.DataFrame:
@@ -123,7 +139,7 @@ def build_setup_outcomes(df: pd.DataFrame, setups_df: pd.DataFrame) -> pd.DataFr
         best_low = forward["Low"].min()
         final_close = forward["Close"].iloc[-1]
         outcome_end_ts = forward["Timestamp"].iloc[-1]
-        reference_level = setup.ReferenceLevel
+        reference_level = _validated_reference_level(setup.ReferenceLevel)
 
         if setup.Direction == "LONG":
             mfe_pct = ((best_high - reference_level) / reference_level) * 100
