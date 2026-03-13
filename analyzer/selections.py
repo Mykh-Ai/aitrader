@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pandas as pd
 
+from analyzer.thresholds import MIN_SAMPLE_COUNT
+
 SELECTION_COLUMNS = [
     "SourceReport",
     "GroupType",
@@ -18,7 +20,6 @@ SELECTION_COLUMNS = [
 ]
 
 MIN_SELECTION_SCORE = 0.05
-MIN_SELECTION_SAMPLE = 5
 MIN_POSITIVE_RATE_DELTA = 0.0
 
 _REQUIRED_RANKING_COLUMNS = {
@@ -49,7 +50,7 @@ def _validate_required_columns(rankings_df: pd.DataFrame) -> None:
 
 def _classify_row(ranking_row: pd.Series) -> tuple[str, str]:
     min_sample_passed = bool(ranking_row["MinSamplePassed"])
-    has_min_sample_count = bool(ranking_row["SampleCount"] >= MIN_SELECTION_SAMPLE)
+    has_min_sample_count = bool(ranking_row["SampleCount"] >= MIN_SAMPLE_COUNT)
     has_positive_delta = bool(ranking_row["Delta_PositiveCloseReturnRate"] > MIN_POSITIVE_RATE_DELTA)
     score = ranking_row["RankingScore"]
 
