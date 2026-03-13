@@ -178,12 +178,37 @@ def test_numeric_bucket_families_generate_low_mid_high_rows_correctly():
     assert numeric_rows["SampleCount"].tolist() == [2, 2, 2]
 
 
-def test_numeric_bucket_family_fails_when_too_few_unique_values_exist():
+def test_numeric_bucket_family_with_too_few_unique_values_is_skipped():
     setups_df = _base_setups()
     setups_df["RelVolume_20"] = 99.0
 
-    with pytest.raises(ValueError, match="at least 3 distinct"):
-        build_setup_context_report(setups_df, _base_outcomes())
+    report = build_setup_context_report(setups_df, _base_outcomes())
+
+    assert "RelVolume_20" not in report["GroupType"].values
+    assert report.loc[report["GroupType"] == "AbsorptionScore_v1", "GroupValue"].tolist() == [
+        "LOW",
+        "MID",
+        "HIGH",
+    ]
+
+
+def test_row_ordering_remains_deterministic_when_numeric_family_is_skipped():
+    setups_df = _base_setups()
+    setups_df["RelVolume_20"] = 99.0
+
+    report = build_setup_context_report(setups_df, _base_outcomes())
+
+    assert report.loc[report["GroupType"] == "AbsorptionScore_v1", "GroupValue"].tolist() == [
+        "LOW",
+        "MID",
+        "HIGH",
+    ]
+    assert report.loc[report["GroupType"] == "DeltaAbsRatio_20", "GroupValue"].tolist() == [
+        "LOW",
+        "MID",
+        "HIGH",
+    ]
+    assert "RelVolume_20" not in report["GroupType"].values
 
 
 def test_context_report_row_ordering_matches_contract():
