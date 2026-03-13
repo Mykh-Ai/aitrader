@@ -79,7 +79,7 @@ def load_raw_csv(path: str | Path) -> pd.DataFrame:
     - preserve gaps (no synthetic backfill/fill)
     """
     path = Path(path)
-    df = pd.read_csv(path)
+    df = pd.read_csv(path, encoding="utf-8")
 
     missing = missing_required_columns(df.columns.tolist())
     if missing:

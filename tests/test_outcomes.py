@@ -171,6 +171,42 @@ def test_setup_bar_is_excluded_from_outcome_window():
     assert row["BestLow"] != 1.0
 
 
+def test_reference_level_zero_fails_loudly():
+    features = _features_df()
+    setups = _setups_df()
+    setups.loc[0] = ["s-zero", pd.Timestamp("2025-01-01T00:03:00Z"), "LONG", 0.0]
+
+    try:
+        build_setup_outcomes(features, setups)
+        assert False, "Expected ValueError"
+    except ValueError as exc:
+        assert "Invalid ReferenceLevel" in str(exc)
+
+
+def test_reference_level_non_finite_fails_loudly():
+    features = _features_df()
+    setups = _setups_df()
+    setups.loc[0] = ["s-inf", pd.Timestamp("2025-01-01T00:03:00Z"), "LONG", float("inf")]
+
+    try:
+        build_setup_outcomes(features, setups)
+        assert False, "Expected ValueError"
+    except ValueError as exc:
+        assert "Invalid ReferenceLevel" in str(exc)
+
+
+def test_reference_level_nan_fails_loudly():
+    features = _features_df()
+    setups = _setups_df()
+    setups.loc[0] = ["s-nan", pd.Timestamp("2025-01-01T00:03:00Z"), "SHORT", float("nan")]
+
+    try:
+        build_setup_outcomes(features, setups)
+        assert False, "Expected ValueError"
+    except ValueError as exc:
+        assert "Invalid ReferenceLevel" in str(exc)
+
+
 def test_output_preserves_setup_row_order():
     features = _features_df(rows=30)
     setups = _setups_df()
