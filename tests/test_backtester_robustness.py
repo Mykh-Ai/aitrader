@@ -28,6 +28,7 @@ LEDGER_COLUMNS = [
     "notes",
     "trade_pnl",
     "trade_return_pct",
+    "trade_return_r",
 ]
 
 
@@ -65,6 +66,7 @@ def _make_trade(index: int, *, ret: float | None = 0.01, resolved: bool = True, 
         "notes": "",
         "trade_pnl": ret,
         "trade_return_pct": ret,
+        "trade_return_r": ret,
     }
     if regime is not None:
         row["regime"] = regime
@@ -85,6 +87,7 @@ def test_oos_honesty_without_return_basis_is_not_evaluated():
     ledger = _build_ledger([_make_trade(i, ret=0.01) for i in range(1, 8)])
     ledger["trade_return_pct"] = None
     ledger["trade_pnl"] = None
+    ledger["trade_return_r"] = None
     artifacts = build_robustness_artifacts(trade_ledger_df=ledger)
 
     row = artifacts.summary.loc[artifacts.summary["scope"] == "ALL_TRADES"].iloc[0]
@@ -261,6 +264,27 @@ def test_unresolved_trades_explicitly_excluded_from_return_checks():
     assert row["resolved_trade_count"] == 2
     assert "unresolved trades excluded from return-based checks=1" in row["notes"]
 
+
+
+def test_return_basis_consistency_prefers_pct_then_pnl_then_r_in_robustness_notes():
+    ledger = _build_ledger([_make_trade(i, ret=0.01) for i in range(1, 10)])
+
+    pct_artifacts = build_robustness_artifacts(trade_ledger_df=ledger)
+    pct_note = pct_artifacts.summary.loc[pct_artifacts.summary["scope"] == "ALL_TRADES", "notes"].iloc[0]
+    assert "return_basis=trade_return_pct" in pct_note
+
+    pnl_ledger = ledger.copy()
+    pnl_ledger["trade_return_pct"] = None
+    pnl_artifacts = build_robustness_artifacts(trade_ledger_df=pnl_ledger)
+    pnl_note = pnl_artifacts.summary.loc[pnl_artifacts.summary["scope"] == "ALL_TRADES", "notes"].iloc[0]
+    assert "return_basis=trade_pnl" in pnl_note
+
+    r_ledger = ledger.copy()
+    r_ledger["trade_return_pct"] = None
+    r_ledger["trade_pnl"] = None
+    r_artifacts = build_robustness_artifacts(trade_ledger_df=r_ledger)
+    r_note = r_artifacts.summary.loc[r_artifacts.summary["scope"] == "ALL_TRADES", "notes"].iloc[0]
+    assert "return_basis=trade_return_r" in r_note
 
 def test_write_robustness_csvs(tmp_path: Path):
     ledger = _build_ledger([_make_trade(i, ret=0.02) for i in range(1, 10)])

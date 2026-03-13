@@ -86,7 +86,10 @@ def test_missing_scope_honesty_validation_present_robustness_missing_is_review_n
     decisions = artifacts.decisions.set_index("scope")
 
     assert decisions.loc["RESOLVED_ONLY", "promotion_decision"] == "REVIEW"
-    assert decisions.loc["RESOLVED_ONLY", "robustness_status"] == "MISSING"
+    assert decisions.loc["RESOLVED_ONLY", "robustness_status"] == "NOT_AVAILABLE"
+
+    details = artifacts.details.set_index("scope")
+    assert details.loc["RESOLVED_ONLY", "matrix_rule"] == "missing robustness scope => REVIEW"
 
 
 def test_invalid_controlled_enums_fail_loudly():

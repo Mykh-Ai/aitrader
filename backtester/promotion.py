@@ -31,6 +31,7 @@ PROMOTION_DETAIL_COLUMNS = [
 ]
 
 PROMOTION_DECISIONS = ("PROMOTE", "REVIEW", "REJECT")
+MISSING_ROBUSTNESS_STATUS = "NOT_AVAILABLE"
 
 REQUIRED_VALIDATION_COLUMNS = {"scope", "validation_status"}
 REQUIRED_ROBUSTNESS_COLUMNS = {"scope", "robustness_status"}
@@ -167,7 +168,7 @@ def build_promotion_artifacts(
         if scope not in robustness_lookup.index:
             decision = "REVIEW"
             matrix_rule = "missing robustness scope => REVIEW"
-            robustness_status = "MISSING"
+            robustness_status = MISSING_ROBUSTNESS_STATUS
             reason = "robustness scope missing; deterministic non-promote review required"
         else:
             robustness_status = str(robustness_lookup.loc[scope, "robustness_status"])

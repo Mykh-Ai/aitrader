@@ -33,6 +33,7 @@ LEDGER_COLUMNS = [
     "replay_semantics_version",
     "trade_return_pct",
     "trade_pnl",
+    "trade_return_r",
     "notes",
 ]
 
@@ -62,6 +63,7 @@ def _ledger_df() -> pd.DataFrame:
             "replay_semantics_version": "REPLAY_V0_1",
             "trade_return_pct": None,
             "trade_pnl": None,
+            "trade_return_r": None,
             "notes": "",
         },
         {
@@ -87,6 +89,7 @@ def _ledger_df() -> pd.DataFrame:
             "replay_semantics_version": "REPLAY_V0_1",
             "trade_return_pct": None,
             "trade_pnl": None,
+            "trade_return_r": None,
             "notes": "",
         },
         {
@@ -112,6 +115,7 @@ def _ledger_df() -> pd.DataFrame:
             "replay_semantics_version": "REPLAY_V0_1",
             "trade_return_pct": None,
             "trade_pnl": None,
+            "trade_return_r": None,
             "notes": "",
         },
     ]
@@ -121,7 +125,7 @@ def _ledger_df() -> pd.DataFrame:
     return df
 
 
-def _ledger_with_explicit_returns(*, include_return_pct: bool = True, include_pnl: bool = True) -> pd.DataFrame:
+def _ledger_with_explicit_returns(*, include_return_pct: bool = True, include_pnl: bool = True, include_return_r: bool = True) -> pd.DataFrame:
     df = _ledger_df()
     if include_return_pct:
         df["trade_return_pct"] = [0.03, -0.02, None]
@@ -131,6 +135,10 @@ def _ledger_with_explicit_returns(*, include_return_pct: bool = True, include_pn
         df["trade_pnl"] = [30.0, -20.0, None]
     else:
         df["trade_pnl"] = None
+    if include_return_r:
+        df["trade_return_r"] = [1.5, -1.0, None]
+    else:
+        df["trade_return_r"] = None
     return df
 
 
@@ -228,6 +236,20 @@ def test_honest_fallback_to_resolved_trade_count_when_no_economic_result_fields(
     assert set(artifacts.equity_curve["equity_basis"]) == {"RESOLVED_TRADE_COUNT"}
     assert set(artifacts.drawdown["drawdown_basis"]) == {"RESOLVED_TRADE_COUNT"}
     assert artifacts.equity_curve["notes"].str.contains("not monetary equity", regex=False).all()
+
+
+def test_return_basis_priority_is_deterministic_pct_then_pnl_then_r():
+    pct = build_trade_metrics_artifacts(_ledger_with_explicit_returns(include_return_pct=True, include_pnl=True, include_return_r=True))
+    pct_all = pct.trade_metrics.loc[pct.trade_metrics["scope"] == "ALL_TRADES"].iloc[0]
+    assert pct_all["expectancy_basis"] == "trade_return_pct"
+
+    pnl = build_trade_metrics_artifacts(_ledger_with_explicit_returns(include_return_pct=False, include_pnl=True, include_return_r=True))
+    pnl_all = pnl.trade_metrics.loc[pnl.trade_metrics["scope"] == "ALL_TRADES"].iloc[0]
+    assert pnl_all["expectancy_basis"] == "trade_pnl"
+
+    ret_r = build_trade_metrics_artifacts(_ledger_with_explicit_returns(include_return_pct=False, include_pnl=False, include_return_r=True))
+    ret_r_all = ret_r.trade_metrics.loc[ret_r.trade_metrics["scope"] == "ALL_TRADES"].iloc[0]
+    assert ret_r_all["expectancy_basis"] == "trade_return_r"
 
 
 def test_missing_required_metrics_field_fails_loudly():
