@@ -137,6 +137,7 @@ class CandleBuffer:
 
 buffer = CandleBuffer()
 lock = threading.Lock()
+last_flushed_ts = None
 
 
 # ─── Логування ───────────────────────────────────────────────────
@@ -286,10 +287,55 @@ def get_csv_path() -> str:
     return os.path.join(FEED_DIR, f"{day}.csv")
 
 
+def _read_last_data_timestamp(csv_path: str):
+    """Дешево читає Timestamp останнього data-рядка (без повного scan)."""
+    if not os.path.isfile(csv_path):
+        return None
+
+    try:
+        with open(csv_path, "rb") as f:
+            f.seek(0, os.SEEK_END)
+            file_size = f.tell()
+            if file_size == 0:
+                return None
+
+            pos = file_size
+            chunk_size = 4096
+            tail = b""
+
+            while pos > 0:
+                read_size = min(chunk_size, pos)
+                pos -= read_size
+                f.seek(pos)
+                tail = f.read(read_size) + tail
+                lines = tail.splitlines()
+                if len(lines) >= 2 or pos == 0:
+                    for raw_line in reversed(lines):
+                        line = raw_line.decode("utf-8", errors="replace").strip()
+                        if line:
+                            ts = line.split(",", 1)[0]
+                            if ts != "Timestamp":
+                                return ts
+                            return None
+    except Exception as e:
+        log(f"⚠️ Tail read error ({os.path.basename(csv_path)}): {e}")
+
+    return None
+
+
 def flush_candle():
     """Зберігає хвилинну свічку в CSV і скидає буфер."""
 
+    global last_flushed_ts
+
     with lock:
+        bar_time = datetime.datetime.utcnow().replace(second=0, microsecond=0)
+        ts = bar_time.strftime("%Y-%m-%d %H:%M:%S")
+
+        if last_flushed_ts == ts:
+            log(f"⏭️ Skip duplicate flush (in-memory guard): {ts}")
+            return
+
         is_synthetic = 0
         if buffer.is_empty():
             selected_price = buffer.mark_price or buffer.last_price or 0.0
@@ -299,8 +345,6 @@ def flush_candle():
             buffer.close = selected_price
             is_synthetic = 1
 
-        bar_time = datetime.datetime.utcnow().replace(second=0, microsecond=0)
-        ts = bar_time.strftime("%Y-%m-%d %H:%M:%S")
         row = buffer.to_csv_row(ts, is_synthetic)
 
         # Зберігаємо OI/FR для наступної свічки
@@ -311,12 +355,21 @@ def flush_candle():
         buffer.funding_rate = fr
 
     csv_path = get_csv_path()
+    existing_last_ts = _read_last_data_timestamp(csv_path)
+    if existing_last_ts == ts:
+        with lock:
+            last_flushed_ts = ts
+        log(f"⏭️ Skip duplicate flush (file tail guard): {ts} already in {os.path.basename(csv_path)}")
+        return
+
     file_exists = os.path.isfile(csv_path)
     try:
         with open(csv_path, "a") as f:
             if not file_exists:
                 f.write(CSV_HEADER)
             f.write(row)
+        with lock:
+            last_flushed_ts = ts
     except Exception as e:
         log(f"❌ CSV write error: {e}")
         return
