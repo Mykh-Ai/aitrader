@@ -81,6 +81,7 @@ def test_failed_break_down_produces_one_long_setup():
     assert row["SetupBarTs"] == pd.Timestamp("2025-01-01T00:05:00Z")
     assert row["ReferenceEventTs"] == pd.Timestamp("2025-01-01T00:05:00Z")
     assert row["ReferenceEventType"] == "FAILED_BREAK_DOWN"
+    assert row["SourceTF"] == "H1"
     assert row["ReferenceEventAnchorTs"] == pd.Timestamp("2025-01-01T00:03:00Z")
     assert row["ReferenceLevel"] == 100.0
     assert row["AbsorptionScore_v1"] == 4
@@ -132,6 +133,7 @@ def test_failed_break_up_produces_one_short_setup():
     assert row["SetupType"] == "FAILED_BREAK_RECLAIM_SHORT"
     assert row["Direction"] == "SHORT"
     assert row["ReferenceEventType"] == "FAILED_BREAK_UP"
+    assert row["SourceTF"] == "H4"
 
 
 def test_sweep_events_only_produce_no_setups():
