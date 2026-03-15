@@ -19,9 +19,12 @@ RANKING_COLUMNS = [
     "Delta_Mean_CloseReturn_Pct",
     "Delta_PositiveCloseReturnRate",
     "MinSamplePassed",
+    "RankingMethod",
     "RankingScore",
     "RankingLabel",
 ]
+
+RANKING_METHOD = "RANKING_V1_LINEAR_DELTA_MFE_MAE"
 
 
 _REQUIRED_INPUT_COLUMNS = {
@@ -103,6 +106,7 @@ def _score_row(candidate_row: pd.Series, baseline_row: pd.Series) -> dict:
         "Delta_Mean_CloseReturn_Pct": delta_close_return,
         "Delta_PositiveCloseReturnRate": delta_positive_rate,
         "MinSamplePassed": min_sample_passed,
+        "RankingMethod": RANKING_METHOD,
         "RankingScore": ranking_score,
         "RankingLabel": ranking_label,
     }
