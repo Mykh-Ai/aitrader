@@ -248,3 +248,43 @@ def test_manifest_honesty_contains_phase_boundary_and_non_live_disclaimers(tmp_p
     assert "pre-generated Analyzer artifacts only" in notes
     assert "does not call analyzer.pipeline.run()" in notes
     assert "not live-trading authorization" in notes
+
+
+def test_no_event_path_writes_valid_engine_csv_and_manifest_and_does_not_break_ledger(tmp_path: Path):
+    artifact_dir = tmp_path / "analyzer_run"
+    output_dir = tmp_path / "out"
+    _write_analyzer_artifacts(artifact_dir)
+
+    pd.DataFrame(
+        [
+            {
+                "SourceReport": "REPORT_A",
+                "GroupType": "Direction",
+                "GroupValue": "SHORT",
+                "SelectionDecision": "SELECT",
+            }
+        ]
+    ).to_csv(artifact_dir / "analyzer_setup_shortlist.csv", index=False)
+    pd.DataFrame(
+        [
+            {
+                "SourceReport": "REPORT_A",
+                "GroupType": "Direction",
+                "GroupValue": "SHORT",
+                "SelectionDecision": "SELECT",
+            }
+        ]
+    ).to_csv(artifact_dir / "analyzer_research_summary.csv", index=False)
+
+    result = _run(artifact_dir, output_dir)
+
+    engine_events = pd.read_csv(result.engine_events_path)
+    assert engine_events.empty
+    assert "event_id" in engine_events.columns
+
+    ledger = pd.read_csv(result.ledger_path)
+    assert ledger.empty
+
+    orchestration_manifest = json.loads(result.orchestration_manifest_path.read_text(encoding="utf-8"))
+    assert orchestration_manifest["engine_event_count"] == 0
+    assert orchestration_manifest["trade_count"] == 0
