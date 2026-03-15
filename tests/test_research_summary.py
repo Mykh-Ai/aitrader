@@ -205,6 +205,19 @@ def test_outcome_semantics_is_materialized_as_fixed_horizon_research_proxy():
     assert set(research_summary_df["OutcomeSemantics"]) == {"RESEARCH_PROXY_FIXED_HORIZON"}
 
 
+def test_implemented_status_semantics_are_materialized_as_explicit_disclaimers():
+    research_summary_df = build_research_summary(_shortlist_df(), _shortlist_explanations_df(), _setups_df())
+
+    assert set(research_summary_df["ConfidenceModelStatus"]) == {"PROXY_RANKING_HEURISTIC"}
+    assert set(research_summary_df["AcceptedBreakSemanticsStatus"]) == {"NOT_IMPLEMENTED"}
+    assert set(research_summary_df["ContextFormalizationStatus"]) == {
+        "DESCRIPTIVE_ONLY_UNLESS_EXPLICIT_SEMANTICS"
+    }
+    assert set(research_summary_df["ExecutableEntrySemanticsStatus"]) == {
+        "IMPLEMENTED_IN_BACKTEST_RULESET_V1"
+    }
+
+
 def test_unexpected_selection_decision_fails_loudly():
     shortlist_df = _shortlist_df()
     shortlist_df.loc[0, "SelectionDecision"] = "REJECT"

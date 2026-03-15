@@ -24,6 +24,10 @@ RESEARCH_SUMMARY_COLUMNS = [
     "PositiveRateDirection",
     "ExplanationCode",
     "OutcomeSemantics",
+    "ConfidenceModelStatus",
+    "AcceptedBreakSemanticsStatus",
+    "ContextFormalizationStatus",
+    "ExecutableEntrySemanticsStatus",
     "FormalizationEligible",
     "Direction",
     "SetupType",
@@ -33,6 +37,10 @@ RESEARCH_SUMMARY_COLUMNS = [
 _NATURAL_KEY = ["ShortlistRank", "SourceReport", "GroupType", "GroupValue"]
 _RESEARCH_PRIORITY_MAP = {"SELECT": "P1", "REVIEW": "P2"}
 _OUTCOME_SEMANTICS_RESEARCH_PROXY = "RESEARCH_PROXY_FIXED_HORIZON"
+_CONFIDENCE_MODEL_STATUS = "PROXY_RANKING_HEURISTIC"
+_ACCEPTED_BREAK_SEMANTICS_STATUS = "NOT_IMPLEMENTED"
+_CONTEXT_FORMALIZATION_STATUS = "DESCRIPTIVE_ONLY_UNLESS_EXPLICIT_SEMANTICS"
+_EXECUTABLE_ENTRY_SEMANTICS_STATUS = "IMPLEMENTED_IN_BACKTEST_RULESET_V1"
 
 _REQUIRED_SHORTLIST_COLUMNS = {
     "ShortlistRank",
@@ -321,6 +329,10 @@ def build_research_summary(
 
     merged_df["ResearchPriority"] = _derive_research_priority(merged_df["SelectionDecision"])
     merged_df["OutcomeSemantics"] = _OUTCOME_SEMANTICS_RESEARCH_PROXY
+    merged_df["ConfidenceModelStatus"] = _CONFIDENCE_MODEL_STATUS
+    merged_df["AcceptedBreakSemanticsStatus"] = _ACCEPTED_BREAK_SEMANTICS_STATUS
+    merged_df["ContextFormalizationStatus"] = _CONTEXT_FORMALIZATION_STATUS
+    merged_df["ExecutableEntrySemanticsStatus"] = _EXECUTABLE_ENTRY_SEMANTICS_STATUS
 
     if setups_df is None or setups_df.empty:
         merged_df = _enrich_without_setups_fail_loud_direction_rows(merged_df)
