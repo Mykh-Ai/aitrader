@@ -155,7 +155,7 @@ def test_research_summary_first_requires_research_summary_input():
         )
 
 
-def test_unknown_group_type_without_explicit_semantics_fails_loudly():
+def test_unknown_group_type_without_explicit_semantics_is_skipped_with_warning():
     shortlist = pd.DataFrame(
         [
             {
@@ -167,8 +167,11 @@ def test_unknown_group_type_without_explicit_semantics_fails_loudly():
         ]
     )
 
-    with pytest.raises(ValueError, match="Cannot derive direction/setup/event mapping"):
-        build_backtest_rulesets(shortlist, None)
+    rulesets, warnings = build_backtest_rulesets(shortlist, None)
+
+    assert rulesets.empty
+    assert any("RULESET_SHORTLIST_ROW_SKIPPED" in w for w in warnings)
+    assert any("unsupported_group_type_without_explicit_direction_setup_events" in w for w in warnings)
 
 
 def test_explicit_semantics_columns_override_baseline_mapping():
