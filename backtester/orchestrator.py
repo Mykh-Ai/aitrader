@@ -27,7 +27,6 @@ from .rulesets import build_backtest_rulesets, validate_rulesets, write_backtest
 from .validation import build_validation_artifacts, write_validation_csvs
 
 REQUIRED_ANALYZER_ARTIFACTS = {
-    "raw": "raw.csv",
     "features": "analyzer_features.csv",
     "setups": "analyzer_setups.csv",
     "shortlist": "analyzer_setup_shortlist.csv",
@@ -84,16 +83,10 @@ def _load_csv(path: Path, *, label: str) -> pd.DataFrame:
 def _resolve_artifact_paths(
     *,
     artifact_dir: Path,
-    raw_artifact_filename: str,
     events_artifact_filename: str | None,
     lineage_artifact_filename: str | None,
 ) -> tuple[dict[str, Path], dict[str, Path]]:
-    required_filenames = {
-        **REQUIRED_ANALYZER_ARTIFACTS,
-        "raw": raw_artifact_filename,
-    }
-
-    required_paths = {key: artifact_dir / filename for key, filename in required_filenames.items()}
+    required_paths = {key: artifact_dir / filename for key, filename in REQUIRED_ANALYZER_ARTIFACTS.items()}
     missing_required = [f"{key}={path}" for key, path in required_paths.items() if not path.exists()]
     if missing_required:
         raise ReplayContractError(
@@ -115,6 +108,55 @@ def _resolve_artifact_paths(
     return required_paths, optional_paths
 
 
+def resolve_raw_feed_path(
+    *,
+    artifact_dir: Path,
+    raw_path: str | Path | None,
+    raw_artifact_filename: str,
+    run_manifest_filename: str = "run_manifest.json",
+) -> Path:
+    if raw_path is not None:
+        explicit_raw_path = Path(raw_path)
+        if explicit_raw_path.exists() and explicit_raw_path.is_file():
+            return explicit_raw_path
+        raise ReplayContractError(f"Explicit raw_path does not exist or is not a file: {explicit_raw_path}")
+
+    manifest_path = artifact_dir / run_manifest_filename
+    manifest_candidates: list[Path] = []
+    if manifest_path.exists() and manifest_path.is_file():
+        try:
+            manifest_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            raise ReplayContractError(f"Failed parsing run manifest at {manifest_path}: {exc}") from exc
+
+        input_feed_paths = manifest_payload.get("input_feed_paths")
+        if input_feed_paths is not None and not isinstance(input_feed_paths, list):
+            raise ReplayContractError(
+                f"run manifest field input_feed_paths must be a list when present: {manifest_path}"
+            )
+
+        if isinstance(input_feed_paths, list):
+            for candidate in input_feed_paths:
+                if not isinstance(candidate, str) or not candidate.strip():
+                    continue
+                candidate_path = Path(candidate)
+                if not candidate_path.is_absolute():
+                    candidate_path = manifest_path.parent / candidate_path
+                manifest_candidates.append(candidate_path)
+                if candidate_path.exists() and candidate_path.is_file():
+                    return candidate_path
+
+    fallback_raw_path = artifact_dir / raw_artifact_filename
+    if fallback_raw_path.exists() and fallback_raw_path.is_file():
+        return fallback_raw_path
+
+    manifest_candidates_str = ", ".join(str(path) for path in manifest_candidates) or "<none>"
+    raise ReplayContractError(
+        "Raw feed not found for Phase 3 orchestration. Checked explicit raw_path, "
+        f"manifest input_feed_paths ({manifest_candidates_str}), and fallback {fallback_raw_path}."
+    )
+
+
 def run_backtester(
     *,
     artifact_dir: str | Path,
@@ -125,6 +167,7 @@ def run_backtester(
     same_bar_policy_id: str,
     replay_semantics_version: str,
     generation_timestamp: str | None = None,
+    raw_path: str | Path | None = None,
     raw_artifact_filename: str = "raw.csv",
     events_artifact_filename: str | None = None,
     lineage_artifact_filename: str | None = None,
@@ -143,9 +186,13 @@ def run_backtester(
 
     required_paths, optional_paths = _resolve_artifact_paths(
         artifact_dir=artifact_root,
-        raw_artifact_filename=raw_artifact_filename,
         events_artifact_filename=events_artifact_filename,
         lineage_artifact_filename=lineage_artifact_filename,
+    )
+    required_paths["raw"] = resolve_raw_feed_path(
+        artifact_dir=artifact_root,
+        raw_path=raw_path,
+        raw_artifact_filename=raw_artifact_filename,
     )
 
     shortlist_df = _load_csv(required_paths["shortlist"], label="shortlist")
