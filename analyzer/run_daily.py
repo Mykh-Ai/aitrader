@@ -9,13 +9,26 @@ from __future__ import annotations
 import json
 import platform
 import re
+import hashlib
 import socket
 import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pandas as pd
+
 from . import pipeline
+from .context_reports import CONTEXT_REPORT_COLUMNS
+from .outcomes import OUTCOME_COLUMNS
+from .rankings import RANKING_COLUMNS
+from .reports import REPORT_COLUMNS
+from .research_summary import RESEARCH_SUMMARY_COLUMNS
+from .schema import EVENT_COLUMNS, FEATURE_COLUMNS_IMPLEMENTED, REQUIRED_RAW_COLUMNS
+from .selections import SELECTION_COLUMNS
+from .setups import SETUP_COLUMNS
+from .shortlist_explanations import SHORTLIST_EXPLANATION_COLUMNS
+from .shortlists import SHORTLIST_COLUMNS
 
 # Канонічний список артефактів, які повинен створити pipeline
 EXPECTED_ARTIFACTS = [
@@ -33,9 +46,29 @@ EXPECTED_ARTIFACTS = [
 ]
 
 PIPELINE_STAGE_COUNT = 16
+ANALYZER_SCHEMA_VERSION = "phase2.v1"
+ARTIFACT_CONTRACT_VERSION = "phase2.analyzer-run.v1"
 
 # Дефолтний кореневий каталог для run output
 DEFAULT_RUNS_ROOT = Path("/opt/aitrader/analyzer_runs")
+
+REQUIRED_ARTIFACT_COLUMNS: dict[str, list[str]] = {
+    "analyzer_features.csv": [*REQUIRED_RAW_COLUMNS, *FEATURE_COLUMNS_IMPLEMENTED],
+    "analyzer_events.csv": list(EVENT_COLUMNS),
+    "analyzer_setups.csv": list(SETUP_COLUMNS),
+    "analyzer_setup_outcomes.csv": list(OUTCOME_COLUMNS),
+    "analyzer_setup_report.csv": list(REPORT_COLUMNS),
+    "analyzer_setup_context_report.csv": list(CONTEXT_REPORT_COLUMNS),
+    "analyzer_setup_rankings.csv": list(RANKING_COLUMNS),
+    "analyzer_setup_selections.csv": list(SELECTION_COLUMNS),
+    "analyzer_setup_shortlist.csv": list(SHORTLIST_COLUMNS),
+    "analyzer_setup_shortlist_explanations.csv": list(SHORTLIST_EXPLANATION_COLUMNS),
+    "analyzer_research_summary.csv": list(RESEARCH_SUMMARY_COLUMNS),
+}
+
+
+class ArtifactValidationError(ValueError):
+    """Raised when analyzer run artifacts violate canonical contract."""
 
 
 def _extract_date_from_filename(file_path: Path) -> str:
@@ -114,17 +147,76 @@ def _get_git_info() -> tuple[str, str]:
     return commit, branch
 
 
-def _count_rows(run_dir: Path, artifacts: list[str]) -> dict[str, int]:
-    """Рахує кількість рядків у кожному артефакті (без header)."""
-    counts: dict[str, int] = {}
-    for name in artifacts:
-        path = run_dir / name
-        if path.exists():
-            # Рахуємо рядки мінус header
-            with open(path, "r", encoding="utf-8") as f:
-                line_count = sum(1 for _ in f)
-            counts[name] = max(0, line_count - 1)
-    return counts
+def _sha256_file(path: Path) -> str:
+    hasher = hashlib.sha256()
+    with open(path, "rb") as f:
+        while chunk := f.read(8192):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
+def _validate_timestamp_monotonicity(df: pd.DataFrame, *, artifact_name: str, column: str) -> None:
+    if df.empty:
+        return
+    parsed = pd.to_datetime(df[column], utc=True, errors="coerce")
+    if parsed.isna().any():
+        raise ArtifactValidationError(
+            f"Артефакт {artifact_name} має невалідні timestamp у колонці {column}"
+        )
+    if not parsed.is_monotonic_increasing:
+        raise ArtifactValidationError(
+            f"Артефакт {artifact_name} має немонотонну часову колонку {column}"
+        )
+
+
+def validate_artifact_contract(run_dir: Path) -> dict[str, dict[str, str] | dict[str, int]]:
+    """Валідує canonical contract для всіх required artifact CSV."""
+    errors: list[str] = []
+    row_counts: dict[str, int] = {}
+    artifact_paths: dict[str, str] = {}
+    artifact_hashes: dict[str, str] = {}
+
+    for artifact_name in EXPECTED_ARTIFACTS:
+        path = run_dir / artifact_name
+        artifact_paths[artifact_name] = str(path)
+
+        if not path.exists() or not path.is_file():
+            errors.append(f"Відсутній required артефакт: {artifact_name}")
+            continue
+
+        try:
+            df = pd.read_csv(path)
+        except Exception as exc:
+            errors.append(f"Артефакт нечитабельний {artifact_name}: {exc}")
+            continue
+
+        expected_columns = REQUIRED_ARTIFACT_COLUMNS[artifact_name]
+        actual_columns = df.columns.tolist()
+        if actual_columns != expected_columns:
+            errors.append(
+                "Schema mismatch "
+                f"{artifact_name}: expected={expected_columns}, actual={actual_columns}"
+            )
+
+        try:
+            if artifact_name == "analyzer_features.csv":
+                _validate_timestamp_monotonicity(df, artifact_name=artifact_name, column="Timestamp")
+            if artifact_name == "analyzer_events.csv":
+                _validate_timestamp_monotonicity(df, artifact_name=artifact_name, column="Timestamp")
+        except ArtifactValidationError as exc:
+            errors.append(str(exc))
+
+        row_counts[artifact_name] = int(len(df))
+        artifact_hashes[artifact_name] = _sha256_file(path)
+
+    if errors:
+        raise ArtifactValidationError("; ".join(errors))
+
+    return {
+        "artifact_paths": artifact_paths,
+        "row_counts": row_counts,
+        "artifact_hashes": artifact_hashes,
+    }
 
 
 def _write_manifest(
@@ -136,29 +228,39 @@ def _write_manifest(
     input_bar_count: int,
     status: str,
     error_message: str | None = None,
+    validation_metadata: dict[str, dict[str, str] | dict[str, int]] | None = None,
 ) -> Path:
     """Записує run_manifest.json у run directory."""
     run_id = run_dir.name
     git_commit, git_branch = _get_git_info()
 
-    artifact_row_counts = {}
-    if status == "SUCCESS":
-        artifact_row_counts = _count_rows(run_dir, EXPECTED_ARTIFACTS)
+    input_checksum = _sha256_file(input_path)
+    row_counts = (validation_metadata or {}).get("row_counts", {})
+    artifact_paths = (validation_metadata or {}).get("artifact_paths", {})
+    artifact_hashes = (validation_metadata or {}).get("artifact_hashes", {})
 
     manifest = {
         "run_id": run_id,
+        "run_date": date_str,
+        "date_range": {"from": date_str, "to": date_str},
         "generated_at_utc": datetime.now(timezone.utc).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         ),
         "input_feed_paths": [str(input_path)],
+        "input_feed_checksums": {str(input_path): input_checksum},
         "input_date_range": {"from": date_str, "to": date_str},
         "input_bar_count": input_bar_count,
         "input_includes_partial_day": partial_day,
         "output_dir": str(run_dir),
         "artifact_list": list(EXPECTED_ARTIFACTS),
         "artifact_count": len(EXPECTED_ARTIFACTS),
-        "artifact_row_counts": artifact_row_counts,
+        "artifact_paths": artifact_paths,
+        "artifact_row_counts": row_counts,
+        "row_counts": row_counts,
+        "artifact_hashes": artifact_hashes,
         "pipeline_stage_count": PIPELINE_STAGE_COUNT,
+        "analyzer_schema_version": ANALYZER_SCHEMA_VERSION,
+        "artifact_contract_version": ARTIFACT_CONTRACT_VERSION,
         "analyzer_version": git_commit,
         "git_commit": git_commit,
         "git_branch": git_branch,
@@ -257,20 +359,23 @@ def run_daily(
         )
         raise
 
-    # 6. Верифікація артефактів
-    missing = verify_artifacts(run_dir)
-    if missing:
-        error_message = f"Відсутні артефакти: {', '.join(missing)}"
+    # 6. Верифікація canonical artifact contract
+    validation_metadata = None
+    try:
+        validation_metadata = validate_artifact_contract(run_dir)
+    except ArtifactValidationError as exc:
+        error_message = str(exc)
         _write_manifest(
             run_dir,
             input_path=input_path,
             date_str=date_str,
             partial_day=partial_day,
             input_bar_count=input_bar_count,
-            status="FAILED",
+            status="NON_CANONICAL",
             error_message=error_message,
+            validation_metadata=validation_metadata,
         )
-        raise ValueError(error_message)
+        raise ValueError(error_message) from exc
 
     # 7. Запис manifest
     manifest_path = _write_manifest(
@@ -280,6 +385,7 @@ def run_daily(
         partial_day=partial_day,
         input_bar_count=input_bar_count,
         status="SUCCESS",
+        validation_metadata=validation_metadata,
     )
 
     return {
