@@ -53,6 +53,19 @@ Package: `backtester/`
 - Implemented modules: `rulesets.py`, `engine.py`, `ledger.py`, `metrics.py`, `validation.py`, `robustness.py`, `promotion.py`, `orchestrator.py`.
 - End-to-end orchestration entrypoint: `backtester/orchestrator.py` (`run_backtester`, `orchestrate_backtest`).
 - Boundary: consumes pre-generated Analyzer CSV artifacts; does not call `analyzer.pipeline.run()` implicitly.
+- Raw feed resolution for replay is now explicit and compatibility-safe:
+  1. explicit `raw_path`
+  2. `run_manifest.json -> input_feed_paths`
+  3. `artifact_dir/raw.csv` fallback compatibility mode
+- `artifact_dir/raw.csv` is **not** the canonical raw-lineage boundary for Phase 3; manifest lineage is the preferred source of truth when available.
+- Shortlist ingestion is formalization-safe by contract:
+  - baseline auto-formalization currently supports only `Direction` and `SetupType`
+  - rows with full explicit semantics (`Direction`, `SetupType`, `EligibleEventTypes`) are also accepted
+  - descriptive/context-only shortlist rows are skipped with structured warnings instead of causing fatal orchestration failure
+- No-event / no-trade replay path is now a valid contract:
+  - `backtest_engine_events.csv` is written as a valid header-only CSV when replay emits zero events
+  - orchestration can complete with `ruleset_count=0`, `engine_event_count=0`, and `trade_count=0`
+  - `backtest_orchestration_manifest.json` remains the authoritative summary for such runs
 
 Current output artifacts include:
 
@@ -81,6 +94,39 @@ Implemented baseline limitations (documented and explicit):
 - perturbation checks are external-surface only
 - regime robustness requires explicit regime labels
 - promotion decisions are research progression outputs only (not live-trading authorization)
+
+### Phase 2 → Phase 3 bridge patches (P0.1–P0.3)
+
+These changes are intentionally documented because they define the current integration contract between Analyzer outputs and the Phase 3 backtester.
+
+**P0.1 — Raw-feed resolution hardening**
+- Phase 3 no longer assumes `artifact_dir/raw.csv` is the only replay raw source.
+- Replay raw bars are resolved in this order:
+  1. explicit `raw_path`
+  2. `run_manifest.json -> input_feed_paths`
+  3. `artifact_dir/raw.csv` fallback compatibility mode
+- This preserves backward compatibility while removing manual dependency on copied `raw.csv` files when manifest lineage is available.
+
+**P0.2 — Formalization-safe shortlist ingestion**
+- Phase 3 no longer assumes every shortlist row is directly formalizable into a ruleset.
+- Current baseline auto-formalization supports only:
+  - `GroupType=Direction`
+  - `GroupType=SetupType`
+- Descriptive/context shortlist rows (for example `AbsorptionScore_v1`, `Ctx*`, bucketed ratios, lifecycle/outcome-only rows) are treated as research surfaces, not direct ruleset definitions.
+- Unsupported descriptive/context rows are skipped with structured `mapping_warnings`; they do not crash orchestration.
+
+**P0.3 — No-event replay contract**
+- If replay emits zero events, `backtest_engine_events.csv` is still written as a valid header-only artifact using canonical replay event columns.
+- The no-event path is therefore a valid, controlled outcome rather than a broken artifact state.
+- In such runs, orchestration may complete with:
+  - `ruleset_count = 0`
+  - `engine_event_count = 0`
+  - `trade_count = 0`
+
+**Implication for future work**
+- Analyzer shortlist remains a research surface first, not a guaranteed ruleset source.
+- Phase 3 currently formalizes only a narrow subset of shortlist semantics.
+- Future enrichment of shortlist / research summary with explicit formalization fields should extend this bridge deliberately, not by inference.
 
 ## Analyzer — Scope
 
@@ -137,12 +183,7 @@ Package: `analyzer/`
 | `selections.py` | Classify ranked groups into SELECT/REVIEW/REJECT decisions with deterministic threshold logic; research triage only |
 | `shortlists.py` | Filter to SELECT+REVIEW rows, sort by priority and score, assign ShortlistRank; export/review view only |
 | `shortlist_explanations.py` | Derive categorical bands (ScoreBand, SampleBand, DeltaDirection, PositiveRateDirection) and composite ExplanationCode per shortlist row |
-| `research_summary.py` | Build deterministic final research summary rows from shortlist + shortlist explanations; map research priority, add bridge fields (`FormalizationEligible`, `Direction`, `SetupType`, `EligibleEventTypes`), and enforce strict one-to-one joins |
-
-Bridge contract note (Analyzer → Backtester):
-- `FormalizationEligible=TRUE` rows are formalization-ready for Backtester rulesets.
-- `FormalizationEligible=FALSE` rows are research-only lineage rows and must retain null replay semantics fields.
-- Without `setups_df`, `SetupType` rows with explicit `_LONG`/`_SHORT` suffix remain formalizable; `Direction` rows fail loud because setup-family lineage is unavailable.
+| `research_summary.py` | Build deterministic final research summary rows from shortlist + shortlist explanations; map research priority and enforce strict one-to-one joins |
 
 **Infrastructure:**
 
