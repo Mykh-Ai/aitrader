@@ -11,7 +11,7 @@ from backtester.engine import ReplayContractError, ZeroCostSkeletonModel
 from backtester.orchestrator import ORCHESTRATION_MANIFEST_NAME, result_as_dict, run_backtester
 
 
-def _write_analyzer_artifacts(artifact_dir: Path) -> None:
+def _write_analyzer_artifacts(artifact_dir: Path, *, raw_output_path: Path | None = None) -> None:
     artifact_dir.mkdir(parents=True, exist_ok=True)
 
     raw = pd.DataFrame(
@@ -73,7 +73,10 @@ def _write_analyzer_artifacts(artifact_dir: Path) -> None:
     )
     research_summary = shortlist.copy()
 
-    raw.to_csv(artifact_dir / "raw.csv", index=False)
+    if raw_output_path is None:
+        raw_output_path = artifact_dir / "raw.csv"
+    raw_output_path.parent.mkdir(parents=True, exist_ok=True)
+    raw.to_csv(raw_output_path, index=False)
     features.to_csv(artifact_dir / "analyzer_features.csv", index=False)
     setups.to_csv(artifact_dir / "analyzer_setups.csv", index=False)
     shortlist.to_csv(artifact_dir / "analyzer_setup_shortlist.csv", index=False)
@@ -173,6 +176,52 @@ def test_missing_required_analyzer_artifact_fails_loudly(tmp_path: Path):
 
     with pytest.raises(ReplayContractError, match="Missing required Analyzer artifacts"):
         _run(artifact_dir, tmp_path / "out")
+
+
+def test_raw_feed_resolution_prefers_explicit_raw_path(tmp_path: Path):
+    artifact_dir = tmp_path / "analyzer_run"
+    external_raw_path = tmp_path / "feeds" / "explicit_raw.csv"
+    _write_analyzer_artifacts(artifact_dir, raw_output_path=external_raw_path)
+
+    result = run_backtester(
+        artifact_dir=artifact_dir,
+        output_dir=tmp_path / "out",
+        ruleset_source_formalization_mode="SHORTLIST_FIRST",
+        variant_names=("BASE",),
+        cost_model_id="COST_MODEL_ZERO_SKELETON_ONLY",
+        same_bar_policy_id="SAME_BAR_CONSERVATIVE_V0_1",
+        replay_semantics_version="REPLAY_V0_1",
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        raw_path=external_raw_path,
+        cost_models={"COST_MODEL_ZERO_SKELETON_ONLY": ZeroCostSkeletonModel()},
+    )
+
+    assert result.engine_events_path.exists()
+
+
+def test_raw_feed_resolution_uses_manifest_input_feed_paths(tmp_path: Path):
+    artifact_dir = tmp_path / "analyzer_run"
+    manifest_raw_path = tmp_path / "feeds" / "manifest_raw.csv"
+    _write_analyzer_artifacts(artifact_dir, raw_output_path=manifest_raw_path)
+
+    manifest_payload = {
+        "status": "SUCCESS",
+        "input_feed_paths": [str(manifest_raw_path)],
+    }
+    (artifact_dir / "run_manifest.json").write_text(json.dumps(manifest_payload), encoding="utf-8")
+
+    result = _run(artifact_dir, tmp_path / "out")
+
+    assert result.engine_events_path.exists()
+
+
+def test_raw_feed_resolution_falls_back_to_artifact_dir_raw_csv(tmp_path: Path):
+    artifact_dir = tmp_path / "analyzer_run"
+    _write_analyzer_artifacts(artifact_dir)
+
+    result = _run(artifact_dir, tmp_path / "out")
+
+    assert result.engine_events_path.exists()
 
 
 def test_boundary_preservation_orchestrator_does_not_call_analyzer_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
