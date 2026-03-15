@@ -15,6 +15,7 @@ SETUP_COLUMNS = [
     "SetupBarTs",
     "ReferenceEventTs",
     "ReferenceEventType",
+    "SourceTF",
     "ReferenceEventAnchorTs",
     "ReferenceLevel",
     "AbsorptionScore_v1",
@@ -175,6 +176,7 @@ def extract_setup_candidates(df: pd.DataFrame, events_df: pd.DataFrame) -> pd.Da
             "SetupBarTs": out["Timestamp"],
             "ReferenceEventTs": out["Timestamp"],
             "ReferenceEventType": out["EventType"],
+            "SourceTF": out["SourceTF"],
             "ReferenceEventAnchorTs": out["ReferenceSwingTs"],
             "ReferenceLevel": out["PriceLevel"],
         }
