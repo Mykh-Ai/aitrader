@@ -62,6 +62,7 @@ _VALID_SOURCE_FORMALIZATION_MODES = {
     "RESEARCH_SUMMARY_FIRST",
     "INTERSECTION",
 }
+_SUPPORTED_BASELINE_GROUP_TYPES = {"Direction", "SetupType"}
 
 
 def _filter_formalization_eligible(df: pd.DataFrame) -> pd.DataFrame:
@@ -178,6 +179,30 @@ def _resolve_row_semantics(
         return str(explicit_direction), str(explicit_setup_type), str(explicit_events)
 
     return _derive_direction_setup(str(row["GroupType"]), str(row["GroupValue"]))
+
+
+def _is_descriptive_context_group_skip_candidate(row: dict) -> bool:
+    group_type = str(row.get("GroupType", ""))
+    if group_type in _SUPPORTED_BASELINE_GROUP_TYPES:
+        return False
+
+    explicit_direction = row.get("Direction")
+    explicit_setup_type = row.get("SetupType")
+    explicit_events = row.get("EligibleEventTypes")
+    explicit_values = [explicit_direction, explicit_setup_type, explicit_events]
+    has_any_explicit = any(pd.notna(v) and str(v).strip() != "" for v in explicit_values)
+    return not has_any_explicit
+
+
+def _build_skip_warning(row: dict, reason: str) -> str:
+    return (
+        "RULESET_SHORTLIST_ROW_SKIPPED"
+        f"|reason={reason}"
+        f"|SourceReport={row.get('SourceReport')}"
+        f"|GroupType={row.get('GroupType')}"
+        f"|GroupValue={row.get('GroupValue')}"
+        f"|SelectionDecision={row.get('SelectionDecision')}"
+    )
 
 
 def _family_token(source_report: str, group_type: str, group_value: str) -> str:
@@ -302,6 +327,7 @@ def build_backtest_rulesets(
         }
 
     rows: list[RulesetRow] = []
+    skipped_warnings: list[str] = []
 
     for short_row in shortlist.itertuples(index=False):
         source_report = str(short_row.SourceReport)
@@ -316,6 +342,15 @@ def build_backtest_rulesets(
             )
 
         row_dict = short_row._asdict()
+        if _is_descriptive_context_group_skip_candidate(row_dict):
+            skipped_warnings.append(
+                _build_skip_warning(
+                    row_dict,
+                    reason="unsupported_group_type_without_explicit_direction_setup_events",
+                )
+            )
+            continue
+
         direction, setup_type, eligible_events = _resolve_row_semantics(
             row_dict,
             direction_column=direction_column,
@@ -380,6 +415,7 @@ def build_backtest_rulesets(
         rulesets_df,
         max_variants_per_candidate=max_variants_per_candidate,
     )
+    warnings.extend(skipped_warnings)
     return rulesets_df, warnings
 
 
