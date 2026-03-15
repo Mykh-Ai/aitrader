@@ -18,6 +18,20 @@ SWEEP_FEATURE_COLUMNS = [
 ]
 
 
+def _first_cross_only(
+    cross_mask: pd.Series,
+    reference_level: pd.Series,
+    reference_ts: pd.Series,
+) -> pd.Series:
+    """Keep only the first qualifying cross per unchanged reference lineage."""
+    if not cross_mask.any():
+        return cross_mask
+
+    cross_hits = cross_mask.astype("int64")
+    hits_for_reference = cross_hits.groupby([reference_level, reference_ts], dropna=False).cumsum()
+    return cross_mask & (hits_for_reference == 1)
+
+
 def _annotate_tf_sweeps(out: pd.DataFrame, tf_label: str) -> pd.DataFrame:
     high_price_col = f"SwingHigh_{tf_label}_Price"
     high_ts_col = f"SwingHigh_{tf_label}_ConfirmedAt"
@@ -41,8 +55,11 @@ def _annotate_tf_sweeps(out: pd.DataFrame, tf_label: str) -> pd.DataFrame:
     raw_down = low_level.notna() & (out["Low"] < low_level) & ~synthetic_mask
 
     ambiguous = raw_up & raw_down
-    up = raw_up & ~ambiguous
-    down = raw_down & ~ambiguous
+    up_candidates = raw_up & ~ambiguous
+    down_candidates = raw_down & ~ambiguous
+
+    up = _first_cross_only(up_candidates, high_level, out[high_ts_col])
+    down = _first_cross_only(down_candidates, low_level, out[low_ts_col])
 
     out[up_col] = up.astype(bool)
     out[down_col] = down.astype(bool)

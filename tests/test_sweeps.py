@@ -40,6 +40,21 @@ def test_downward_sweep_below_confirmed_h1_swing_low():
     assert row["Sweep_H1_ReferenceTs"] == pd.Timestamp("2025-01-01T03:00:00Z")
 
 
+def test_downward_sweep_emits_only_first_cross_for_unchanged_reference():
+    # Confirmed H1 swing low at 01:00 (4) is visible from 03:00 onward.
+    # Multiple later bars remain below 4, but only the first down-side cross should emit.
+    df = _hourly_df(highs=[10, 11, 10, 10, 10, 10], lows=[8, 4, 6, 3, 2, 1])
+
+    out = detect_sweeps(annotate_swings(df))
+
+    first = out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T03:00:00Z")].iloc[0]
+    assert first["Sweep_H1_Down"]
+    assert first["Sweep_H1_ReferenceLevel"] == 4
+    assert first["Sweep_H1_ReferenceTs"] == pd.Timestamp("2025-01-01T03:00:00Z")
+
+    assert not out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T04:00:00Z"), "Sweep_H1_Down"].iloc[0]
+    assert not out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T05:00:00Z"), "Sweep_H1_Down"].iloc[0]
+
 def test_no_sweep_before_confirmation_exists():
     # Bar at 02:00 trades above eventual swing high (14), but confirmation appears only at 03:00.
     df = _hourly_df(highs=[10, 14, 15, 10], lows=[5, 6, 7, 6])
@@ -49,6 +64,54 @@ def test_no_sweep_before_confirmation_exists():
     row = out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T02:00:00Z")].iloc[0]
     assert pd.isna(row["SwingHigh_H1_Price"])
     assert not row["Sweep_H1_Up"]
+
+
+def test_sweep_emits_only_first_cross_for_unchanged_reference():
+    # Confirmed H1 swing high at 01:00 (14) is visible from 03:00 onward.
+    # Multiple later bars remain above 14, but only the first cross should emit.
+    df = _hourly_df(highs=[10, 14, 11, 15, 16, 17], lows=[5, 6, 6, 6, 6, 6])
+
+    out = detect_sweeps(annotate_swings(df))
+
+    assert out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T03:00:00Z"), "Sweep_H1_Up"].iloc[0]
+    assert not out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T04:00:00Z"), "Sweep_H1_Up"].iloc[0]
+    assert not out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T05:00:00Z"), "Sweep_H1_Up"].iloc[0]
+
+
+def test_sweep_dedup_resets_when_confirmed_reference_changes():
+    # First confirmed high reference (14) is swept at 03:00.
+    # Later a new confirmed high reference (16) materializes at 06:00 and can sweep again at 07:00.
+    df = _hourly_df(highs=[10, 14, 11, 15, 16, 13, 12, 17], lows=[5, 6, 6, 6, 6, 6, 6, 6])
+
+    out = detect_sweeps(annotate_swings(df))
+
+    first = out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T03:00:00Z")].iloc[0]
+    assert first["Sweep_H1_Up"]
+    assert first["Sweep_H1_ReferenceLevel"] == 14
+
+    # Re-breach of unchanged reference is suppressed.
+    assert not out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T04:00:00Z"), "Sweep_H1_Up"].iloc[0]
+
+    second = out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T07:00:00Z")].iloc[0]
+    assert second["Sweep_H1_Up"]
+    assert second["Sweep_H1_ReferenceLevel"] == 16
+    assert second["Sweep_H1_ReferenceTs"] == pd.Timestamp("2025-01-01T06:00:00Z")
+
+
+def test_first_cross_dedup_is_group_local_across_reference_switch():
+    # Cross on old reference at 03:00 and first cross on new reference at 07:00
+    # must both emit; group-local dedup must not suppress new lineage first cross.
+    df = _hourly_df(highs=[10, 14, 11, 15, 16, 13, 12, 17], lows=[5, 6, 6, 6, 6, 6, 6, 6])
+
+    out = detect_sweeps(annotate_swings(df))
+
+    old_ref_cross = out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T03:00:00Z")].iloc[0]
+    new_ref_cross = out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T07:00:00Z")].iloc[0]
+
+    assert old_ref_cross["Sweep_H1_Up"]
+    assert old_ref_cross["Sweep_H1_ReferenceLevel"] == 14
+    assert new_ref_cross["Sweep_H1_Up"]
+    assert new_ref_cross["Sweep_H1_ReferenceLevel"] == 16
 
 
 def test_equal_touch_is_not_sweep_with_strict_rule():
