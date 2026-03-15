@@ -5,10 +5,12 @@ import pytest
 
 from backtester.engine import (
     ReplayContractError,
+    REPLAY_EVENT_COLUMNS,
     ReplayInputs,
     ZeroCostSkeletonModel,
     load_replay_inputs,
     run_replay_engine,
+    write_engine_outputs,
 )
 
 
@@ -325,3 +327,35 @@ def test_same_bar_unresolved_emits_structured_unresolved_not_notes_only():
     assert close_row["close_reason"] == "SAME_BAR_UNRESOLVED"
     assert close_row["close_reason_category"] == "UNRESOLVED"
     assert close_row["close_resolved"] == False
+
+
+def test_no_eligible_setups_returns_empty_events_with_canonical_schema():
+    inputs = ReplayInputs(
+        raw_df=_raw_df(),
+        features_df=_features_df(),
+        setups_df=_setups_df(),
+        rulesets_df=_rulesets_df().assign(direction="SHORT"),
+    )
+
+    events, _ = run_replay_engine(
+        inputs,
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models=_cost_models(),
+    )
+
+    assert events.empty
+    assert list(events.columns) == list(REPLAY_EVENT_COLUMNS)
+
+
+def test_write_engine_outputs_persists_header_only_csv_for_empty_events(tmp_path: Path):
+    empty_events = pd.DataFrame(columns=["event_type"])
+    events_path, manifest_path = write_engine_outputs(
+        events_df=empty_events,
+        manifest={"generated_at_utc": "2024-01-01T00:00:00+00:00"},
+        output_dir=tmp_path,
+    )
+
+    written = pd.read_csv(events_path)
+    assert written.empty
+    assert list(written.columns) == list(REPLAY_EVENT_COLUMNS)
+    assert manifest_path.exists()

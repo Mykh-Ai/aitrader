@@ -37,6 +37,29 @@ REQUIRED_RULESET_REPLAY_FIELDS = (
 )
 SAME_BAR_OUTCOMES = ("STOP_WINS", "TARGET_WINS", "UNRESOLVED", "DEFERRED", "NONE")
 CLOSE_REASON_CATEGORIES = ("STOP", "TARGET", "EXPIRY", "UNRESOLVED")
+REPLAY_EVENT_COLUMNS = (
+    "event_id",
+    "ruleset_id",
+    "event_type",
+    "timestamp",
+    "bar_timestamp",
+    "source_setup_id",
+    "direction",
+    "state_before",
+    "state_after",
+    "price_raw",
+    "price_effective",
+    "same_bar_policy_id",
+    "same_bar_outcome",
+    "cost_model_id",
+    "replay_semantics_version",
+    "close_reason",
+    "close_reason_category",
+    "close_resolved",
+    "close_price_raw",
+    "close_price_effective",
+    "notes",
+)
 
 ENTRY_TIMING_BASELINE = "SIGNAL_BAR_CLOSE__ENTRY_NEXT_BAR_OPEN"
 ENTRY_PRICE_BASELINE = "NEXT_BAR_OPEN"
@@ -612,7 +635,7 @@ def run_replay_engine(
                 ),
             )
 
-    events_df = pd.DataFrame(events)
+    events_df = pd.DataFrame(events, columns=REPLAY_EVENT_COLUMNS)
     manifest = {
         "artifact_paths": inputs.artifact_paths or {},
         "ruleset_ids": rulesets["ruleset_id"].astype(str).tolist(),
@@ -637,7 +660,8 @@ def write_engine_outputs(
     events_path = output / "backtest_engine_events.csv"
     manifest_path = output / "backtest_run_manifest.json"
 
-    events_df.to_csv(events_path, index=False)
+    events_out = events_df.reindex(columns=REPLAY_EVENT_COLUMNS)
+    events_out.to_csv(events_path, index=False)
     with manifest_path.open("w", encoding="utf-8") as fp:
         json.dump(dict(manifest), fp, ensure_ascii=False, indent=2)
     return events_path, manifest_path
