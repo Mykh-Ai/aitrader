@@ -267,6 +267,71 @@ def test_output_columns_match_exact_schema_order():
     assert list(shortlist_df.columns) == SHORTLIST_COLUMNS
 
 
+def test_shortlist_assigns_honesty_metadata_for_baseline_context_and_diagnostic_rows():
+    rankings_df = pd.DataFrame(
+        [
+            {
+                "SourceReport": "report",
+                "GroupType": "Direction",
+                "GroupValue": "LONG",
+                "SampleCount": 12,
+                "RankingScore": 0.15,
+                "RankingLabel": "TOP",
+                "Delta_Mean_CloseReturn_Pct": 0.20,
+                "Delta_PositiveCloseReturnRate": 0.08,
+            },
+            {
+                "SourceReport": "context_report",
+                "GroupType": "AbsorptionScore_v1",
+                "GroupValue": "HIGH",
+                "SampleCount": 10,
+                "RankingScore": 0.12,
+                "RankingLabel": "TOP",
+                "Delta_Mean_CloseReturn_Pct": 0.09,
+                "Delta_PositiveCloseReturnRate": 0.04,
+            },
+            {
+                "SourceReport": "report",
+                "GroupType": "LifecycleStatus",
+                "GroupValue": "EXPIRED",
+                "SampleCount": 18,
+                "RankingScore": 0.08,
+                "RankingLabel": "TOP",
+                "Delta_Mean_CloseReturn_Pct": 0.03,
+                "Delta_PositiveCloseReturnRate": 0.02,
+            },
+        ]
+    )
+    selections_df = pd.DataFrame(
+        [
+            {
+                **row,
+                "SelectionDecision": "SELECT",
+                "SelectionReason": "STRONG_POSITIVE_EDGE",
+            }
+            for row in rankings_df.to_dict("records")
+        ]
+    )
+
+    shortlist_df = build_setup_shortlist(rankings_df, selections_df)
+
+    by_group = shortlist_df.set_index("GroupType")
+    assert by_group.loc["Direction", "SemanticClass"] == "BASELINE_DIRECT"
+    assert by_group.loc["Direction", "FormalizationPath"] == "BASELINE_AUTO"
+
+    assert by_group.loc["AbsorptionScore_v1", "SemanticClass"] == "RESEARCH_CONTEXT_ONLY"
+    assert (
+        by_group.loc["AbsorptionScore_v1", "FormalizationPath"]
+        == "EXPLICIT_SEMANTICS_REQUIRED"
+    )
+
+    assert by_group.loc["LifecycleStatus", "SemanticClass"] == "DIAGNOSTIC_ONLY"
+    assert (
+        by_group.loc["LifecycleStatus", "FormalizationPath"]
+        == "NOT_DIRECT_FORMALIZATION_SOURCE"
+    )
+
+
 def test_empty_after_filter_returns_empty_shortlist_schema():
     selections_df = _selections_df()
     selections_df["SelectionDecision"] = "REJECT"

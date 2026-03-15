@@ -9,6 +9,8 @@ SHORTLIST_COLUMNS = [
     "SourceReport",
     "GroupType",
     "GroupValue",
+    "SemanticClass",
+    "FormalizationPath",
     "SampleCount",
     "RankingScore",
     "RankingLabel",
@@ -20,6 +22,16 @@ SHORTLIST_COLUMNS = [
 
 _NATURAL_KEY = ["SourceReport", "GroupType", "GroupValue"]
 _SELECTION_PRIORITY = {"SELECT": 0, "REVIEW": 1}
+
+_DIAGNOSTIC_GROUP_TYPES = {"LifecycleStatus", "OutcomeStatus"}
+
+_SEMANTIC_CLASS_BASELINE_DIRECT = "BASELINE_DIRECT"
+_SEMANTIC_CLASS_RESEARCH_CONTEXT_ONLY = "RESEARCH_CONTEXT_ONLY"
+_SEMANTIC_CLASS_DIAGNOSTIC_ONLY = "DIAGNOSTIC_ONLY"
+
+_FORMALIZATION_PATH_BASELINE_AUTO = "BASELINE_AUTO"
+_FORMALIZATION_PATH_EXPLICIT_SEMANTICS_REQUIRED = "EXPLICIT_SEMANTICS_REQUIRED"
+_FORMALIZATION_PATH_NOT_DIRECT_SOURCE = "NOT_DIRECT_FORMALIZATION_SOURCE"
 
 _REQUIRED_RANKING_COLUMNS = {
     "SourceReport",
@@ -89,6 +101,28 @@ def _strict_shortlist_join(rankings_df: pd.DataFrame, shortlistable_selections: 
     return shortlistable_selections.copy()
 
 
+def _semantic_class_for_row(source_report: object, group_type: object) -> str:
+    group_type_text = str(group_type)
+    if group_type_text in {"Direction", "SetupType"}:
+        return _SEMANTIC_CLASS_BASELINE_DIRECT
+    if group_type_text in _DIAGNOSTIC_GROUP_TYPES:
+        return _SEMANTIC_CLASS_DIAGNOSTIC_ONLY
+    if str(source_report) == "context_report":
+        return _SEMANTIC_CLASS_RESEARCH_CONTEXT_ONLY
+    return _SEMANTIC_CLASS_RESEARCH_CONTEXT_ONLY
+
+
+def _formalization_path_for_semantic_class(semantic_class: object) -> str:
+    value = str(semantic_class)
+    if value == _SEMANTIC_CLASS_BASELINE_DIRECT:
+        return _FORMALIZATION_PATH_BASELINE_AUTO
+    if value == _SEMANTIC_CLASS_DIAGNOSTIC_ONLY:
+        return _FORMALIZATION_PATH_NOT_DIRECT_SOURCE
+    if value == _SEMANTIC_CLASS_RESEARCH_CONTEXT_ONLY:
+        return _FORMALIZATION_PATH_EXPLICIT_SEMANTICS_REQUIRED
+    raise ValueError(f"Unsupported semantic class for shortlist formalization path mapping: {semantic_class}")
+
+
 def build_setup_shortlist(rankings_df: pd.DataFrame, selections_df: pd.DataFrame) -> pd.DataFrame:
     """Build deterministic shortlist rows for research review/export only."""
     _validate_required_columns(rankings_df, _REQUIRED_RANKING_COLUMNS, "rankings_df")
@@ -111,6 +145,15 @@ def build_setup_shortlist(rankings_df: pd.DataFrame, selections_df: pd.DataFrame
         )
 
     shortlist_df = _strict_shortlist_join(rankings_df, shortlistable)
+    shortlist_df["SemanticClass"] = [
+        _semantic_class_for_row(source_report, group_type)
+        for source_report, group_type in zip(
+            shortlist_df["SourceReport"], shortlist_df["GroupType"], strict=False
+        )
+    ]
+    shortlist_df["FormalizationPath"] = shortlist_df["SemanticClass"].map(
+        _formalization_path_for_semantic_class
+    )
 
     shortlist_df["_SelectionPriority"] = shortlist_df["SelectionDecision"].map(_SELECTION_PRIORITY)
     shortlist_df = shortlist_df.sort_values(
