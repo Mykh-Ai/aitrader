@@ -22,6 +22,7 @@ RESEARCH_SUMMARY_COLUMNS = [
     "DeltaDirection",
     "PositiveRateDirection",
     "ExplanationCode",
+    "OutcomeSemantics",
     "FormalizationEligible",
     "Direction",
     "SetupType",
@@ -30,6 +31,7 @@ RESEARCH_SUMMARY_COLUMNS = [
 
 _NATURAL_KEY = ["ShortlistRank", "SourceReport", "GroupType", "GroupValue"]
 _RESEARCH_PRIORITY_MAP = {"SELECT": "P1", "REVIEW": "P2"}
+_OUTCOME_SEMANTICS_RESEARCH_PROXY = "RESEARCH_PROXY_FIXED_HORIZON"
 
 _REQUIRED_SHORTLIST_COLUMNS = {
     "ShortlistRank",
@@ -316,6 +318,7 @@ def build_research_summary(
             )
 
     merged_df["ResearchPriority"] = _derive_research_priority(merged_df["SelectionDecision"])
+    merged_df["OutcomeSemantics"] = _OUTCOME_SEMANTICS_RESEARCH_PROXY
 
     if setups_df is None or setups_df.empty:
         merged_df = _enrich_without_setups_fail_loud_direction_rows(merged_df)
