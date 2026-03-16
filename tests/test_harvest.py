@@ -10,12 +10,15 @@ from analyzer.harvest import (
     FORMALIZATION_CANDIDATE_COLUMNS,
     FORMALIZATION_REVIEW_COLUMNS,
     HARVESTED_CANDIDATE_COLUMNS,
+    PHASE3_RULESET_CONTRACT_COLUMNS,
     PHASE3_RULESET_DRAFT_COLUMNS,
     build_and_save_phase2_formalization_candidates,
     build_and_save_phase2_formalization_review,
+    build_and_save_phase3_ruleset_contract,
     build_and_save_phase3_ruleset_draft,
     build_phase2_formalization_candidates,
     build_phase2_formalization_review,
+    build_phase3_ruleset_contract,
     build_phase3_ruleset_draft,
     harvest_phase2_candidates,
     harvest_source_rows,
@@ -564,3 +567,129 @@ def test_build_and_save_phase3_ruleset_draft_writes_exactly_one_row(tmp_path: Pa
     assert list(written.columns) == PHASE3_RULESET_DRAFT_COLUMNS
     assert len(written) == 1
     assert written.iloc[0]["ExecutableStatus"] == "NOT_EXECUTABLE_YET"
+
+
+def test_build_phase3_ruleset_contract_materializes_single_explicit_contract_row() -> None:
+    draft = pd.DataFrame(
+        [
+            {
+                "SourceReport": "setup_report",
+                "GroupType": "SetupType",
+                "GroupValue": "FAILED_BREAK_RECLAIM_LONG",
+                "DistinctRunCount": 2,
+                "OccurrenceCount": 3,
+                "FirstSeenRunDate": "2026-01-01",
+                "LastSeenRunDate": "2026-01-03",
+                "RankingMethods": "delta_weighted",
+                "RunIds": "run_1;run_2;run_3",
+                "RunDates": "2026-01-01;2026-01-02;2026-01-03",
+                "RankingScoreMean": 0.6,
+                "SelectionDecisions": "SELECT",
+                "RankingLabels": "A",
+                "ResearchPriorities": "HIGH",
+                "FormalizationStatus": "CANDIDATE_UNDER_REVIEW",
+                "ReadinessFlag": "REVIEW_REQUIRED",
+                "KnownCaveats": "RESEARCH_ONLY_NOT_YET_RULESET",
+                "ProposedSetupFamily": "FAILED_BREAK_RECLAIM_LONG",
+                "ProposedDirection": "LONG",
+                "ProposedEligibleEventTypes": "GROUP_TYPE:SetupType",
+                "RuleDraftStatus": "NOT_DRAFTED",
+                "OpenQuestions": "NEED_EXPLICIT_RULE_BOUNDARY_REVIEW",
+                "ReviewNextAction": "MANUAL_RULESET_DRAFT",
+                "RulesetDraftId": "RULESET_DRAFT::setup_report::SetupType::FAILED_BREAK_RECLAIM_LONG::DRAFT_V1",
+                "RulesetVersion": "DRAFT_V1",
+                "DraftStatus": "DRAFT_CREATED",
+                "ExecutableStatus": "NOT_EXECUTABLE_YET",
+                "SetupFamily": "FAILED_BREAK_RECLAIM_LONG",
+                "Direction": "LONG",
+                "EligibleEventTypes": "GROUP_TYPE:SetupType",
+                "RuleBoundaryStatus": "REVIEW_REQUIRED",
+                "EntryLogicStatus": "NOT_IMPLEMENTED",
+                "ExitLogicStatus": "NOT_IMPLEMENTED",
+                "RiskLogicStatus": "NOT_IMPLEMENTED",
+                "KnownUnresolvedFields": "ENTRY_EXIT_RISK_NOT_DEFINED",
+                "NextAction": "EXPLICIT_RULESET_SPEC_REVIEW",
+            }
+        ]
+    )
+
+    contract = build_phase3_ruleset_contract(draft)
+
+    assert list(contract.columns) == PHASE3_RULESET_CONTRACT_COLUMNS
+    assert len(contract) == 1
+    row = contract.iloc[0]
+    assert row["RulesetId"] == "RULESET::setup_report::SetupType::FAILED_BREAK_RECLAIM_LONG::CONTRACT_V1"
+    assert row["RulesetContractVersion"] == "CONTRACT_V1"
+    assert row["ContractStatus"] == "CONTRACT_DEFINED_PARTIAL"
+    assert row["ReplayReadinessStatus"] == "NOT_READY_FOR_REPLAY"
+    assert row["SetupFamily"] == "FAILED_BREAK_RECLAIM_LONG"
+    assert row["Direction"] == "LONG"
+    assert row["EligibleEventTypes"] == "GROUP_TYPE:SetupType"
+    assert row["EntryTriggerSpec"] == "NOT_YET_EXPLICIT"
+    assert row["EntryBoundarySpec"] == "NOT_YET_EXPLICIT"
+    assert row["ExitBoundarySpec"] == "NOT_YET_EXPLICIT"
+    assert row["RiskSpec"] == "NOT_YET_EXPLICIT"
+    assert row["ContractCompleteness"] == "PARTIAL"
+    assert row["KnownUnresolvedContractFields"] == "ENTRY_EXIT_RISK_BOUNDARIES_UNRESOLVED"
+    assert row["NextAction"] == "MANUAL_REPLAY_RULE_MAPPING"
+
+
+def test_build_phase3_ruleset_contract_returns_empty_artifact_when_no_draft() -> None:
+    contract = build_phase3_ruleset_contract(pd.DataFrame(columns=PHASE3_RULESET_DRAFT_COLUMNS))
+
+    assert list(contract.columns) == PHASE3_RULESET_CONTRACT_COLUMNS
+    assert contract.empty
+
+
+def test_build_and_save_phase3_ruleset_contract_writes_exactly_one_row(tmp_path: Path) -> None:
+    draft_path = tmp_path / "phase3_ruleset_draft.csv"
+    output_path = tmp_path / "phase3_ruleset_contract.csv"
+    pd.DataFrame(
+        [
+            {
+                "SourceReport": "setup_report",
+                "GroupType": "SetupType",
+                "GroupValue": "FAILED_BREAK_RECLAIM_LONG",
+                "DistinctRunCount": 2,
+                "OccurrenceCount": 3,
+                "FirstSeenRunDate": "2026-01-01",
+                "LastSeenRunDate": "2026-01-03",
+                "RankingMethods": "delta_weighted",
+                "RunIds": "run_1;run_2;run_3",
+                "RunDates": "2026-01-01;2026-01-02;2026-01-03",
+                "RankingScoreMean": 0.6,
+                "SelectionDecisions": "SELECT",
+                "RankingLabels": "A",
+                "ResearchPriorities": "HIGH",
+                "FormalizationStatus": "CANDIDATE_UNDER_REVIEW",
+                "ReadinessFlag": "REVIEW_REQUIRED",
+                "KnownCaveats": "RESEARCH_ONLY_NOT_YET_RULESET",
+                "ProposedSetupFamily": "FAILED_BREAK_RECLAIM_LONG",
+                "ProposedDirection": "LONG",
+                "ProposedEligibleEventTypes": "GROUP_TYPE:SetupType",
+                "RuleDraftStatus": "NOT_DRAFTED",
+                "OpenQuestions": "NEED_EXPLICIT_RULE_BOUNDARY_REVIEW",
+                "ReviewNextAction": "MANUAL_RULESET_DRAFT",
+                "RulesetDraftId": "RULESET_DRAFT::setup_report::SetupType::FAILED_BREAK_RECLAIM_LONG::DRAFT_V1",
+                "RulesetVersion": "DRAFT_V1",
+                "DraftStatus": "DRAFT_CREATED",
+                "ExecutableStatus": "NOT_EXECUTABLE_YET",
+                "SetupFamily": "FAILED_BREAK_RECLAIM_LONG",
+                "Direction": "LONG",
+                "EligibleEventTypes": "GROUP_TYPE:SetupType",
+                "RuleBoundaryStatus": "REVIEW_REQUIRED",
+                "EntryLogicStatus": "NOT_IMPLEMENTED",
+                "ExitLogicStatus": "NOT_IMPLEMENTED",
+                "RiskLogicStatus": "NOT_IMPLEMENTED",
+                "KnownUnresolvedFields": "ENTRY_EXIT_RISK_NOT_DEFINED",
+                "NextAction": "EXPLICIT_RULESET_SPEC_REVIEW",
+            }
+        ]
+    ).to_csv(draft_path, index=False)
+
+    build_and_save_phase3_ruleset_contract(draft_path, output_path)
+    written = pd.read_csv(output_path)
+
+    assert list(written.columns) == PHASE3_RULESET_CONTRACT_COLUMNS
+    assert len(written) == 1
+    assert written.iloc[0]["ReplayReadinessStatus"] == "NOT_READY_FOR_REPLAY"
