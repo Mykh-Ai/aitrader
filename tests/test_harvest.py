@@ -271,7 +271,7 @@ def test_build_phase2_formalization_candidates_selects_single_deterministic_stab
     assert list(formalization.columns) == FORMALIZATION_CANDIDATE_COLUMNS
     assert len(formalization) == 1
     assert formalization.iloc[0]["GroupValue"] == "FAILED_BREAK_RECLAIM_LONG"
-    assert formalization.iloc[0]["FormalizationStatus"] == "UNDER_REVIEW"
+    assert formalization.iloc[0]["FormalizationStatus"] == "CANDIDATE_UNDER_REVIEW"
     assert formalization.iloc[0]["ReadinessFlag"] == "REVIEW_REQUIRED"
     assert formalization.iloc[0]["KnownCaveats"] == "RESEARCH_ONLY_NOT_YET_RULESET"
 
