@@ -517,14 +517,16 @@ Candidate artifacts include:
 
 # Next Stage After P0–P3
 
-All planned phases (P0–P3) are complete. The system is ready for:
+All original phases (P0–P3) are complete. Next implementation targets:
 
-1. **Phase 3 backtesting** — validate edge on 6-month historical data using materialized rulesets
-2. **Phase 4 execution** — live trading via Spot Margin API (after backtesting validation)
+1. **Phase 4 — Ruleset Validation Layer** — mandatory validation gate before replay execution
+2. **Phase 5 — Experiment Registry** — structured journal of all backtest/replay runs
+3. **Backtesting** — validate edge on 6-month historical data using materialized rulesets
+4. **Execution** — live trading via Spot Margin API (after backtesting validation)
 
 ```text
-Phase 2 implementation plan is fully delivered.
-Pipeline is stable, reproducible, and binding-ready for Phase 3 backtesting.
+Pipeline order:
+analyzer → formalization → ruleset → validation (Phase 4) → replay → registry (Phase 5)
 ```
 
 ---
@@ -537,6 +539,8 @@ Pipeline is stable, reproducible, and binding-ready for Phase 3 backtesting.
 | P1 | Research honesty, ranking transparency | DONE |
 | P2 | Structural & context hardening | DONE |
 | P3 | Formalization candidate | DONE |
+| Phase 4 | Ruleset validation layer | TODO |
+| Phase 5 | Experiment registry / batch evaluation | TODO |
 
 ---
 
@@ -781,3 +785,87 @@ Implementation requirements:
 - Validation must execute automatically before replay execution begins.
 - Orchestrator must enforce hard-gate behavior on invalid results.
 - Validation logic must remain deterministic for identical artifact inputs.
+
+---
+
+# Phase 5 — Experiment Registry / Batch Evaluation Layer
+
+## Purpose
+
+Phase 5 introduces a structured experiment registry — an artifact journal of every backtest/replay run.
+
+Without a registry, after 5–10 replay runs the following questions become unanswerable:
+
+- which ruleset produced this result?
+- was this the old or new version?
+- which mapping was used?
+- which cost model / same-bar policy?
+- which run is better and why?
+
+The registry solves this by providing a single filterable list of experiments with full lineage and short outcome summaries.
+
+## Output Artifact
+
+```
+phase5_experiment_registry.csv
+```
+
+One row per experiment (backtest/replay run).
+
+## Registry Fields
+
+| Field | Description |
+|-------|-------------|
+| `ExperimentId` | Unique experiment identifier |
+| `ExperimentLabel` | Short human-readable tag (e.g. "baseline_v1", "tight_stop_test") |
+| `RunTimestamp` | When the experiment was executed |
+| `DateRangeStart` | Input data start date |
+| `DateRangeEnd` | Input data end date |
+| `RulesetId` | Which ruleset was used |
+| `RulesetContractVersion` | Contract version of the ruleset |
+| `ReplaySemanticsVersion` | Replay semantics version |
+| `MappingVersion` | Mapping version |
+| `ValidationStatus` | Phase 4 validation result |
+| `CostModelId` | Which cost model was applied |
+| `SameBarPolicyId` | Same-bar execution policy |
+| `InputArtifactDir` | Path to input artifacts |
+| `BacktestRunDir` | Path to backtest output |
+| `GitCommit` | Git commit hash for reproducibility |
+| `DurationSeconds` | How long the run took |
+| `TradeCount` | Total trades generated |
+| `ResolvedTradeCount` | Trades that reached resolution |
+| `ValidationSummaryStatus` | Aggregated validation outcome |
+| `PromotionSummaryStatus` | Whether results qualify for promotion |
+| `NetResult` | Short outcome metric |
+| `Notes` | Free-text notes |
+
+## Design Principles
+
+- Registry only records facts — no aggregation, no comparison, no auto-promotion
+- Append-only: each run adds a row, never modifies previous rows
+- Deterministic: identical inputs must produce identical registry rows (except `RunTimestamp`, `DurationSeconds`)
+- Lineage-complete: every registry row must link back to its full artifact chain
+
+## What the Registry Does NOT Do
+
+- No cross-experiment comparison logic (separate layer if needed)
+- No auto-promotion of "best" results
+- No modification of upstream artifacts
+- No execution decisions — purely observational
+
+## Implementation Targets
+
+Expected implementation components:
+
+- `backtester/experiment_registry.py`
+- `tests/test_experiment_registry.py`
+
+Integration call site:
+
+- `backtester/orchestrator.py` — hook after run completion
+
+Integration rules:
+
+- Registry write must execute after every completed replay run (valid or invalid)
+- Registry must not block or modify replay execution
+- Registry artifacts must be preserved alongside backtest output
