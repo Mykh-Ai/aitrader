@@ -24,6 +24,7 @@ from .metrics import build_trade_metrics_artifacts, write_trade_metrics_csvs
 from .promotion import build_promotion_artifacts, write_promotion_csvs
 from .robustness import build_robustness_artifacts, write_robustness_csvs
 from .rulesets import build_backtest_rulesets, validate_rulesets, write_backtest_rulesets_csv
+from .ruleset_validation import validate_phase3_ruleset_mapping, write_ruleset_validation_csvs
 from .validation import build_validation_artifacts, write_validation_csvs
 
 REQUIRED_ANALYZER_ARTIFACTS = {
@@ -37,6 +38,8 @@ OPTIONAL_ANALYZER_ARTIFACTS = {
     "events": "analyzer_events.csv",
     "lineage": "analyzer_setup_shortlist_explanations.csv",
     "ruleset_mapping": "phase3_ruleset_mapping.csv",
+    "ruleset_contract": "phase3_ruleset_contract.csv",
+    "ruleset_draft": "phase3_ruleset_draft.csv",
 }
 
 ORCHESTRATION_MANIFEST_NAME = "backtest_orchestration_manifest.json"
@@ -200,6 +203,7 @@ def run_backtester(
     shortlist_df = _load_csv(required_paths["shortlist"], label="shortlist")
     research_summary_df = _load_csv(required_paths["research_summary"], label="research_summary")
     ruleset_mapping_df = None
+    phase4_validation_paths: dict[str, str] = {}
 
     if ruleset_source_formalization_mode == "PHASE3_MAPPING_ONLY":
         mapping_name = ruleset_mapping_artifact_filename or OPTIONAL_ANALYZER_ARTIFACTS["ruleset_mapping"]
@@ -210,6 +214,41 @@ def run_backtester(
                 f"ruleset_mapping={mapping_path}"
             )
         ruleset_mapping_df = _load_csv(mapping_path, label="phase3_ruleset_mapping")
+
+        contract_path = artifact_root / OPTIONAL_ANALYZER_ARTIFACTS["ruleset_contract"]
+        draft_path = artifact_root / OPTIONAL_ANALYZER_ARTIFACTS["ruleset_draft"]
+        contract_df = _load_csv(contract_path, label="phase3_ruleset_contract") if contract_path.exists() else None
+        draft_df = _load_csv(draft_path, label="phase3_ruleset_draft") if draft_path.exists() else None
+
+        # Ownership boundary: ruleset_validation.py is the mandatory pre-replay
+        # executable-readiness gate for PHASE3_MAPPING_ONLY. rulesets.py keeps
+        # defensive materialization checks, but does not replace this Phase 4 gate.
+        phase4_artifacts = validate_phase3_ruleset_mapping(
+            mapping_df=ruleset_mapping_df,
+            contract_df=contract_df,
+            draft_df=draft_df,
+        )
+        summary_path, details_path = write_ruleset_validation_csvs(artifacts=phase4_artifacts, output_dir=out_dir)
+        phase4_validation_paths = {"summary": str(summary_path), "details": str(details_path)}
+
+        replay_eligible = phase4_artifacts.summary[
+            phase4_artifacts.summary["IsReplayEligible"] == True
+        ].reset_index(drop=True)
+        if replay_eligible.empty:
+            raise ReplayContractError(
+                "Phase 4 ruleset validation gate blocked replay: no replay-eligible mapping rows. "
+                f"See {summary_path} and {details_path}."
+            )
+        if len(replay_eligible.index) > 1:
+            raise ReplayContractError(
+                "Phase 4 ruleset validation gate blocked replay: mapping-only mode requires exactly one "
+                f"replay-eligible row, got {len(replay_eligible.index)}. See {summary_path}."
+            )
+
+        ruleset_id = str(replay_eligible.iloc[0]["RulesetId"])
+        ruleset_mapping_df = ruleset_mapping_df[
+            ruleset_mapping_df["RulesetId"].astype(str) == ruleset_id
+        ].reset_index(drop=True)
 
     rulesets_df, mapping_warnings = build_backtest_rulesets(
         shortlist_df=shortlist_df,
@@ -283,6 +322,7 @@ def run_backtester(
         "replay_semantics_version": replay_semantics_version,
         "ruleset_count": int(len(rulesets_df)),
         "mapping_warnings": list(mapping_warnings),
+        "phase4_validation_paths": phase4_validation_paths,
         "engine_event_count": int(len(engine_events_df)),
         "trade_count": int(len(trade_ledger_df)),
         "validation_scopes": validation_artifacts.summary["scope"].astype(str).tolist(),

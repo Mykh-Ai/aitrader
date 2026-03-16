@@ -301,6 +301,8 @@ def _build_rulesets_from_phase3_mapping(
         if _is_unresolved_placeholder(str(value)):
             raise ValueError(f"Critical mapping field '{column}' is unresolved: {value}")
 
+    # Defensive guard only: orchestrator-owned Phase 4 gate is the authoritative
+    # pre-replay readiness validator for PHASE3_MAPPING_ONLY.
     mapping_status = str(mapping_row["MappingStatus"]).strip().upper()
     if mapping_status not in _ACCEPTABLE_MAPPING_STATUSES:
         raise ValueError(
