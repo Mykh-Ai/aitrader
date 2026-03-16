@@ -10,10 +10,13 @@ from analyzer.harvest import (
     FORMALIZATION_CANDIDATE_COLUMNS,
     FORMALIZATION_REVIEW_COLUMNS,
     HARVESTED_CANDIDATE_COLUMNS,
+    PHASE3_RULESET_DRAFT_COLUMNS,
     build_and_save_phase2_formalization_candidates,
     build_and_save_phase2_formalization_review,
+    build_and_save_phase3_ruleset_draft,
     build_phase2_formalization_candidates,
     build_phase2_formalization_review,
+    build_phase3_ruleset_draft,
     harvest_phase2_candidates,
     harvest_source_rows,
 )
@@ -420,3 +423,144 @@ def test_build_and_save_phase2_formalization_review_writes_exactly_one_row(tmp_p
     assert len(written) == 1
     assert written.iloc[0]["GroupValue"] == "FAILED_BREAK_RECLAIM_LONG"
     assert written.iloc[0]["RuleDraftStatus"] == "NOT_DRAFTED"
+
+
+def test_build_phase3_ruleset_draft_materializes_single_explicit_draft_row() -> None:
+    review = pd.DataFrame(
+        [
+            {
+                "SourceReport": "setup_report",
+                "GroupType": "SetupType",
+                "GroupValue": "FAILED_BREAK_RECLAIM_LONG",
+                "DistinctRunCount": 2,
+                "OccurrenceCount": 3,
+                "FirstSeenRunDate": "2026-01-01",
+                "LastSeenRunDate": "2026-01-03",
+                "RankingMethods": "delta_weighted",
+                "RunIds": "run_1;run_2;run_3",
+                "RunDates": "2026-01-01;2026-01-02;2026-01-03",
+                "RankingScoreMean": 0.6,
+                "SelectionDecisions": "SELECT",
+                "RankingLabels": "A",
+                "ResearchPriorities": "HIGH",
+                "FormalizationStatus": "CANDIDATE_UNDER_REVIEW",
+                "ReadinessFlag": "REVIEW_REQUIRED",
+                "KnownCaveats": "RESEARCH_ONLY_NOT_YET_RULESET",
+                "ProposedSetupFamily": "FAILED_BREAK_RECLAIM_LONG",
+                "ProposedDirection": "LONG",
+                "ProposedEligibleEventTypes": "GROUP_TYPE:SetupType",
+                "RuleDraftStatus": "NOT_DRAFTED",
+                "OpenQuestions": "NEED_EXPLICIT_RULE_BOUNDARY_REVIEW",
+                "NextAction": "MANUAL_RULESET_DRAFT",
+            }
+        ]
+    )
+
+    draft = build_phase3_ruleset_draft(review)
+
+    assert list(draft.columns) == PHASE3_RULESET_DRAFT_COLUMNS
+    assert len(draft) == 1
+    row = draft.iloc[0]
+    assert row["RulesetDraftId"] == (
+        "RULESET_DRAFT::setup_report::SetupType::FAILED_BREAK_RECLAIM_LONG::DRAFT_V1"
+    )
+    assert row["RulesetVersion"] == "DRAFT_V1"
+    assert row["DraftStatus"] == "DRAFT_CREATED"
+    assert row["ExecutableStatus"] == "NOT_EXECUTABLE_YET"
+    assert row["SetupFamily"] == "FAILED_BREAK_RECLAIM_LONG"
+    assert row["Direction"] == "LONG"
+    assert row["EligibleEventTypes"] == "GROUP_TYPE:SetupType"
+    assert row["RuleBoundaryStatus"] == "REVIEW_REQUIRED"
+    assert row["EntryLogicStatus"] == "NOT_IMPLEMENTED"
+    assert row["ExitLogicStatus"] == "NOT_IMPLEMENTED"
+    assert row["RiskLogicStatus"] == "NOT_IMPLEMENTED"
+    assert row["KnownUnresolvedFields"] == "ENTRY_EXIT_RISK_NOT_DEFINED"
+    assert row["ReviewNextAction"] == "MANUAL_RULESET_DRAFT"
+    assert row["NextAction"] == "EXPLICIT_RULESET_SPEC_REVIEW"
+
+
+def test_build_phase3_ruleset_draft_returns_empty_artifact_when_no_review_candidate() -> None:
+    draft = build_phase3_ruleset_draft(pd.DataFrame(columns=FORMALIZATION_REVIEW_COLUMNS))
+
+    assert list(draft.columns) == PHASE3_RULESET_DRAFT_COLUMNS
+    assert draft.empty
+
+
+def test_build_phase3_ruleset_draft_preserves_unresolved_safe_defaults() -> None:
+    review = pd.DataFrame(
+        [
+            {
+                "SourceReport": "setup_report",
+                "GroupType": "EventType",
+                "GroupValue": "SOMETHING",
+                "DistinctRunCount": 2,
+                "OccurrenceCount": 2,
+                "FirstSeenRunDate": "2026-01-01",
+                "LastSeenRunDate": "2026-01-02",
+                "RankingMethods": "delta_weighted",
+                "RunIds": "run_1;run_2",
+                "RunDates": "2026-01-01;2026-01-02",
+                "RankingScoreMean": 0.4,
+                "SelectionDecisions": "REVIEW",
+                "RankingLabels": "B",
+                "ResearchPriorities": "MEDIUM",
+                "FormalizationStatus": "CANDIDATE_UNDER_REVIEW",
+                "ReadinessFlag": "REVIEW_REQUIRED",
+                "KnownCaveats": "RESEARCH_ONLY_NOT_YET_RULESET",
+                "ProposedSetupFamily": "UNRESOLVED_SETUP_FAMILY_REVIEW_REQUIRED",
+                "ProposedDirection": "UNRESOLVED_DIRECTION_REVIEW_REQUIRED",
+                "ProposedEligibleEventTypes": "UNRESOLVED_EVENT_TYPES_REVIEW_REQUIRED",
+                "RuleDraftStatus": "NOT_DRAFTED",
+                "OpenQuestions": "NEED_EXPLICIT_RULE_BOUNDARY_REVIEW",
+                "NextAction": "MANUAL_RULESET_DRAFT",
+            }
+        ]
+    )
+
+    draft = build_phase3_ruleset_draft(review)
+    row = draft.iloc[0]
+
+    assert row["SetupFamily"] == "UNRESOLVED_SETUP_FAMILY_REVIEW_REQUIRED"
+    assert row["Direction"] == "UNRESOLVED_DIRECTION_REVIEW_REQUIRED"
+    assert row["EligibleEventTypes"] == "UNRESOLVED_EVENT_TYPES_REVIEW_REQUIRED"
+
+
+def test_build_and_save_phase3_ruleset_draft_writes_exactly_one_row(tmp_path: Path) -> None:
+    review_path = tmp_path / "phase2_formalization_review.csv"
+    output_path = tmp_path / "phase3_ruleset_draft.csv"
+    pd.DataFrame(
+        [
+            {
+                "SourceReport": "setup_report",
+                "GroupType": "SetupType",
+                "GroupValue": "FAILED_BREAK_RECLAIM_LONG",
+                "DistinctRunCount": 2,
+                "OccurrenceCount": 3,
+                "FirstSeenRunDate": "2026-01-01",
+                "LastSeenRunDate": "2026-01-03",
+                "RankingMethods": "delta_weighted",
+                "RunIds": "run_1;run_2;run_3",
+                "RunDates": "2026-01-01;2026-01-02;2026-01-03",
+                "RankingScoreMean": 0.6,
+                "SelectionDecisions": "SELECT",
+                "RankingLabels": "A",
+                "ResearchPriorities": "HIGH",
+                "FormalizationStatus": "CANDIDATE_UNDER_REVIEW",
+                "ReadinessFlag": "REVIEW_REQUIRED",
+                "KnownCaveats": "RESEARCH_ONLY_NOT_YET_RULESET",
+                "ProposedSetupFamily": "FAILED_BREAK_RECLAIM_LONG",
+                "ProposedDirection": "LONG",
+                "ProposedEligibleEventTypes": "GROUP_TYPE:SetupType",
+                "RuleDraftStatus": "NOT_DRAFTED",
+                "OpenQuestions": "NEED_EXPLICIT_RULE_BOUNDARY_REVIEW",
+                "NextAction": "MANUAL_RULESET_DRAFT",
+            }
+        ]
+    ).to_csv(review_path, index=False)
+
+    build_and_save_phase3_ruleset_draft(review_path, output_path)
+    written = pd.read_csv(output_path)
+
+    assert list(written.columns) == PHASE3_RULESET_DRAFT_COLUMNS
+    assert len(written) == 1
+    assert written.iloc[0]["ExecutableStatus"] == "NOT_EXECUTABLE_YET"
