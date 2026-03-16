@@ -180,3 +180,62 @@ def test_failed_break_pending_state_resets_after_large_timestamp_gap():
     out = detect_failed_breaks(df)
 
     assert not out["FailedBreak_H1_Up"].any()
+
+
+def test_failed_break_confirmation_must_happen_inside_timeout_window():
+    df = _empty_sweeps_df(7)
+    df.loc[1, "Sweep_H1_Up"] = True
+    df.loc[1, "Sweep_H1_Direction"] = "up"
+    df.loc[1, "Sweep_H1_ReferenceLevel"] = 100.0
+    df.loc[1, "Sweep_H1_ReferenceTs"] = df.loc[1, "Timestamp"]
+    df["Close"] = [99.0, 101.0, 102.0, 102.0, 102.0, 102.0, 99.0]
+
+    out = detect_failed_breaks(df, confirmation_bars=3)
+
+    assert not out["FailedBreak_H1_Up"].any()
+
+
+def test_failed_break_can_still_confirm_on_last_in_window_bar():
+    df = _empty_sweeps_df(6)
+    df.loc[1, "Sweep_H1_Up"] = True
+    df.loc[1, "Sweep_H1_Direction"] = "up"
+    df.loc[1, "Sweep_H1_ReferenceLevel"] = 100.0
+    df.loc[1, "Sweep_H1_ReferenceTs"] = df.loc[1, "Timestamp"]
+    df["Close"] = [99.0, 101.0, 102.0, 102.0, 99.0, 98.0]
+
+    out = detect_failed_breaks(df, confirmation_bars=3)
+
+    assert out.loc[4, "FailedBreak_H1_Up"]
+    assert not out.loc[5, "FailedBreak_H1_Up"]
+
+
+def test_new_sweep_after_timeout_can_create_fresh_failed_break_opportunity():
+    df = _empty_sweeps_df(8)
+    df.loc[1, "Sweep_H1_Up"] = True
+    df.loc[1, "Sweep_H1_Direction"] = "up"
+    df.loc[1, "Sweep_H1_ReferenceLevel"] = 100.0
+    df.loc[1, "Sweep_H1_ReferenceTs"] = df.loc[1, "Timestamp"]
+
+    df.loc[6, "Sweep_H1_Up"] = True
+    df.loc[6, "Sweep_H1_Direction"] = "up"
+    df.loc[6, "Sweep_H1_ReferenceLevel"] = 110.0
+    df.loc[6, "Sweep_H1_ReferenceTs"] = df.loc[6, "Timestamp"]
+
+    df["Close"] = [99.0, 101.0, 102.0, 102.0, 102.0, 102.0, 111.0, 109.0]
+
+    out = detect_failed_breaks(df, confirmation_bars=3)
+
+    assert out["FailedBreak_H1_Up"].sum() == 1
+    assert out.loc[7, "FailedBreak_H1_Up"]
+    assert out.loc[7, "FailedBreak_H1_ReferenceLevel"] == 110.0
+
+
+def test_confirmation_bars_must_be_positive():
+    df = _empty_sweeps_df(3)
+
+    try:
+        detect_failed_breaks(df, confirmation_bars=0)
+    except ValueError as exc:
+        assert "confirmation_bars" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError for confirmation_bars=0")
