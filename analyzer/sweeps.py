@@ -4,17 +4,27 @@ from __future__ import annotations
 
 import pandas as pd
 
+PENETRATION_MODEL_VERSION = "v1_observation_only"
+
 SWEEP_FEATURE_COLUMNS = [
     "Sweep_H1_Up",
     "Sweep_H1_Down",
     "Sweep_H1_Direction",
     "Sweep_H1_ReferenceLevel",
     "Sweep_H1_ReferenceTs",
+    "Sweep_H1_PenetrationAbs",
+    "Sweep_H1_PenetrationRel",
+    "Sweep_H1_PenetrationBand",
+    "Sweep_H1_PenetrationModelVersion",
     "Sweep_H4_Up",
     "Sweep_H4_Down",
     "Sweep_H4_Direction",
     "Sweep_H4_ReferenceLevel",
     "Sweep_H4_ReferenceTs",
+    "Sweep_H4_PenetrationAbs",
+    "Sweep_H4_PenetrationRel",
+    "Sweep_H4_PenetrationBand",
+    "Sweep_H4_PenetrationModelVersion",
 ]
 
 
@@ -43,6 +53,10 @@ def _annotate_tf_sweeps(out: pd.DataFrame, tf_label: str) -> pd.DataFrame:
     direction_col = f"Sweep_{tf_label}_Direction"
     ref_level_col = f"Sweep_{tf_label}_ReferenceLevel"
     ref_ts_col = f"Sweep_{tf_label}_ReferenceTs"
+    penetration_abs_col = f"Sweep_{tf_label}_PenetrationAbs"
+    penetration_rel_col = f"Sweep_{tf_label}_PenetrationRel"
+    penetration_band_col = f"Sweep_{tf_label}_PenetrationBand"
+    penetration_model_col = f"Sweep_{tf_label}_PenetrationModelVersion"
 
     high_level = pd.to_numeric(out[high_price_col], errors="coerce")
     low_level = pd.to_numeric(out[low_price_col], errors="coerce")
@@ -78,6 +92,25 @@ def _annotate_tf_sweeps(out: pd.DataFrame, tf_label: str) -> pd.DataFrame:
     ref_ts.loc[up] = out.loc[up, high_ts_col]
     ref_ts.loc[down] = out.loc[down, low_ts_col]
     out[ref_ts_col] = pd.to_datetime(ref_ts, utc=True)
+
+    penetration_abs = pd.Series(pd.NA, index=out.index, dtype="Float64")
+    penetration_abs.loc[up] = out.loc[up, "High"] - high_level.loc[up]
+    penetration_abs.loc[down] = low_level.loc[down] - out.loc[down, "Low"]
+    out[penetration_abs_col] = penetration_abs
+
+    denom = ref_level.abs().replace({0.0: pd.NA})
+    out[penetration_rel_col] = (penetration_abs / denom).astype("Float64")
+
+    penetration_band = pd.Series(pd.NA, index=out.index, dtype="object")
+    rel = out[penetration_rel_col]
+    penetration_band.loc[rel.notna() & (rel < 0.001)] = "shallow"
+    penetration_band.loc[rel.notna() & (rel >= 0.001) & (rel < 0.003)] = "medium"
+    penetration_band.loc[rel.notna() & (rel >= 0.003)] = "deep"
+    out[penetration_band_col] = penetration_band
+
+    penetration_model = pd.Series(pd.NA, index=out.index, dtype="object")
+    penetration_model.loc[penetration_abs.notna()] = PENETRATION_MODEL_VERSION
+    out[penetration_model_col] = penetration_model
 
     return out
 
