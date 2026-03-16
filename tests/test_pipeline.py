@@ -5,7 +5,7 @@ import pytest
 
 from analyzer.pipeline import run
 from analyzer.rankings import RANKING_COLUMNS
-from analyzer.schema import FEATURE_COLUMNS_IMPLEMENTED, FEATURE_COLUMNS_PLANNED
+from analyzer.schema import FEATURE_COLUMNS_IMPLEMENTED
 from analyzer.selections import SELECTION_COLUMNS
 from analyzer.shortlist_explanations import SHORTLIST_EXPLANATION_COLUMNS
 from analyzer.shortlists import SHORTLIST_COLUMNS
@@ -157,7 +157,7 @@ def test_pipeline_output_contains_implemented_feature_columns(tmp_path, monkeypa
         assert col in features.columns
 
 
-def test_pipeline_output_does_not_claim_planned_columns_as_materialized(tmp_path, monkeypatch):
+def test_pipeline_output_contains_context_feature_columns(tmp_path, monkeypatch):
     fixture = Path(__file__).parent / "fixtures" / "sample_raw_minimal.csv"
 
     monkeypatch.setattr(
@@ -193,8 +193,8 @@ def test_pipeline_output_does_not_claim_planned_columns_as_materialized(tmp_path
     result = run(fixture, tmp_path)
     features = result["features"]
 
-    for col in FEATURE_COLUMNS_PLANNED:
-        assert col not in features.columns
+    for col in ["session", "minutes_from_eu_open", "minutes_from_us_open", "ContextModelVersion"]:
+        assert col in features.columns
 
 
 def test_fixture_files_exist_and_loadable():

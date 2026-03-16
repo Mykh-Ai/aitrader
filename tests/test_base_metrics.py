@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from analyzer.base_metrics import add_base_metrics
+from analyzer.context import CONTEXT_MODEL_VERSION
 from analyzer.loader import load_raw_csv
 
 
@@ -62,3 +63,39 @@ def test_oi_change_and_liq_total_behavior():
     assert np.isnan(out["OI_Change"].iloc[0])
     assert out["OI_Change"].iloc[1] == 4.5
     assert out["LiqTotal"].tolist() == [2.0, 2.5]
+
+
+def test_context_metadata_is_materialized_deterministically():
+    data = pd.DataFrame(
+        {
+            "Timestamp": pd.to_datetime(
+                [
+                    "2025-01-01T07:59:00Z",
+                    "2025-01-01T08:00:00Z",
+                    "2025-01-01T13:30:00Z",
+                ],
+                utc=True,
+            ),
+            "Open": [100.0, 100.0, 100.0],
+            "High": [101.0, 101.0, 101.0],
+            "Low": [99.0, 99.0, 99.0],
+            "Close": [100.5, 100.5, 100.5],
+            "Volume": [10.0, 10.0, 10.0],
+            "AggTrades": [1.0, 1.0, 1.0],
+            "BuyQty": [5.0, 5.0, 5.0],
+            "SellQty": [4.0, 4.0, 4.0],
+            "VWAP": [100.2, 100.2, 100.2],
+            "OpenInterest": [1000.0, 1000.0, 1000.0],
+            "FundingRate": [0.0, 0.0, 0.0],
+            "LiqBuyQty": [1.5, 1.5, 1.5],
+            "LiqSellQty": [0.5, 0.5, 0.5],
+            "IsSynthetic": [0, 0, 0],
+        }
+    )
+
+    out = add_base_metrics(data)
+
+    assert out["session"].tolist() == ["ASIA", "EU", "US"]
+    assert out["minutes_from_eu_open"].tolist() == [-1, 0, 330]
+    assert out["minutes_from_us_open"].tolist() == [-331, -330, 0]
+    assert set(out["ContextModelVersion"]) == {CONTEXT_MODEL_VERSION}
