@@ -71,9 +71,25 @@ FORMALIZATION_CANDIDATE_COLUMNS = [
     "KnownCaveats",
 ]
 
+FORMALIZATION_REVIEW_COLUMNS = [
+    *FORMALIZATION_CANDIDATE_COLUMNS,
+    "ProposedSetupFamily",
+    "ProposedDirection",
+    "ProposedEligibleEventTypes",
+    "RuleDraftStatus",
+    "OpenQuestions",
+    "NextAction",
+]
+
 FORMALIZATION_STATUS_UNDER_REVIEW = "CANDIDATE_UNDER_REVIEW"
 FORMALIZATION_READINESS_REVIEW_REQUIRED = "REVIEW_REQUIRED"
 FORMALIZATION_CAVEAT_RESEARCH_ONLY = "RESEARCH_ONLY_NOT_YET_RULESET"
+RULE_DRAFT_STATUS_NOT_DRAFTED = "NOT_DRAFTED"
+OPEN_QUESTIONS_RULE_BOUNDARY_REVIEW = "NEED_EXPLICIT_RULE_BOUNDARY_REVIEW"
+NEXT_ACTION_MANUAL_RULESET_DRAFT = "MANUAL_RULESET_DRAFT"
+
+PROPOSED_SETUP_FAMILY_UNRESOLVED = "UNRESOLVED_SETUP_FAMILY_REVIEW_REQUIRED"
+PROPOSED_DIRECTION_UNRESOLVED = "UNRESOLVED_DIRECTION_REVIEW_REQUIRED"
 
 GROUP_KEY_COLUMNS = ["SourceReport", "GroupType", "GroupValue"]
 
@@ -257,6 +273,64 @@ def build_and_save_phase2_formalization_candidates(
     return output
 
 
+def _derive_proposed_setup_family(candidate: pd.Series) -> str:
+    if candidate.get("GroupType") == "SetupType":
+        group_value = candidate.get("GroupValue")
+        if pd.notna(group_value) and str(group_value) != "":
+            return str(group_value)
+    return PROPOSED_SETUP_FAMILY_UNRESOLVED
+
+
+def _derive_proposed_direction(candidate: pd.Series) -> str:
+    group_value = str(candidate.get("GroupValue", ""))
+    if group_value.endswith("_LONG"):
+        return "LONG"
+    if group_value.endswith("_SHORT"):
+        return "SHORT"
+    return PROPOSED_DIRECTION_UNRESOLVED
+
+
+def _derive_proposed_eligible_event_types(candidate: pd.Series) -> str:
+    group_type = candidate.get("GroupType")
+    if pd.notna(group_type) and str(group_type) != "":
+        return f"GROUP_TYPE:{group_type}"
+    return "UNRESOLVED_EVENT_TYPES_REVIEW_REQUIRED"
+
+
+def build_phase2_formalization_review(formalization_candidates: pd.DataFrame) -> pd.DataFrame:
+    """Build a deterministic single-row formalization review surface from nominated candidate CSV data."""
+    if formalization_candidates.empty:
+        return pd.DataFrame(columns=FORMALIZATION_REVIEW_COLUMNS)
+
+    selected = formalization_candidates.head(1).copy()
+    candidate = selected.iloc[0]
+    selected = selected.assign(
+        ProposedSetupFamily=_derive_proposed_setup_family(candidate),
+        ProposedDirection=_derive_proposed_direction(candidate),
+        ProposedEligibleEventTypes=_derive_proposed_eligible_event_types(candidate),
+        RuleDraftStatus=RULE_DRAFT_STATUS_NOT_DRAFTED,
+        OpenQuestions=OPEN_QUESTIONS_RULE_BOUNDARY_REVIEW,
+        NextAction=NEXT_ACTION_MANUAL_RULESET_DRAFT,
+    )
+    return selected[FORMALIZATION_REVIEW_COLUMNS].reset_index(drop=True)
+
+
+def build_and_save_phase2_formalization_review(
+    runs_root: str | Path,
+    candidate_output_path: str | Path,
+    review_output_path: str | Path,
+) -> Path:
+    """Materialize deterministic single-candidate review CSV from the formalization-candidate surface."""
+    candidate_path = build_and_save_phase2_formalization_candidates(runs_root, candidate_output_path)
+    formalization_candidates = pd.read_csv(candidate_path)
+    formalization_review = build_phase2_formalization_review(formalization_candidates)
+
+    output = Path(review_output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    formalization_review.to_csv(output, index=False)
+    return output
+
+
 def main() -> None:
     import argparse
 
@@ -274,14 +348,23 @@ def main() -> None:
         default="phase2_formalization_candidates.csv",
         help="Path to output single-candidate formalization handoff CSV",
     )
+    parser.add_argument(
+        "--formalization-review-output",
+        default="phase2_formalization_review.csv",
+        help="Path to output single-candidate formalization review CSV",
+    )
     args = parser.parse_args()
 
     out_path = harvest_phase2_candidates(args.runs_root, args.output)
     formalization_out = build_and_save_phase2_formalization_candidates(
         args.runs_root, args.formalization_output
     )
+    formalization_review_out = build_and_save_phase2_formalization_review(
+        args.runs_root, args.formalization_output, args.formalization_review_output
+    )
     print(f"✅ Harvested candidates saved: {out_path}")
     print(f"✅ Formalization candidates saved: {formalization_out}")
+    print(f"✅ Formalization review saved: {formalization_review_out}")
 
 
 if __name__ == "__main__":
