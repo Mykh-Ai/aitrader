@@ -96,14 +96,14 @@ FEATURE_COLUMNS_IMPLEMENTED = [
     "CtxLiqSpike_v1",
     "CtxWickReclaim_v1",
     "AbsorptionScore_v1",
-]
-
-# Planned placeholders for future phases; not materialized yet.
-FEATURE_COLUMNS_PLANNED = [
     "session",
     "minutes_from_eu_open",
     "minutes_from_us_open",
+    "ContextModelVersion",
 ]
+
+# Planned placeholders for future phases; not materialized yet.
+FEATURE_COLUMNS_PLANNED: list[str] = []
 
 # Backward-compatible union contract.
 FEATURE_COLUMNS_PHASE0 = FEATURE_COLUMNS_IMPLEMENTED + FEATURE_COLUMNS_PLANNED

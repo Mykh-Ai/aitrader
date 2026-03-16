@@ -125,7 +125,7 @@ def _setup_id(
 def extract_setup_candidates(df: pd.DataFrame, events_df: pd.DataFrame) -> pd.DataFrame:
     """Extract baseline setup candidates from FAILED_BREAK_* events only.
 
-    Step 2 enriches each setup with context snapshot columns from ``df``.
+    Step 2 enriches each setup with baseline feature snapshot columns from ``df``.
     """
     if events_df.empty:
         return _empty_setups()
