@@ -33,7 +33,7 @@ def _init_failed_break_columns(out: pd.DataFrame, tf_label: str) -> None:
     out[f"FailedBreak_{tf_label}_ConfirmedTs"] = pd.Series(pd.NaT, index=out.index, dtype="object")
 
 
-def _annotate_tf_failed_breaks(out: pd.DataFrame, tf_label: str) -> None:
+def _annotate_tf_failed_breaks(out: pd.DataFrame, tf_label: str, confirmation_bars: int) -> None:
     sweep_dir_col = f"Sweep_{tf_label}_Direction"
     sweep_level_col = f"Sweep_{tf_label}_ReferenceLevel"
     sweep_ts_col = f"Sweep_{tf_label}_ReferenceTs"
@@ -48,6 +48,7 @@ def _annotate_tf_failed_breaks(out: pd.DataFrame, tf_label: str) -> None:
     pending_direction: str | None = None
     pending_level: float | None = None
     pending_sweep_ts = pd.NaT
+    pending_bar_pos: int | None = None
     previous_ts = pd.NaT
 
     close = pd.to_numeric(out["Close"], errors="coerce")
@@ -58,7 +59,7 @@ def _annotate_tf_failed_breaks(out: pd.DataFrame, tf_label: str) -> None:
     if "IsSynthetic" in out.columns:
         synthetic_mask = pd.to_numeric(out["IsSynthetic"], errors="coerce").fillna(0).astype(int) == 1
 
-    for idx in out.index:
+    for bar_pos, idx in enumerate(out.index):
         current_ts = ts.loc[idx]
         if pd.notna(previous_ts) and pd.notna(current_ts):
             gap_minutes = (current_ts - previous_ts).total_seconds() / 60.0
@@ -66,6 +67,17 @@ def _annotate_tf_failed_breaks(out: pd.DataFrame, tf_label: str) -> None:
                 pending_direction = None
                 pending_level = None
                 pending_sweep_ts = pd.NaT
+                pending_bar_pos = None
+
+        if (
+            pending_direction is not None
+            and pending_bar_pos is not None
+            and (bar_pos - pending_bar_pos) > confirmation_bars
+        ):
+            pending_direction = None
+            pending_level = None
+            pending_sweep_ts = pd.NaT
+            pending_bar_pos = None
 
         # Confirmation always evaluates only previously pending state.
         if (
@@ -83,6 +95,7 @@ def _annotate_tf_failed_breaks(out: pd.DataFrame, tf_label: str) -> None:
                 pending_direction = None
                 pending_level = None
                 pending_sweep_ts = pd.NaT
+                pending_bar_pos = None
         elif (
             not synthetic_mask.loc[idx]
             and pending_direction == "down"
@@ -98,6 +111,7 @@ def _annotate_tf_failed_breaks(out: pd.DataFrame, tf_label: str) -> None:
                 pending_direction = None
                 pending_level = None
                 pending_sweep_ts = pd.NaT
+                pending_bar_pos = None
 
         # Current bar sweeps become pending only for subsequent bars.
         current_dir = out.at[idx, sweep_dir_col]
@@ -111,6 +125,7 @@ def _annotate_tf_failed_breaks(out: pd.DataFrame, tf_label: str) -> None:
             pending_direction = current_dir
             pending_level = float(current_level)
             pending_sweep_ts = out.at[idx, "Timestamp"]
+            pending_bar_pos = bar_pos
 
         previous_ts = current_ts
 
@@ -118,7 +133,7 @@ def _annotate_tf_failed_breaks(out: pd.DataFrame, tf_label: str) -> None:
     out[confirmed_ts_col] = pd.to_datetime(out[confirmed_ts_col], utc=True)
 
 
-def detect_failed_breaks(df: pd.DataFrame, confirmation_bars: int = 3) -> pd.DataFrame:
+def detect_failed_breaks(df: pd.DataFrame, confirmation_bars: int = 5) -> pd.DataFrame:
     """Annotate failed-break confirmations on top of materialized sweep facts.
 
     Conservative confirmation model:
@@ -128,10 +143,14 @@ def detect_failed_breaks(df: pd.DataFrame, confirmation_bars: int = 3) -> pd.Dat
       * downward sweep fails when a later bar closes above the swept level
     - no retroactive marking on the sweep bar itself
 
-    ``confirmation_bars`` is reserved for future lifecycle extension and is currently
-    ignored in Phase 1D.
+    ``confirmation_bars`` sets how many bars after a sweep remain eligible for
+    failed-break confirmation. It is a model/lifecycle parameter for pending
+    failed-break validity, not a claim that later confirmations are inherently
+    poor-quality market structure.
     """
-    _ = confirmation_bars
+    if confirmation_bars < 1:
+        raise ValueError("confirmation_bars must be >= 1")
+
     out = df.copy()
 
     required = {"Timestamp", "Close"}
@@ -147,6 +166,6 @@ def detect_failed_breaks(df: pd.DataFrame, confirmation_bars: int = 3) -> pd.Dat
             f"Sweep_{tf_label}_ReferenceTs",
         }
         if required_tf.issubset(out.columns):
-            _annotate_tf_failed_breaks(out, tf_label)
+            _annotate_tf_failed_breaks(out, tf_label, confirmation_bars)
 
     return out
