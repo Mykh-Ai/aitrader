@@ -120,6 +120,28 @@ PHASE3_RULESET_DRAFT_COLUMNS = [
     "NextAction",
 ]
 
+PHASE3_RULESET_CONTRACT_COLUMNS = [
+    "SourceReport",
+    "GroupType",
+    "GroupValue",
+    "RulesetDraftId",
+    "RulesetVersion",
+    "RulesetId",
+    "RulesetContractVersion",
+    "ContractStatus",
+    "ReplayReadinessStatus",
+    "SetupFamily",
+    "Direction",
+    "EligibleEventTypes",
+    "EntryTriggerSpec",
+    "EntryBoundarySpec",
+    "ExitBoundarySpec",
+    "RiskSpec",
+    "ContractCompleteness",
+    "KnownUnresolvedContractFields",
+    "NextAction",
+]
+
 FORMALIZATION_STATUS_UNDER_REVIEW = "CANDIDATE_UNDER_REVIEW"
 FORMALIZATION_READINESS_REVIEW_REQUIRED = "REVIEW_REQUIRED"
 FORMALIZATION_CAVEAT_RESEARCH_ONLY = "RESEARCH_ONLY_NOT_YET_RULESET"
@@ -136,6 +158,17 @@ RULESET_EXIT_LOGIC_NOT_IMPLEMENTED = "NOT_IMPLEMENTED"
 RULESET_RISK_LOGIC_NOT_IMPLEMENTED = "NOT_IMPLEMENTED"
 RULESET_KNOWN_UNRESOLVED_ENTRY_EXIT_RISK = "ENTRY_EXIT_RISK_NOT_DEFINED"
 RULESET_NEXT_ACTION_SPEC_REVIEW = "EXPLICIT_RULESET_SPEC_REVIEW"
+
+RULESET_CONTRACT_VERSION_V1 = "CONTRACT_V1"
+RULESET_CONTRACT_STATUS_DEFINED_PARTIAL = "CONTRACT_DEFINED_PARTIAL"
+RULESET_REPLAY_READINESS_NOT_READY = "NOT_READY_FOR_REPLAY"
+RULESET_ENTRY_TRIGGER_SPEC_NOT_EXPLICIT = "NOT_YET_EXPLICIT"
+RULESET_ENTRY_BOUNDARY_SPEC_NOT_EXPLICIT = "NOT_YET_EXPLICIT"
+RULESET_EXIT_BOUNDARY_SPEC_NOT_EXPLICIT = "NOT_YET_EXPLICIT"
+RULESET_RISK_SPEC_NOT_EXPLICIT = "NOT_YET_EXPLICIT"
+RULESET_CONTRACT_COMPLETENESS_PARTIAL = "PARTIAL"
+RULESET_CONTRACT_UNRESOLVED_ENTRY_EXIT_RISK = "ENTRY_EXIT_RISK_BOUNDARIES_UNRESOLVED"
+RULESET_CONTRACT_NEXT_ACTION_MANUAL_REPLAY_MAPPING = "MANUAL_REPLAY_RULE_MAPPING"
 
 PROPOSED_SETUP_FAMILY_UNRESOLVED = "UNRESOLVED_SETUP_FAMILY_REVIEW_REQUIRED"
 PROPOSED_DIRECTION_UNRESOLVED = "UNRESOLVED_DIRECTION_REVIEW_REQUIRED"
@@ -443,6 +476,53 @@ def build_and_save_phase3_ruleset_draft(
     return output
 
 
+def _derive_ruleset_id_from_draft(draft_row: pd.Series) -> str:
+    return (
+        f"RULESET::{draft_row.get('SourceReport','')}::"
+        f"{draft_row.get('GroupType','')}::{draft_row.get('GroupValue','')}::"
+        f"{RULESET_CONTRACT_VERSION_V1}"
+    )
+
+
+def build_phase3_ruleset_contract(ruleset_draft: pd.DataFrame) -> pd.DataFrame:
+    """Build a deterministic single-row Phase 3 ruleset contract from ruleset draft artifact."""
+    if ruleset_draft.empty:
+        return pd.DataFrame(columns=PHASE3_RULESET_CONTRACT_COLUMNS)
+
+    selected = ruleset_draft.head(1).copy()
+    draft_row = selected.iloc[0]
+
+    selected = selected.assign(
+        RulesetId=_derive_ruleset_id_from_draft(draft_row),
+        RulesetContractVersion=RULESET_CONTRACT_VERSION_V1,
+        ContractStatus=RULESET_CONTRACT_STATUS_DEFINED_PARTIAL,
+        ReplayReadinessStatus=RULESET_REPLAY_READINESS_NOT_READY,
+        EntryTriggerSpec=RULESET_ENTRY_TRIGGER_SPEC_NOT_EXPLICIT,
+        EntryBoundarySpec=RULESET_ENTRY_BOUNDARY_SPEC_NOT_EXPLICIT,
+        ExitBoundarySpec=RULESET_EXIT_BOUNDARY_SPEC_NOT_EXPLICIT,
+        RiskSpec=RULESET_RISK_SPEC_NOT_EXPLICIT,
+        ContractCompleteness=RULESET_CONTRACT_COMPLETENESS_PARTIAL,
+        KnownUnresolvedContractFields=RULESET_CONTRACT_UNRESOLVED_ENTRY_EXIT_RISK,
+        NextAction=RULESET_CONTRACT_NEXT_ACTION_MANUAL_REPLAY_MAPPING,
+    )
+
+    return selected[PHASE3_RULESET_CONTRACT_COLUMNS].reset_index(drop=True)
+
+
+def build_and_save_phase3_ruleset_contract(
+    ruleset_draft_path: str | Path,
+    ruleset_contract_output_path: str | Path,
+) -> Path:
+    """Materialize deterministic single-candidate Phase 3 ruleset contract CSV from draft artifact."""
+    ruleset_draft = pd.read_csv(ruleset_draft_path)
+    ruleset_contract = build_phase3_ruleset_contract(ruleset_draft)
+
+    output = Path(ruleset_contract_output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    ruleset_contract.to_csv(output, index=False)
+    return output
+
+
 def main() -> None:
     import argparse
 
@@ -470,6 +550,11 @@ def main() -> None:
         default="phase3_ruleset_draft.csv",
         help="Path to output single-candidate Phase 3 ruleset draft CSV",
     )
+    parser.add_argument(
+        "--phase3-ruleset-contract-output",
+        default="phase3_ruleset_contract.csv",
+        help="Path to output single-candidate Phase 3 ruleset contract CSV",
+    )
     args = parser.parse_args()
 
     out_path = harvest_phase2_candidates(args.runs_root, args.output)
@@ -482,10 +567,14 @@ def main() -> None:
     phase3_ruleset_draft_out = build_and_save_phase3_ruleset_draft(
         formalization_review_out, args.phase3_ruleset_draft_output
     )
+    phase3_ruleset_contract_out = build_and_save_phase3_ruleset_contract(
+        phase3_ruleset_draft_out, args.phase3_ruleset_contract_output
+    )
     print(f"✅ Harvested candidates saved: {out_path}")
     print(f"✅ Formalization candidates saved: {formalization_out}")
     print(f"✅ Formalization review saved: {formalization_review_out}")
     print(f"✅ Phase 3 ruleset draft saved: {phase3_ruleset_draft_out}")
+    print(f"✅ Phase 3 ruleset contract saved: {phase3_ruleset_contract_out}")
 
 
 if __name__ == "__main__":
