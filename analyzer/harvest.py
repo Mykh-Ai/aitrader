@@ -142,9 +142,31 @@ PHASE3_RULESET_CONTRACT_COLUMNS = [
     "NextAction",
 ]
 
+<<<<<<< codex/implement-phase3_ruleset_contract.csv-artifact
 FORMALIZATION_STATUS_UNDER_REVIEW = "CANDIDATE_UNDER_REVIEW"
 FORMALIZATION_READINESS_REVIEW_REQUIRED = "REVIEW_REQUIRED"
 FORMALIZATION_CAVEAT_RESEARCH_ONLY = "RESEARCH_ONLY_NOT_YET_RULESET"
+=======
+PHASE3_RULESET_MAPPING_COLUMNS = [
+    "SourceReport",
+    "GroupType",
+    "GroupValue",
+    "RulesetId",
+    "RulesetContractVersion",
+    "MappingVersion",
+    "MappingStatus",
+    "ReplaySemanticsVersion",
+    "SetupFamily",
+    "Direction",
+    "EligibleEventTypes",
+    "EntryTriggerMapping",
+    "EntryBoundaryMapping",
+    "ExitBoundaryMapping",
+    "RiskMapping",
+    "ReplayIntegrationStatus",
+    "KnownUnresolvedMappings",
+c
+>>>>>>> main
 RULE_DRAFT_STATUS_NOT_DRAFTED = "NOT_DRAFTED"
 OPEN_QUESTIONS_RULE_BOUNDARY_REVIEW = "NEED_EXPLICIT_RULE_BOUNDARY_REVIEW"
 NEXT_ACTION_MANUAL_RULESET_DRAFT = "MANUAL_RULESET_DRAFT"
@@ -160,7 +182,11 @@ RULESET_KNOWN_UNRESOLVED_ENTRY_EXIT_RISK = "ENTRY_EXIT_RISK_NOT_DEFINED"
 RULESET_NEXT_ACTION_SPEC_REVIEW = "EXPLICIT_RULESET_SPEC_REVIEW"
 
 RULESET_CONTRACT_VERSION_V1 = "CONTRACT_V1"
+<<<<<<< codex/implement-phase3_ruleset_contract.csv-artifact
 RULESET_CONTRACT_STATUS_DEFINED_PARTIAL = "CONTRACT_DEFINED_PARTIAL"
+=======
+RULESET_CONTRACT_STATUS_DEFINED_PARTIAL = "PARTIAL"
+>>>>>>> main
 RULESET_REPLAY_READINESS_NOT_READY = "NOT_READY_FOR_REPLAY"
 RULESET_ENTRY_TRIGGER_SPEC_NOT_EXPLICIT = "NOT_YET_EXPLICIT"
 RULESET_ENTRY_BOUNDARY_SPEC_NOT_EXPLICIT = "NOT_YET_EXPLICIT"
@@ -170,6 +196,20 @@ RULESET_CONTRACT_COMPLETENESS_PARTIAL = "PARTIAL"
 RULESET_CONTRACT_UNRESOLVED_ENTRY_EXIT_RISK = "ENTRY_EXIT_RISK_BOUNDARIES_UNRESOLVED"
 RULESET_CONTRACT_NEXT_ACTION_MANUAL_REPLAY_MAPPING = "MANUAL_REPLAY_RULE_MAPPING"
 
+<<<<<<< codex/implement-phase3_ruleset_contract.csv-artifact
+=======
+RULESET_MAPPING_VERSION_V1 = "MAPPING_V1"
+RULESET_MAPPING_STATUS_DEFINED_PARTIAL = "PARTIAL"
+RULESET_REPLAY_SEMANTICS_VERSION_V0_1 = "REPLAY_V0_1"
+RULESET_ENTRY_TRIGGER_MAPPING_MANUAL_REQUIRED = "MANUAL_MAPPING_REQUIRED"
+RULESET_ENTRY_BOUNDARY_MAPPING_MANUAL_REQUIRED = "MANUAL_MAPPING_REQUIRED"
+RULESET_EXIT_BOUNDARY_MAPPING_MANUAL_REQUIRED = "MANUAL_MAPPING_REQUIRED"
+RULESET_RISK_MAPPING_MANUAL_REQUIRED = "MANUAL_MAPPING_REQUIRED"
+RULESET_REPLAY_INTEGRATION_STATUS_NOT_INTEGRATED = "NOT_INTEGRATED"
+RULESET_KNOWN_UNRESOLVED_REPLAY_MAPPING = "ENTRY_EXIT_RISK_REPLAY_MAPPING_UNRESOLVED"
+RULESET_NEXT_ACTION_MANUAL_REPLAY_BINDING = "MANUAL_RULESET_TO_REPLAY_BINDING"
+
+>>>>>>> main
 PROPOSED_SETUP_FAMILY_UNRESOLVED = "UNRESOLVED_SETUP_FAMILY_REVIEW_REQUIRED"
 PROPOSED_DIRECTION_UNRESOLVED = "UNRESOLVED_DIRECTION_REVIEW_REQUIRED"
 
@@ -523,6 +563,44 @@ def build_and_save_phase3_ruleset_contract(
     return output
 
 
+<<<<<<< codex/implement-phase3_ruleset_contract.csv-artifact
+=======
+def build_phase3_ruleset_mapping(ruleset_contract: pd.DataFrame) -> pd.DataFrame:
+    """Build deterministic single-row Phase 3 replay mapping surface from ruleset contract artifact."""
+    if ruleset_contract.empty:
+        return pd.DataFrame(columns=PHASE3_RULESET_MAPPING_COLUMNS)
+
+    selected = ruleset_contract.head(1).copy()
+    selected = selected.assign(
+        MappingVersion=RULESET_MAPPING_VERSION_V1,
+        MappingStatus=RULESET_MAPPING_STATUS_DEFINED_PARTIAL,
+        ReplaySemanticsVersion=RULESET_REPLAY_SEMANTICS_VERSION_V0_1,
+        EntryTriggerMapping=RULESET_ENTRY_TRIGGER_MAPPING_MANUAL_REQUIRED,
+        EntryBoundaryMapping=RULESET_ENTRY_BOUNDARY_MAPPING_MANUAL_REQUIRED,
+        ExitBoundaryMapping=RULESET_EXIT_BOUNDARY_MAPPING_MANUAL_REQUIRED,
+        RiskMapping=RULESET_RISK_MAPPING_MANUAL_REQUIRED,
+        ReplayIntegrationStatus=RULESET_REPLAY_INTEGRATION_STATUS_NOT_INTEGRATED,
+        KnownUnresolvedMappings=RULESET_KNOWN_UNRESOLVED_REPLAY_MAPPING,
+        NextAction=RULESET_NEXT_ACTION_MANUAL_REPLAY_BINDING,
+    )
+    return selected[PHASE3_RULESET_MAPPING_COLUMNS].reset_index(drop=True)
+
+
+def build_and_save_phase3_ruleset_mapping(
+    ruleset_contract_path: str | Path,
+    ruleset_mapping_output_path: str | Path,
+) -> Path:
+    """Materialize deterministic single-candidate Phase 3 ruleset replay mapping CSV from contract artifact."""
+    ruleset_contract = pd.read_csv(ruleset_contract_path)
+    ruleset_mapping = build_phase3_ruleset_mapping(ruleset_contract)
+
+    output = Path(ruleset_mapping_output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    ruleset_mapping.to_csv(output, index=False)
+    return output
+
+
+>>>>>>> main
 def main() -> None:
     import argparse
 
@@ -555,6 +633,14 @@ def main() -> None:
         default="phase3_ruleset_contract.csv",
         help="Path to output single-candidate Phase 3 ruleset contract CSV",
     )
+<<<<<<< codex/implement-phase3_ruleset_contract.csv-artifact
+=======
+    parser.add_argument(
+        "--phase3-ruleset-mapping-output",
+        default="phase3_ruleset_mapping.csv",
+        help="Path to output single-candidate Phase 3 ruleset mapping CSV",
+    )
+>>>>>>> main
     args = parser.parse_args()
 
     out_path = harvest_phase2_candidates(args.runs_root, args.output)
@@ -570,11 +656,21 @@ def main() -> None:
     phase3_ruleset_contract_out = build_and_save_phase3_ruleset_contract(
         phase3_ruleset_draft_out, args.phase3_ruleset_contract_output
     )
+<<<<<<< codex/implement-phase3_ruleset_contract.csv-artifact
+=======
+    phase3_ruleset_mapping_out = build_and_save_phase3_ruleset_mapping(
+        phase3_ruleset_contract_out, args.phase3_ruleset_mapping_output
+    )
+>>>>>>> main
     print(f"✅ Harvested candidates saved: {out_path}")
     print(f"✅ Formalization candidates saved: {formalization_out}")
     print(f"✅ Formalization review saved: {formalization_review_out}")
     print(f"✅ Phase 3 ruleset draft saved: {phase3_ruleset_draft_out}")
     print(f"✅ Phase 3 ruleset contract saved: {phase3_ruleset_contract_out}")
+<<<<<<< codex/implement-phase3_ruleset_contract.csv-artifact
+=======
+    print(f"✅ Phase 3 ruleset mapping saved: {phase3_ruleset_mapping_out}")
+>>>>>>> main
 
 
 if __name__ == "__main__":
