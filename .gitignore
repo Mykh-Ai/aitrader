@@ -3,3 +3,6 @@ logs/
 __pycache__/
 *.pyc
 .env
+.claude/
+analyzer_runs/
+backtest_runs/
