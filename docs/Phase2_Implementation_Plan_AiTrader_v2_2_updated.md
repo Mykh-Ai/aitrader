@@ -616,3 +616,235 @@ Phase 2 must prioritize:
 - versioned research outputs
 
 over premature trading logic complexity.
+
+---
+
+# Phase 4 — Ruleset Validation Layer
+
+## Purpose
+
+Phase 4 introduces a mandatory deterministic validation layer between ruleset materialization and replay execution.
+
+This validation layer prevents the following invalid states from entering replay/backtester execution:
+
+- incomplete rulesets
+- placeholder configuration values
+- unresolved rule boundaries
+- unresolved replay mappings
+- incompatible replay semantics
+- contract–mapping inconsistencies
+
+The validation layer must evaluate materialized `RulesetRows` produced by the Phase 3 pipeline.
+
+Phase 3 produces the following artifacts:
+
+- `phase2_formalization_candidates.csv`
+- `phase2_formalization_review.csv`
+- `phase3_ruleset_draft.csv`
+- `phase3_ruleset_contract.csv`
+- `phase3_ruleset_mapping.csv`
+
+Rulesets are materialized using `PHASE3_MAPPING_ONLY` mode.
+
+Phase 4 ensures that these rulesets are safe and executable before replay is allowed to begin.
+
+## Validation Categories
+
+Validation must include all of the following categories:
+
+1. Structural validation
+2. Placeholder / unresolved detection
+3. Status readiness validation
+4. Replay semantics compatibility
+5. Contract–mapping consistency validation
+6. Cross-artifact integrity validation
+
+All categories are mandatory. A ruleset is replay-eligible only if it passes every category.
+
+## Structural Validation
+
+The following fields must exist and must be non-empty in each materialized `RulesetRow`:
+
+- `RulesetId`
+- `SetupFamily`
+- `Direction`
+- `EligibleEventTypes`
+- `ReplaySemanticsVersion`
+- `EntryTriggerMapping`
+- `EntryBoundaryMapping`
+- `ExitBoundaryMapping`
+- `RiskMapping`
+
+Validation behavior:
+
+- If any required field is missing, validation must fail.
+- If any required field is present but empty/blank/null-equivalent, validation must fail.
+- Field-level failure reasons must be emitted in `ValidationErrors`.
+
+Failure modes in this category include:
+
+- schema drift between mapping output and runtime expectations
+- partially materialized rows
+- empty executable mapping payloads
+
+## Placeholder / Unresolved Detection
+
+Validation must detect unresolved placeholder values in executable fields.
+
+The following marker families must be treated as unresolved:
+
+- `UNRESOLVED_*`
+- `NOT_YET_*`
+- `MANUAL_*`
+
+If any unresolved marker appears in fields required for execution (including entry mapping, exit mapping, risk mapping, replay semantics, or any other runtime-critical mapping field), validation must fail.
+
+This rule is critical because placeholder markers are valid during early formalization, but must never cross into runtime execution.
+
+Failure modes in this category include:
+
+- draft placeholders accidentally propagated into mapping output
+- unresolved rule boundaries represented as temporary tokens
+- unresolved replay mapping keys left for manual follow-up
+
+## Status Gate Validation
+
+Replay-eligible rulesets must satisfy strict readiness status gates.
+
+`MappingStatus` must be:
+
+- `READY`
+
+`ReplayIntegrationStatus` must be:
+
+- `READY_FOR_BINDING`
+
+Validation behavior:
+
+- Any value outside the allowed sets must fail validation.
+- Missing status fields must fail validation.
+- Case-variant or free-form status strings must fail validation unless explicitly normalized upstream.
+
+Failure modes in this category include:
+
+- mapping marked as draft but passed to replay
+- integration not explicitly acknowledged
+- stale status vocabularies from prior schema versions
+
+## Replay Semantics Compatibility
+
+Validation must ensure that `ReplaySemanticsVersion` is supported by the currently running backtester runtime.
+
+Validation behavior:
+
+- Unsupported semantics versions must fail validation.
+- Missing semantics version declarations must fail validation.
+- Semantics versions that are syntactically present but not registered in runtime-supported versions must fail validation.
+
+Failure modes in this category include:
+
+- mapped rulesets targeting deprecated semantics
+- forward-declared semantics not yet implemented in runtime
+- accidental runtime/artifact version skew
+
+## Contract–Mapping Consistency Validation
+
+Validation must ensure that the Phase 3 contract artifact and Phase 3 mapping artifact are logically consistent for each ruleset.
+
+Required checks include:
+
+- `SetupFamily` in mapping must match `SetupFamily` defined in contract.
+- `Direction` must match between contract and mapping.
+- `EligibleEventTypes` in mapping must not contradict contract definition.
+- `MappingVersion` must correspond to the contract version.
+
+Validation behavior:
+
+- Any contract–mapping mismatch must fail validation.
+- Missing contract references for mapped rows must fail validation.
+- Duplicate or ambiguous contract linkage for a single `RulesetId` must fail validation.
+
+Failure modes in this category include:
+
+- mapping rows copied from a different setup family
+- direction inversion between contract and mapping
+- event eligibility widened or narrowed outside contract intent
+- version drift between contract revision and mapping revision
+
+## Cross-Artifact Integrity Validation
+
+Validation must ensure that lineage and compatibility remain intact across draft, contract, and mapping artifacts.
+
+Required checks include:
+
+- `RulesetId` consistency across draft, contract, and mapping artifacts
+- `ContractVersion` compatibility with `MappingVersion`
+- `ReplaySemanticsVersion` compatibility with mapping layer declarations
+
+Validation behavior:
+
+- Any lineage break must fail validation.
+- Missing upstream artifact linkage must fail validation.
+- Orphan mapping rows without draft/contract lineage must fail validation.
+
+Failure modes in this category include:
+
+- ruleset identity reuse collisions
+- contract/mapping pair assembled from different generation batches
+- semantics declared in one artifact but omitted or contradicted in another
+
+## Validation Output
+
+The validation layer must produce a structured result with at least the following fields:
+
+- `ValidationStatus`
+- `ValidationErrors`
+
+`ValidationStatus` allowed values:
+
+- `VALID`
+- `INVALID`
+- `REVIEW_REQUIRED`
+
+`ValidationErrors` requirements:
+
+- must be a list of explicit failure reasons
+- each reason must identify the failing category and rule
+- each reason should include `RulesetId` and relevant field(s) when available
+
+Execution gate behavior:
+
+- If `ValidationStatus == INVALID`, replay/backtester must fail loudly and stop execution.
+- `REVIEW_REQUIRED` may be used only for non-executable policy checks; replay must not auto-proceed unless explicitly permitted by orchestration policy.
+- Silent downgrade, silent coercion, or implicit auto-fix of invalid executable mappings is not permitted at this gate.
+
+## Integration Point
+
+The validation layer must run as a mandatory orchestration step after ruleset materialization and before replay execution.
+
+Pipeline order:
+
+`analyzer → formalization → ruleset draft → ruleset contract → ruleset mapping → ruleset materialization → ruleset validation → replay/backtesting`
+
+Integration rules:
+
+- Replay execution must never begin without validation.
+- Validation is part of the deterministic execution contract, not an optional diagnostic.
+- Validation outcomes must be recorded as orchestration artifacts/log events for auditability.
+
+## Implementation Targets
+
+Expected implementation components:
+
+- `backtester/validation.py`
+- `tests/test_backtester_validation.py`
+
+Integration call site:
+
+- `backtester/orchestrator.py`
+
+Implementation requirements:
+
+- Validation must execute automatically before replay execution begins.
+- Orchestrator must enforce hard-gate behavior on invalid results.
+- Validation logic must remain deterministic for identical artifact inputs.
