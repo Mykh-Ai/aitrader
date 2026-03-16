@@ -5,6 +5,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from .context import add_context_metadata
+
 
 RANGE_EPSILON = 1e-12
 
@@ -43,5 +45,7 @@ def add_base_metrics(df: pd.DataFrame) -> pd.DataFrame:
 
     out["OI_Change"] = out["OpenInterest"].diff()
     out["LiqTotal"] = out["LiqBuyQty"] + out["LiqSellQty"]
+
+    out = add_context_metadata(out)
 
     return out
