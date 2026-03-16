@@ -218,6 +218,12 @@ def test_implemented_status_semantics_are_materialized_as_explicit_disclaimers()
     }
 
 
+def test_context_model_version_is_materialized_in_summary():
+    research_summary_df = build_research_summary(_shortlist_df(), _shortlist_explanations_df(), _setups_df())
+
+    assert set(research_summary_df["ContextModelVersion"]) == {"CONTEXT_MODEL_V1_SESSION_UTC"}
+
+
 def test_unexpected_selection_decision_fails_loudly():
     shortlist_df = _shortlist_df()
     shortlist_df.loc[0, "SelectionDecision"] = "REJECT"

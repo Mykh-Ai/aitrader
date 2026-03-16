@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pandas as pd
 
+from .context import CONTEXT_MODEL_VERSION
+
 RESEARCH_SUMMARY_COLUMNS = [
     "ShortlistRank",
     "ResearchPriority",
@@ -32,6 +34,7 @@ RESEARCH_SUMMARY_COLUMNS = [
     "Direction",
     "SetupType",
     "EligibleEventTypes",
+    "ContextModelVersion",
 ]
 
 _NATURAL_KEY = ["ShortlistRank", "SourceReport", "GroupType", "GroupValue"]
@@ -164,6 +167,7 @@ def _enrich_replay_semantics(merged_df: pd.DataFrame, setups_df: pd.DataFrame) -
     enriched["Direction"] = direction_values
     enriched["SetupType"] = setup_type_values
     enriched["EligibleEventTypes"] = event_values
+    enriched["ContextModelVersion"] = CONTEXT_MODEL_VERSION
     return enriched
 
 
@@ -210,6 +214,7 @@ def _enrich_without_setups_fail_loud_direction_rows(merged_df: pd.DataFrame) -> 
     enriched["Direction"] = direction_values
     enriched["SetupType"] = setup_type_values
     enriched["EligibleEventTypes"] = event_values
+    enriched["ContextModelVersion"] = CONTEXT_MODEL_VERSION
     return enriched
 
 
