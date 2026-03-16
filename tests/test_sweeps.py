@@ -256,3 +256,37 @@ def test_no_sweep_before_real_row_anchor_when_confirmation_lands_on_synthetic_se
     assert not out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T03:00:00Z"), "Sweep_H1_Up"].iloc[0]
     assert not out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T04:00:00Z"), "Sweep_H1_Up"].iloc[0]
     assert out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T05:00:00Z"), "Sweep_H1_Up"].iloc[0]
+
+
+def test_penetration_metadata_is_observation_only_and_versioned():
+    df = _hourly_df(highs=[10.0, 14.0, 11.0, 15.0], lows=[5.0, 6.0, 6.0, 6.0])
+
+    out = detect_sweeps(annotate_swings(df))
+
+    row = out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T03:00:00Z")].iloc[0]
+    assert row["Sweep_H1_Up"]
+    assert row["Sweep_H1_ReferenceLevel"] == 14.0
+    assert row["Sweep_H1_PenetrationAbs"] == 1.0
+    assert row["Sweep_H1_PenetrationRel"] == 1.0 / 14.0
+    assert row["Sweep_H1_PenetrationBand"] == "deep"
+    assert row["Sweep_H1_PenetrationModelVersion"] == "v1_observation_only"
+
+    no_sweep = out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T02:00:00Z")].iloc[0]
+    assert pd.isna(no_sweep["Sweep_H1_PenetrationAbs"])
+    assert pd.isna(no_sweep["Sweep_H1_PenetrationRel"])
+    assert pd.isna(no_sweep["Sweep_H1_PenetrationBand"])
+    assert pd.isna(no_sweep["Sweep_H1_PenetrationModelVersion"])
+
+
+def test_penetration_metadata_does_not_modify_first_cross_dedup_semantics():
+    df = _hourly_df(highs=[10, 14, 11, 15, 16, 17], lows=[5, 6, 6, 6, 6, 6])
+
+    out = detect_sweeps(annotate_swings(df))
+
+    assert out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T03:00:00Z"), "Sweep_H1_Up"].iloc[0]
+    assert not out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T04:00:00Z"), "Sweep_H1_Up"].iloc[0]
+    assert not out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T05:00:00Z"), "Sweep_H1_Up"].iloc[0]
+
+    assert out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T03:00:00Z"), "Sweep_H1_PenetrationAbs"].iloc[0] == 1
+    assert pd.isna(out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T04:00:00Z"), "Sweep_H1_PenetrationAbs"].iloc[0])
+    assert pd.isna(out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T05:00:00Z"), "Sweep_H1_PenetrationAbs"].iloc[0])
