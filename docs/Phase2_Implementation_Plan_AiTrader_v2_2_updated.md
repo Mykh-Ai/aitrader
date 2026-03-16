@@ -421,68 +421,27 @@ Phase 2 should still be understood as a **research / hypothesis-forming layer**,
 
 # Ranking Layer Improvements
 
-Avoid opaque single-number scores.
+**Status: DONE**
 
-Replace:
+Completed:
 
-```text
-CompositeScore
-```
-
-with:
-
-```text
-RankingScore
-RankingMethod
-RankingComponents
-```
-
-Example:
-
-```text
-RankingMethod = heuristic_v1
-RankingComponents =
-    expectancy_component
-    stability_component
-    sample_size_component
-```
-
-This allows ranking evolution without invalidating historical runs.
+- Replaced opaque `CompositeScore` with `RankingScore` + `RankingMethod`
+- `RankingComponents` intentionally deferred to avoid schema noise
+- Ranking evolution supported without invalidating historical runs
 
 ---
 
 # Setup Artifacts and Lineage
 
+**Status: DONE**
+
 Goal: make setup artifacts usable for downstream reasoning.
 
-Principle:
+Completed:
 
-```text
-setup artifacts must be downstream-sufficient
-```
-
-A setup row should contain enough information for:
-
-- review
-- Phase 3 formalization
-- manual research analysis
-
-without recomputing internal Analyzer logic.
-
-However, `setups.csv` does **not** need to duplicate all analyzer state.
-
-Key lineage fields:
-
-```text
-source_event_type
-source_event_ts
-source_tf
-
-reference_swing_ts
-reference_level
-
-setup_family_version
-```
+- Setup artifacts are downstream-sufficient for review, formalization, and manual analysis
+- Key lineage fields implemented: `source_event_type`, `source_event_ts`, `source_tf`, `reference_swing_ts`, `reference_level`, `setup_family_version`
+- `setups.csv` does not duplicate all analyzer state — only provenance-critical fields
 
 ---
 
@@ -503,53 +462,27 @@ Completed:
 
 # Context Layer Improvements
 
-Context scoring must be clearly labeled as heuristic.
+**Status: DONE**
 
-Example:
+Completed:
 
-```text
-AbsorptionScore_v1
-```
-
-Additional context fields:
-
-```text
-session
-minutes_from_eu_open
-minutes_from_us_open
-```
-
-Add:
-
-```text
-ContextModelVersion
-```
-
-to downstream artifacts.
+- Context scoring labeled as heuristic (`AbsorptionScore_v1`)
+- Context fields implemented (`session`, `minutes_from_eu_open`, `minutes_from_us_open`)
+- `ContextModelVersion` added to downstream artifacts
 
 ---
 
 # Multi-Day Candidate Harvesting
 
+**Status: DONE**
+
 Goal: move from daily snapshots to accumulating research evidence.
 
-Tasks:
+Completed:
 
-Create a multi-day aggregation layer across canonical runs.
-
-Each aggregated row must track provenance:
-
-```text
-RunId
-RunDate
-AnalyzerVersion
-ArtifactContractVersion
-RankingMethod
-SetupFamilyVersion
-InputRawDate
-```
-
-Candidates must appear in multiple runs to qualify as stable leads.
+- Multi-day aggregation layer across canonical runs implemented
+- Provenance tracking per aggregated row (`RunId`, `RunDate`, `AnalyzerVersion`, `ArtifactContractVersion`, `RankingMethod`, `SetupFamilyVersion`, `InputRawDate`)
+- Stable lead qualification: candidates must appear in multiple runs
 
 ---
 
