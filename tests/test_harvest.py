@@ -8,9 +8,12 @@ import pytest
 
 from analyzer.harvest import (
     FORMALIZATION_CANDIDATE_COLUMNS,
+    FORMALIZATION_REVIEW_COLUMNS,
     HARVESTED_CANDIDATE_COLUMNS,
     build_and_save_phase2_formalization_candidates,
+    build_and_save_phase2_formalization_review,
     build_phase2_formalization_candidates,
+    build_phase2_formalization_review,
     harvest_phase2_candidates,
     harvest_source_rows,
 )
@@ -321,3 +324,99 @@ def test_build_and_save_phase2_formalization_candidates_writes_exactly_one_row(t
     assert list(written.columns) == FORMALIZATION_CANDIDATE_COLUMNS
     assert len(written) == 1
     assert written.iloc[0]["GroupValue"] == "FAILED_BREAK_RECLAIM_LONG"
+
+
+def test_build_phase2_formalization_review_extends_single_candidate_with_review_metadata() -> None:
+    formalization_candidates = pd.DataFrame(
+        [
+            {
+                "SourceReport": "setup_report",
+                "GroupType": "SetupType",
+                "GroupValue": "FAILED_BREAK_RECLAIM_LONG",
+                "DistinctRunCount": 2,
+                "OccurrenceCount": 3,
+                "FirstSeenRunDate": "2026-01-01",
+                "LastSeenRunDate": "2026-01-03",
+                "RankingMethods": "delta_weighted",
+                "RunIds": "run_1;run_2;run_3",
+                "RunDates": "2026-01-01;2026-01-02;2026-01-03",
+                "RankingScoreMean": 0.6,
+                "SelectionDecisions": "SELECT",
+                "RankingLabels": "A",
+                "ResearchPriorities": "HIGH",
+                "FormalizationStatus": "CANDIDATE_UNDER_REVIEW",
+                "ReadinessFlag": "REVIEW_REQUIRED",
+                "KnownCaveats": "RESEARCH_ONLY_NOT_YET_RULESET",
+            }
+        ]
+    )
+
+    review = build_phase2_formalization_review(formalization_candidates)
+
+    assert list(review.columns) == FORMALIZATION_REVIEW_COLUMNS
+    assert len(review) == 1
+    assert review.iloc[0]["ProposedSetupFamily"] == "FAILED_BREAK_RECLAIM_LONG"
+    assert review.iloc[0]["ProposedDirection"] == "LONG"
+    assert review.iloc[0]["ProposedEligibleEventTypes"] == "GROUP_TYPE:SetupType"
+    assert review.iloc[0]["RuleDraftStatus"] == "NOT_DRAFTED"
+    assert review.iloc[0]["OpenQuestions"] == "NEED_EXPLICIT_RULE_BOUNDARY_REVIEW"
+    assert review.iloc[0]["NextAction"] == "MANUAL_RULESET_DRAFT"
+
+
+def test_build_phase2_formalization_review_returns_empty_artifact_when_no_candidate() -> None:
+    review = build_phase2_formalization_review(pd.DataFrame(columns=FORMALIZATION_CANDIDATE_COLUMNS))
+
+    assert list(review.columns) == FORMALIZATION_REVIEW_COLUMNS
+    assert review.empty
+
+
+def test_build_and_save_phase2_formalization_review_writes_exactly_one_row(tmp_path: Path) -> None:
+    runs_root = tmp_path / "analyzer_runs"
+
+    _write_run(
+        runs_root / "run_001",
+        run_id="run_001",
+        run_date="2026-01-01",
+        rows=[
+            {
+                "SourceReport": "setup_report",
+                "GroupType": "SetupType",
+                "GroupValue": "FAILED_BREAK_RECLAIM_LONG",
+                "SelectionDecision": "SELECT",
+                "RankingLabel": "A",
+                "RankingScore": 0.55,
+                "ResearchPriority": "HIGH",
+                "RankingMethod": "delta_weighted",
+            }
+        ],
+    )
+
+    _write_run(
+        runs_root / "run_002",
+        run_id="run_002",
+        run_date="2026-01-02",
+        rows=[
+            {
+                "SourceReport": "setup_report",
+                "GroupType": "SetupType",
+                "GroupValue": "FAILED_BREAK_RECLAIM_LONG",
+                "SelectionDecision": "SELECT",
+                "RankingLabel": "A",
+                "RankingScore": 0.60,
+                "ResearchPriority": "HIGH",
+                "RankingMethod": "delta_weighted",
+            }
+        ],
+    )
+
+    candidate_output = tmp_path / "phase2_formalization_candidates.csv"
+    review_output = tmp_path / "phase2_formalization_review.csv"
+
+    build_and_save_phase2_formalization_review(runs_root, candidate_output, review_output)
+
+    written = pd.read_csv(review_output)
+
+    assert list(written.columns) == FORMALIZATION_REVIEW_COLUMNS
+    assert len(written) == 1
+    assert written.iloc[0]["GroupValue"] == "FAILED_BREAK_RECLAIM_LONG"
+    assert written.iloc[0]["RuleDraftStatus"] == "NOT_DRAFTED"
