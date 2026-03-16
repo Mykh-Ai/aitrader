@@ -81,12 +81,61 @@ FORMALIZATION_REVIEW_COLUMNS = [
     "NextAction",
 ]
 
+PHASE3_RULESET_DRAFT_COLUMNS = [
+    "SourceReport",
+    "GroupType",
+    "GroupValue",
+    "DistinctRunCount",
+    "OccurrenceCount",
+    "FirstSeenRunDate",
+    "LastSeenRunDate",
+    "RankingMethods",
+    "RunIds",
+    "RunDates",
+    "RankingScoreMean",
+    "SelectionDecisions",
+    "RankingLabels",
+    "ResearchPriorities",
+    "FormalizationStatus",
+    "ReadinessFlag",
+    "KnownCaveats",
+    "ProposedSetupFamily",
+    "ProposedDirection",
+    "ProposedEligibleEventTypes",
+    "RuleDraftStatus",
+    "OpenQuestions",
+    "ReviewNextAction",
+    "RulesetDraftId",
+    "RulesetVersion",
+    "DraftStatus",
+    "ExecutableStatus",
+    "SetupFamily",
+    "Direction",
+    "EligibleEventTypes",
+    "RuleBoundaryStatus",
+    "EntryLogicStatus",
+    "ExitLogicStatus",
+    "RiskLogicStatus",
+    "KnownUnresolvedFields",
+    "NextAction",
+]
+
 FORMALIZATION_STATUS_UNDER_REVIEW = "CANDIDATE_UNDER_REVIEW"
 FORMALIZATION_READINESS_REVIEW_REQUIRED = "REVIEW_REQUIRED"
 FORMALIZATION_CAVEAT_RESEARCH_ONLY = "RESEARCH_ONLY_NOT_YET_RULESET"
 RULE_DRAFT_STATUS_NOT_DRAFTED = "NOT_DRAFTED"
 OPEN_QUESTIONS_RULE_BOUNDARY_REVIEW = "NEED_EXPLICIT_RULE_BOUNDARY_REVIEW"
 NEXT_ACTION_MANUAL_RULESET_DRAFT = "MANUAL_RULESET_DRAFT"
+
+RULESET_VERSION_DRAFT_V1 = "DRAFT_V1"
+RULESET_DRAFT_STATUS_CREATED = "DRAFT_CREATED"
+RULESET_EXECUTABLE_STATUS_NOT_READY = "NOT_EXECUTABLE_YET"
+RULESET_RULE_BOUNDARY_REVIEW_REQUIRED = "REVIEW_REQUIRED"
+RULESET_ENTRY_LOGIC_NOT_IMPLEMENTED = "NOT_IMPLEMENTED"
+RULESET_EXIT_LOGIC_NOT_IMPLEMENTED = "NOT_IMPLEMENTED"
+RULESET_RISK_LOGIC_NOT_IMPLEMENTED = "NOT_IMPLEMENTED"
+RULESET_KNOWN_UNRESOLVED_ENTRY_EXIT_RISK = "ENTRY_EXIT_RISK_NOT_DEFINED"
+RULESET_NEXT_ACTION_SPEC_REVIEW = "EXPLICIT_RULESET_SPEC_REVIEW"
 
 PROPOSED_SETUP_FAMILY_UNRESOLVED = "UNRESOLVED_SETUP_FAMILY_REVIEW_REQUIRED"
 PROPOSED_DIRECTION_UNRESOLVED = "UNRESOLVED_DIRECTION_REVIEW_REQUIRED"
@@ -331,6 +380,69 @@ def build_and_save_phase2_formalization_review(
     return output
 
 
+def _derive_ruleset_draft_id(review_row: pd.Series) -> str:
+    return (
+        f"RULESET_DRAFT::{review_row.get('SourceReport','')}::"
+        f"{review_row.get('GroupType','')}::{review_row.get('GroupValue','')}::"
+        f"{RULESET_VERSION_DRAFT_V1}"
+    )
+
+
+def _safe_value_or_unresolved(value: object, unresolved_value: str) -> str:
+    if pd.isna(value):
+        return unresolved_value
+    text = str(value)
+    if text == "" or text.startswith("UNRESOLVED_"):
+        return unresolved_value
+    return text
+
+
+def build_phase3_ruleset_draft(formalization_review: pd.DataFrame) -> pd.DataFrame:
+    """Build a deterministic single-row Phase 3 ruleset draft surface from formalization review."""
+    if formalization_review.empty:
+        return pd.DataFrame(columns=PHASE3_RULESET_DRAFT_COLUMNS)
+
+    selected = formalization_review.head(1).copy()
+    review_row = selected.iloc[0]
+
+    selected = selected.rename(columns={"NextAction": "ReviewNextAction"}).assign(
+        RulesetDraftId=_derive_ruleset_draft_id(review_row),
+        RulesetVersion=RULESET_VERSION_DRAFT_V1,
+        DraftStatus=RULESET_DRAFT_STATUS_CREATED,
+        ExecutableStatus=RULESET_EXECUTABLE_STATUS_NOT_READY,
+        SetupFamily=_safe_value_or_unresolved(
+            review_row.get("ProposedSetupFamily"), PROPOSED_SETUP_FAMILY_UNRESOLVED
+        ),
+        Direction=_safe_value_or_unresolved(
+            review_row.get("ProposedDirection"), PROPOSED_DIRECTION_UNRESOLVED
+        ),
+        EligibleEventTypes=_safe_value_or_unresolved(
+            review_row.get("ProposedEligibleEventTypes"), "UNRESOLVED_EVENT_TYPES_REVIEW_REQUIRED"
+        ),
+        RuleBoundaryStatus=RULESET_RULE_BOUNDARY_REVIEW_REQUIRED,
+        EntryLogicStatus=RULESET_ENTRY_LOGIC_NOT_IMPLEMENTED,
+        ExitLogicStatus=RULESET_EXIT_LOGIC_NOT_IMPLEMENTED,
+        RiskLogicStatus=RULESET_RISK_LOGIC_NOT_IMPLEMENTED,
+        KnownUnresolvedFields=RULESET_KNOWN_UNRESOLVED_ENTRY_EXIT_RISK,
+        NextAction=RULESET_NEXT_ACTION_SPEC_REVIEW,
+    )
+    return selected[PHASE3_RULESET_DRAFT_COLUMNS].reset_index(drop=True)
+
+
+def build_and_save_phase3_ruleset_draft(
+    formalization_review_path: str | Path,
+    ruleset_draft_output_path: str | Path,
+) -> Path:
+    """Materialize deterministic single-candidate Phase 3 ruleset draft CSV from review artifact."""
+    formalization_review = pd.read_csv(formalization_review_path)
+    ruleset_draft = build_phase3_ruleset_draft(formalization_review)
+
+    output = Path(ruleset_draft_output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    ruleset_draft.to_csv(output, index=False)
+    return output
+
+
 def main() -> None:
     import argparse
 
@@ -353,6 +465,11 @@ def main() -> None:
         default="phase2_formalization_review.csv",
         help="Path to output single-candidate formalization review CSV",
     )
+    parser.add_argument(
+        "--phase3-ruleset-draft-output",
+        default="phase3_ruleset_draft.csv",
+        help="Path to output single-candidate Phase 3 ruleset draft CSV",
+    )
     args = parser.parse_args()
 
     out_path = harvest_phase2_candidates(args.runs_root, args.output)
@@ -362,9 +479,13 @@ def main() -> None:
     formalization_review_out = build_and_save_phase2_formalization_review(
         args.runs_root, args.formalization_output, args.formalization_review_output
     )
+    phase3_ruleset_draft_out = build_and_save_phase3_ruleset_draft(
+        formalization_review_out, args.phase3_ruleset_draft_output
+    )
     print(f"✅ Harvested candidates saved: {out_path}")
     print(f"✅ Formalization candidates saved: {formalization_out}")
     print(f"✅ Formalization review saved: {formalization_review_out}")
+    print(f"✅ Phase 3 ruleset draft saved: {phase3_ruleset_draft_out}")
 
 
 if __name__ == "__main__":
