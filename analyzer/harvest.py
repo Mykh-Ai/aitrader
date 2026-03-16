@@ -142,6 +142,27 @@ PHASE3_RULESET_CONTRACT_COLUMNS = [
     "NextAction",
 ]
 
+PHASE3_RULESET_MAPPING_COLUMNS = [
+    "SourceReport",
+    "GroupType",
+    "GroupValue",
+    "RulesetId",
+    "RulesetContractVersion",
+    "MappingVersion",
+    "MappingStatus",
+    "ReplaySemanticsVersion",
+    "SetupFamily",
+    "Direction",
+    "EligibleEventTypes",
+    "EntryTriggerMapping",
+    "EntryBoundaryMapping",
+    "ExitBoundaryMapping",
+    "RiskMapping",
+    "ReplayIntegrationStatus",
+    "KnownUnresolvedMappings",
+    "NextAction",
+]
+
 FORMALIZATION_STATUS_UNDER_REVIEW = "CANDIDATE_UNDER_REVIEW"
 FORMALIZATION_READINESS_REVIEW_REQUIRED = "REVIEW_REQUIRED"
 FORMALIZATION_CAVEAT_RESEARCH_ONLY = "RESEARCH_ONLY_NOT_YET_RULESET"
@@ -169,6 +190,17 @@ RULESET_RISK_SPEC_NOT_EXPLICIT = "NOT_YET_EXPLICIT"
 RULESET_CONTRACT_COMPLETENESS_PARTIAL = "PARTIAL"
 RULESET_CONTRACT_UNRESOLVED_ENTRY_EXIT_RISK = "ENTRY_EXIT_RISK_BOUNDARIES_UNRESOLVED"
 RULESET_CONTRACT_NEXT_ACTION_MANUAL_REPLAY_MAPPING = "MANUAL_REPLAY_RULE_MAPPING"
+
+RULESET_MAPPING_VERSION_V1 = "MAPPING_V1"
+RULESET_MAPPING_STATUS_DEFINED_PARTIAL = "MAPPING_DEFINED_PARTIAL"
+RULESET_REPLAY_SEMANTICS_VERSION_V0_1 = "REPLAY_V0_1"
+RULESET_ENTRY_TRIGGER_MAPPING_MANUAL_REQUIRED = "MANUAL_MAPPING_REQUIRED"
+RULESET_ENTRY_BOUNDARY_MAPPING_MANUAL_REQUIRED = "MANUAL_MAPPING_REQUIRED"
+RULESET_EXIT_BOUNDARY_MAPPING_MANUAL_REQUIRED = "MANUAL_MAPPING_REQUIRED"
+RULESET_RISK_MAPPING_MANUAL_REQUIRED = "MANUAL_MAPPING_REQUIRED"
+RULESET_REPLAY_INTEGRATION_STATUS_NOT_INTEGRATED = "NOT_INTEGRATED"
+RULESET_KNOWN_UNRESOLVED_REPLAY_MAPPING = "ENTRY_EXIT_RISK_REPLAY_MAPPING_UNRESOLVED"
+RULESET_NEXT_ACTION_MANUAL_REPLAY_BINDING = "MANUAL_RULESET_TO_REPLAY_BINDING"
 
 PROPOSED_SETUP_FAMILY_UNRESOLVED = "UNRESOLVED_SETUP_FAMILY_REVIEW_REQUIRED"
 PROPOSED_DIRECTION_UNRESOLVED = "UNRESOLVED_DIRECTION_REVIEW_REQUIRED"
@@ -523,6 +555,41 @@ def build_and_save_phase3_ruleset_contract(
     return output
 
 
+def build_phase3_ruleset_mapping(ruleset_contract: pd.DataFrame) -> pd.DataFrame:
+    """Build deterministic single-row Phase 3 replay mapping surface from ruleset contract artifact."""
+    if ruleset_contract.empty:
+        return pd.DataFrame(columns=PHASE3_RULESET_MAPPING_COLUMNS)
+
+    selected = ruleset_contract.head(1).copy()
+    selected = selected.assign(
+        MappingVersion=RULESET_MAPPING_VERSION_V1,
+        MappingStatus=RULESET_MAPPING_STATUS_DEFINED_PARTIAL,
+        ReplaySemanticsVersion=RULESET_REPLAY_SEMANTICS_VERSION_V0_1,
+        EntryTriggerMapping=RULESET_ENTRY_TRIGGER_MAPPING_MANUAL_REQUIRED,
+        EntryBoundaryMapping=RULESET_ENTRY_BOUNDARY_MAPPING_MANUAL_REQUIRED,
+        ExitBoundaryMapping=RULESET_EXIT_BOUNDARY_MAPPING_MANUAL_REQUIRED,
+        RiskMapping=RULESET_RISK_MAPPING_MANUAL_REQUIRED,
+        ReplayIntegrationStatus=RULESET_REPLAY_INTEGRATION_STATUS_NOT_INTEGRATED,
+        KnownUnresolvedMappings=RULESET_KNOWN_UNRESOLVED_REPLAY_MAPPING,
+        NextAction=RULESET_NEXT_ACTION_MANUAL_REPLAY_BINDING,
+    )
+    return selected[PHASE3_RULESET_MAPPING_COLUMNS].reset_index(drop=True)
+
+
+def build_and_save_phase3_ruleset_mapping(
+    ruleset_contract_path: str | Path,
+    ruleset_mapping_output_path: str | Path,
+) -> Path:
+    """Materialize deterministic single-candidate Phase 3 ruleset replay mapping CSV from contract artifact."""
+    ruleset_contract = pd.read_csv(ruleset_contract_path)
+    ruleset_mapping = build_phase3_ruleset_mapping(ruleset_contract)
+
+    output = Path(ruleset_mapping_output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    ruleset_mapping.to_csv(output, index=False)
+    return output
+
+
 def main() -> None:
     import argparse
 
@@ -555,6 +622,11 @@ def main() -> None:
         default="phase3_ruleset_contract.csv",
         help="Path to output single-candidate Phase 3 ruleset contract CSV",
     )
+    parser.add_argument(
+        "--phase3-ruleset-mapping-output",
+        default="phase3_ruleset_mapping.csv",
+        help="Path to output single-candidate Phase 3 ruleset mapping CSV",
+    )
     args = parser.parse_args()
 
     out_path = harvest_phase2_candidates(args.runs_root, args.output)
@@ -570,11 +642,15 @@ def main() -> None:
     phase3_ruleset_contract_out = build_and_save_phase3_ruleset_contract(
         phase3_ruleset_draft_out, args.phase3_ruleset_contract_output
     )
+    phase3_ruleset_mapping_out = build_and_save_phase3_ruleset_mapping(
+        phase3_ruleset_contract_out, args.phase3_ruleset_mapping_output
+    )
     print(f"✅ Harvested candidates saved: {out_path}")
     print(f"✅ Formalization candidates saved: {formalization_out}")
     print(f"✅ Formalization review saved: {formalization_review_out}")
     print(f"✅ Phase 3 ruleset draft saved: {phase3_ruleset_draft_out}")
     print(f"✅ Phase 3 ruleset contract saved: {phase3_ruleset_contract_out}")
+    print(f"✅ Phase 3 ruleset mapping saved: {phase3_ruleset_mapping_out}")
 
 
 if __name__ == "__main__":
