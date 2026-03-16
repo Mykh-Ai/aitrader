@@ -61,8 +61,32 @@ _VALID_SOURCE_FORMALIZATION_MODES = {
     "SHORTLIST_FIRST",
     "RESEARCH_SUMMARY_FIRST",
     "INTERSECTION",
+    "PHASE3_MAPPING_ONLY",
 }
 _SUPPORTED_BASELINE_GROUP_TYPES = {"Direction", "SetupType"}
+
+_REQUIRED_PHASE3_MAPPING_COLUMNS = {
+    "SourceReport",
+    "GroupType",
+    "GroupValue",
+    "RulesetId",
+    "RulesetContractVersion",
+    "MappingStatus",
+    "ReplaySemanticsVersion",
+    "SetupFamily",
+    "Direction",
+    "EligibleEventTypes",
+    "ReplayIntegrationStatus",
+}
+_CRITICAL_PHASE3_MAPPING_COLUMNS = {
+    "RulesetId",
+    "SetupFamily",
+    "Direction",
+    "EligibleEventTypes",
+    "ReplaySemanticsVersion",
+}
+_ACCEPTABLE_MAPPING_STATUSES = {"READY"}
+_ACCEPTABLE_INTEGRATION_STATUSES = {"READY_FOR_BINDING"}
 
 
 def _filter_formalization_eligible(df: pd.DataFrame) -> pd.DataFrame:
@@ -112,6 +136,19 @@ class RulesetRow:
 
 def _empty_rulesets() -> pd.DataFrame:
     return pd.DataFrame(columns=RULESET_COLUMNS)
+
+
+def _is_unresolved_placeholder(value: str) -> bool:
+    upper = str(value).strip().upper()
+    unresolved_tokens = (
+        "UNRESOLVED",
+        "NOT_",
+        "NOT YET",
+        "TBD",
+        "TODO",
+        "MANUAL_REQUIRED",
+    )
+    return any(token in upper for token in unresolved_tokens)
 
 
 def _normalize_token(value: str, max_len: int = 56) -> str:
@@ -228,9 +265,108 @@ def _lineage_artifact_for_row(
     return "analyzer_research_summary.csv" if key in research_summary_lookup else "analyzer_setup_shortlist.csv"
 
 
+def _build_rulesets_from_phase3_mapping(
+    *,
+    ruleset_mapping_df: pd.DataFrame | None,
+    ruleset_version: str,
+    cost_model_id: str,
+    same_bar_policy_id: str,
+    replay_semantics_version: str,
+    expiry_model: str,
+    expiry_start_semantics: str,
+    inherited_setup_ttl_bars: int,
+    inherited_outcome_horizon_bars: int,
+    inherited_min_selection_score: float,
+    inherited_min_selection_sample: int,
+) -> tuple[pd.DataFrame, list[str]]:
+    if ruleset_mapping_df is None:
+        raise ValueError("source_formalization_mode='PHASE3_MAPPING_ONLY' requires ruleset_mapping_df")
+
+    _validate_required_columns(ruleset_mapping_df, _REQUIRED_PHASE3_MAPPING_COLUMNS, "ruleset_mapping_df")
+
+    if ruleset_mapping_df.empty:
+        return _empty_rulesets(), []
+
+    if len(ruleset_mapping_df.index) > 1:
+        raise ValueError(
+            "PHASE3_MAPPING_ONLY supports at most one mapping row in v1, "
+            f"got {len(ruleset_mapping_df.index)} rows"
+        )
+
+    mapping_row = ruleset_mapping_df.iloc[0]
+    for column in sorted(_CRITICAL_PHASE3_MAPPING_COLUMNS):
+        value = mapping_row[column]
+        if pd.isna(value) or str(value).strip() == "":
+            raise ValueError(f"Critical mapping field '{column}' is null/blank")
+        if _is_unresolved_placeholder(str(value)):
+            raise ValueError(f"Critical mapping field '{column}' is unresolved: {value}")
+
+    mapping_status = str(mapping_row["MappingStatus"]).strip().upper()
+    if mapping_status not in _ACCEPTABLE_MAPPING_STATUSES:
+        raise ValueError(
+            "MappingStatus is not acceptable for PHASE3 mapping integration: "
+            f"{mapping_row['MappingStatus']}. Allowed values: {sorted(_ACCEPTABLE_MAPPING_STATUSES)}"
+        )
+
+    integration_status = str(mapping_row["ReplayIntegrationStatus"]).strip().upper()
+    if integration_status not in _ACCEPTABLE_INTEGRATION_STATUSES:
+        raise ValueError(
+            "ReplayIntegrationStatus is not acceptable for PHASE3 mapping integration: "
+            f"{mapping_row['ReplayIntegrationStatus']}. Allowed values: {sorted(_ACCEPTABLE_INTEGRATION_STATUSES)}"
+        )
+
+    direction = str(mapping_row["Direction"]).strip().upper()
+    row = RulesetRow(
+        ruleset_id=str(mapping_row["RulesetId"]),
+        ruleset_version=str(mapping_row.get("RulesetContractVersion", ruleset_version)),
+        source_candidate_group=_source_candidate_group(
+            str(mapping_row["SourceReport"]),
+            str(mapping_row["GroupType"]),
+            str(mapping_row["GroupValue"]),
+        ),
+        source_selection_status="SELECT",
+        source_lineage_artifact="phase3_ruleset_mapping.csv",
+        ruleset_variant="BASE",
+        direction=direction,
+        setup_type=str(mapping_row["SetupFamily"]),
+        eligible_event_types=str(mapping_row["EligibleEventTypes"]),
+        entry_trigger=(
+            "PHASE3_EXPLICIT_MAPPING:"
+            f"RulesetId={mapping_row['RulesetId']};MappingStatus={mapping_row['MappingStatus']}"
+        ),
+        entry_timing="SIGNAL_BAR_CLOSE__ENTRY_NEXT_BAR_OPEN",
+        entry_price_convention="NEXT_BAR_OPEN",
+        max_entry_delay_bars=1,
+        invalidation_condition="SETUP_INVALIDATED_OR_EXPIRED",
+        stop_model="REFERENCE_LEVEL_HARD_STOP",
+        take_profit_model="FIXED_R_MULTIPLE:1.5",
+        trailing_model="NONE",
+        expiry_model=expiry_model,
+        expiry_start_semantics=expiry_start_semantics,
+        conflict_policy="ONE_ACTIVE_POSITION_PER_RULESET",
+        position_policy="SINGLE_POSITION_NO_PYRAMID",
+        cost_model_id=cost_model_id,
+        same_bar_policy_id=same_bar_policy_id,
+        replay_semantics_version=str(mapping_row["ReplaySemanticsVersion"] or replay_semantics_version),
+        notes=(
+            "Explicit single-candidate Phase 3 mapping integration; no multi-candidate expansion; "
+            "no heuristic fallback."
+        ),
+        inherited_setup_ttl_bars=inherited_setup_ttl_bars,
+        inherited_outcome_horizon_bars=inherited_outcome_horizon_bars,
+        inherited_min_selection_score=inherited_min_selection_score,
+        inherited_min_selection_sample=inherited_min_selection_sample,
+    )
+
+    rulesets_df = pd.DataFrame([asdict(row)], columns=RULESET_COLUMNS)
+    warnings = validate_rulesets(rulesets_df, max_variants_per_candidate=1)
+    return rulesets_df, warnings
+
+
 def build_backtest_rulesets(
     shortlist_df: pd.DataFrame,
     research_summary_df: pd.DataFrame | None = None,
+    ruleset_mapping_df: pd.DataFrame | None = None,
     *,
     ruleset_version: str = "V1",
     variant_names: tuple[str, ...] = _DEFAULT_VARIANTS,
@@ -250,6 +386,21 @@ def build_backtest_rulesets(
     eligible_event_types_column: str = "EligibleEventTypes",
 ) -> tuple[pd.DataFrame, list[str]]:
     """Map Phase 2 research candidates to deterministic, fully specified ruleset rows."""
+    if source_formalization_mode == "PHASE3_MAPPING_ONLY":
+        return _build_rulesets_from_phase3_mapping(
+            ruleset_mapping_df=ruleset_mapping_df,
+            ruleset_version=ruleset_version,
+            cost_model_id=cost_model_id,
+            same_bar_policy_id=same_bar_policy_id,
+            replay_semantics_version=replay_semantics_version,
+            expiry_model=expiry_model,
+            expiry_start_semantics=expiry_start_semantics,
+            inherited_setup_ttl_bars=inherited_setup_ttl_bars,
+            inherited_outcome_horizon_bars=inherited_outcome_horizon_bars,
+            inherited_min_selection_score=inherited_min_selection_score,
+            inherited_min_selection_sample=inherited_min_selection_sample,
+        )
+
     _validate_required_columns(shortlist_df, _REQUIRED_SHORTLIST_COLUMNS, "shortlist_df")
 
     if research_summary_df is not None:
