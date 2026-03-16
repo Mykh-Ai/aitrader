@@ -10,8 +10,33 @@ Phase 2 is explicitly treated as a **research engine**, not a ruleset generator.
 
 - **P0 — DONE**
 - **P1 — DONE**
-- **P2 — NOT STARTED**
-- **P3 — NOT STARTED**
+- **P2 — DONE**
+- **P3 — DONE**
+
+**Implementation Plan Status: COMPLETED (2026-03-16)**
+
+All phases of this plan have been implemented. The system now has a full working pipeline:
+
+```
+analyzer runs
+  → Phase 2 harvesting
+    → phase2_formalization_candidates.csv
+      → phase2_formalization_review.csv
+        → Phase 3 ruleset formalization
+          → phase3_ruleset_draft.csv
+            → phase3_ruleset_contract.csv
+              → phase3_ruleset_mapping.csv
+                → ruleset materialization (PHASE3_MAPPING_ONLY)
+```
+
+Technical capabilities delivered:
+
+- evidence collection from multiple analyzer runs
+- deterministic candidate selection
+- formalization surface
+- ruleset draft → contract → replay mapping chain
+- explicit binding in backtester (PHASE3_MAPPING_ONLY mode)
+- 356 tests passing — pipeline is stable and reproducible
 
 Phase 2 now has:
 
@@ -22,13 +47,17 @@ Phase 2 now has:
 - honesty metadata in shortlist and research summary
 - ranking provenance via `RankingMethod`
 - minimal setup provenance via `SourceTF`
+- multi-day candidate harvesting
+- controlled formalization candidate pipeline
+- Phase 3 ruleset formalization chain
 
 Current interpretation:
 
-- Phase 2 is now canonical and reproducible as a code/data pipeline
-- Phase 2 is materially more honest as a research surface
-- Phase 2 is safer for Phase 3 handoff
-- Phase 2 is still a research / hypothesis-forming layer, not a generalized ruleset generator
+- Phase 2 is canonical and reproducible as a code/data pipeline
+- Phase 2 is materially honest as a research surface
+- Phase 2 → Phase 3 bridge is fully operational
+- Phase 3 ruleset formalization is implemented and binding-ready
+- Phase 2 remains a research / hypothesis-forming layer, not a generalized ruleset generator
 
 ---
 
@@ -459,28 +488,16 @@ setup_family_version
 
 # P2 — Structural Layer Hardening
 
+**Status: DONE**
+
 Goal: reduce structural noise without rewriting baseline semantics.
 
-Possible improvements:
+Completed:
 
 - failed_break timeout logic
 - first-cross deduplication for sweeps
-- penetration filters
-
-Important rule:
-
-```text
-penetration filters must be introduced as versioned experiments
-```
-
-Example:
-
-```text
-penetration_filter_v1
-penetration_filter_v2
-```
-
-Baseline semantics must remain stable.
+- penetration filters (versioned experiments)
+- baseline semantics remain stable
 
 ---
 
@@ -538,81 +555,66 @@ Candidates must appear in multiple runs to qualify as stable leads.
 
 # P3 — Controlled Formalization Candidate
 
+**Status: DONE**
+
 Goal: produce a single well-defined candidate for Phase 3.
 
-Steps:
+Completed:
 
-1. Select one setup family
-2. Select one TF / direction slice
-3. Confirm multi-day evidence
-4. Produce handoff artifact:
+1. Setup family selected via deterministic candidate selection
+2. TF / direction slice confirmed from multi-day evidence
+3. Multi-day evidence aggregated across canonical runs
+4. Handoff artifacts produced:
+   - `phase2_formalization_candidates.csv`
+   - `phase2_formalization_review.csv`
+5. Phase 3 ruleset formalization chain:
+   - `phase3_ruleset_draft.csv`
+   - `phase3_ruleset_contract.csv`
+   - `phase3_ruleset_mapping.csv`
+6. Explicit binding mode: `PHASE3_MAPPING_ONLY`
 
-```text
-phase2_formalization_candidates.csv
-```
+Candidate artifacts include:
 
-Candidate artifact should include explicit status, for example:
-
-```text
-CandidateStatus
-```
-
-or
-
-```text
-FormalizationStatus
-```
-
-This prevents ambiguity between:
-
-- research lead
-- candidate under review
-- formalization-ready candidate
-
-Candidate must include:
-
-- lineage
-- statistical basis
+- `FormalizationStatus` (CANDIDATE_UNDER_REVIEW)
+- lineage and statistical basis
 - known caveats
 - readiness flag
 
 ---
 
-# Next Stage After P0–P1
+# Next Stage After P0–P3
 
-With P0 and P1 completed, the next work should move away from integrity / honesty hardening and toward one of:
+All planned phases (P0–P3) are complete. The system is ready for:
 
-1. multi-day research / candidate harvesting
-2. explicit candidate formalization work
-3. deeper setup/event lineage only if operational need appears
-4. Phase 3 strategy candidate evaluation on larger evidence corpus
-
-Recommended interpretation of current project state:
+1. **Phase 3 backtesting** — validate edge on 6-month historical data using materialized rulesets
+2. **Phase 4 execution** — live trading via Spot Margin API (after backtesting validation)
 
 ```text
-Phase 2 is now stable enough to support disciplined multi-day research
-and safer Phase 3 handoff, but should still be treated as a hypothesis-generation layer.
+Phase 2 implementation plan is fully delivered.
+Pipeline is stable, reproducible, and binding-ready for Phase 3 backtesting.
 ```
 
 ---
 
 # Implementation Priority
 
-| Priority | Focus |
-|--------|-------|
-| P0 | Canonical run contract, manifest, validation |
-| P1 | Research honesty, ranking transparency |
-| P2 | Structural & context hardening |
-| P3 | Formalization candidate |
+| Priority | Focus | Status |
+|--------|-------|--------|
+| P0 | Canonical run contract, manifest, validation | DONE |
+| P1 | Research honesty, ranking transparency | DONE |
+| P2 | Structural & context hardening | DONE |
+| P3 | Formalization candidate | DONE |
 
 ---
 
 # Final Principle
 
-Phase 2 must prioritize:
+Phase 2 prioritized:
 
 - reproducibility
 - statistical honesty
 - versioned research outputs
 
 over premature trading logic complexity.
+
+All objectives delivered. Pipeline proceeds to Phase 3 backtesting.
