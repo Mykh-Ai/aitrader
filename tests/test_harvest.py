@@ -12,14 +12,17 @@ from analyzer.harvest import (
     HARVESTED_CANDIDATE_COLUMNS,
     PHASE3_RULESET_CONTRACT_COLUMNS,
     PHASE3_RULESET_DRAFT_COLUMNS,
+    PHASE3_RULESET_MAPPING_COLUMNS,
     build_and_save_phase2_formalization_candidates,
     build_and_save_phase2_formalization_review,
     build_and_save_phase3_ruleset_contract,
     build_and_save_phase3_ruleset_draft,
+    build_and_save_phase3_ruleset_mapping,
     build_phase2_formalization_candidates,
     build_phase2_formalization_review,
     build_phase3_ruleset_contract,
     build_phase3_ruleset_draft,
+    build_phase3_ruleset_mapping,
     harvest_phase2_candidates,
     harvest_source_rows,
 )
@@ -693,3 +696,96 @@ def test_build_and_save_phase3_ruleset_contract_writes_exactly_one_row(tmp_path:
     assert list(written.columns) == PHASE3_RULESET_CONTRACT_COLUMNS
     assert len(written) == 1
     assert written.iloc[0]["ReplayReadinessStatus"] == "NOT_READY_FOR_REPLAY"
+
+
+def test_build_phase3_ruleset_mapping_materializes_single_explicit_mapping_row() -> None:
+    contract = pd.DataFrame(
+        [
+            {
+                "SourceReport": "setup_report",
+                "GroupType": "SetupType",
+                "GroupValue": "FAILED_BREAK_RECLAIM_LONG",
+                "RulesetDraftId": "RULESET_DRAFT::setup_report::SetupType::FAILED_BREAK_RECLAIM_LONG::DRAFT_V1",
+                "RulesetVersion": "DRAFT_V1",
+                "RulesetId": "RULESET::setup_report::SetupType::FAILED_BREAK_RECLAIM_LONG::CONTRACT_V1",
+                "RulesetContractVersion": "CONTRACT_V1",
+                "ContractStatus": "CONTRACT_DEFINED_PARTIAL",
+                "ReplayReadinessStatus": "NOT_READY_FOR_REPLAY",
+                "SetupFamily": "FAILED_BREAK_RECLAIM_LONG",
+                "Direction": "LONG",
+                "EligibleEventTypes": "GROUP_TYPE:SetupType",
+                "EntryTriggerSpec": "NOT_YET_EXPLICIT",
+                "EntryBoundarySpec": "NOT_YET_EXPLICIT",
+                "ExitBoundarySpec": "NOT_YET_EXPLICIT",
+                "RiskSpec": "NOT_YET_EXPLICIT",
+                "ContractCompleteness": "PARTIAL",
+                "KnownUnresolvedContractFields": "ENTRY_EXIT_RISK_BOUNDARIES_UNRESOLVED",
+                "NextAction": "MANUAL_REPLAY_RULE_MAPPING",
+            }
+        ]
+    )
+
+    mapping = build_phase3_ruleset_mapping(contract)
+
+    assert list(mapping.columns) == PHASE3_RULESET_MAPPING_COLUMNS
+    assert len(mapping) == 1
+    row = mapping.iloc[0]
+    assert row["RulesetId"] == "RULESET::setup_report::SetupType::FAILED_BREAK_RECLAIM_LONG::CONTRACT_V1"
+    assert row["RulesetContractVersion"] == "CONTRACT_V1"
+    assert row["MappingVersion"] == "MAPPING_V1"
+    assert row["MappingStatus"] == "MAPPING_DEFINED_PARTIAL"
+    assert row["ReplaySemanticsVersion"] == "REPLAY_V0_1"
+    assert row["SetupFamily"] == "FAILED_BREAK_RECLAIM_LONG"
+    assert row["Direction"] == "LONG"
+    assert row["EligibleEventTypes"] == "GROUP_TYPE:SetupType"
+    assert row["EntryTriggerMapping"] == "MANUAL_MAPPING_REQUIRED"
+    assert row["EntryBoundaryMapping"] == "MANUAL_MAPPING_REQUIRED"
+    assert row["ExitBoundaryMapping"] == "MANUAL_MAPPING_REQUIRED"
+    assert row["RiskMapping"] == "MANUAL_MAPPING_REQUIRED"
+    assert row["ReplayIntegrationStatus"] == "NOT_INTEGRATED"
+    assert row["KnownUnresolvedMappings"] == "ENTRY_EXIT_RISK_REPLAY_MAPPING_UNRESOLVED"
+    assert row["NextAction"] == "MANUAL_RULESET_TO_REPLAY_BINDING"
+
+
+def test_build_phase3_ruleset_mapping_returns_empty_artifact_when_no_contract() -> None:
+    mapping = build_phase3_ruleset_mapping(pd.DataFrame(columns=PHASE3_RULESET_CONTRACT_COLUMNS))
+
+    assert list(mapping.columns) == PHASE3_RULESET_MAPPING_COLUMNS
+    assert mapping.empty
+
+
+def test_build_and_save_phase3_ruleset_mapping_writes_exactly_one_row(tmp_path: Path) -> None:
+    contract_path = tmp_path / "phase3_ruleset_contract.csv"
+    output_path = tmp_path / "phase3_ruleset_mapping.csv"
+    pd.DataFrame(
+        [
+            {
+                "SourceReport": "setup_report",
+                "GroupType": "SetupType",
+                "GroupValue": "FAILED_BREAK_RECLAIM_LONG",
+                "RulesetDraftId": "RULESET_DRAFT::setup_report::SetupType::FAILED_BREAK_RECLAIM_LONG::DRAFT_V1",
+                "RulesetVersion": "DRAFT_V1",
+                "RulesetId": "RULESET::setup_report::SetupType::FAILED_BREAK_RECLAIM_LONG::CONTRACT_V1",
+                "RulesetContractVersion": "CONTRACT_V1",
+                "ContractStatus": "CONTRACT_DEFINED_PARTIAL",
+                "ReplayReadinessStatus": "NOT_READY_FOR_REPLAY",
+                "SetupFamily": "FAILED_BREAK_RECLAIM_LONG",
+                "Direction": "LONG",
+                "EligibleEventTypes": "GROUP_TYPE:SetupType",
+                "EntryTriggerSpec": "NOT_YET_EXPLICIT",
+                "EntryBoundarySpec": "NOT_YET_EXPLICIT",
+                "ExitBoundarySpec": "NOT_YET_EXPLICIT",
+                "RiskSpec": "NOT_YET_EXPLICIT",
+                "ContractCompleteness": "PARTIAL",
+                "KnownUnresolvedContractFields": "ENTRY_EXIT_RISK_BOUNDARIES_UNRESOLVED",
+                "NextAction": "MANUAL_REPLAY_RULE_MAPPING",
+            }
+        ]
+    ).to_csv(contract_path, index=False)
+
+    build_and_save_phase3_ruleset_mapping(contract_path, output_path)
+    written = pd.read_csv(output_path)
+
+    assert list(written.columns) == PHASE3_RULESET_MAPPING_COLUMNS
+    assert len(written) == 1
+    assert written.iloc[0]["ReplayIntegrationStatus"] == "NOT_INTEGRATED"
