@@ -44,6 +44,24 @@ def _research_summary_df() -> pd.DataFrame:
     )
 
 
+def _phase3_mapping_df(**overrides) -> pd.DataFrame:
+    row = {
+        "SourceReport": "report",
+        "GroupType": "SetupType",
+        "GroupValue": "FAILED_BREAK_RECLAIM_SHORT",
+        "RulesetId": "RULESET::report::SetupType::FAILED_BREAK_RECLAIM_SHORT::CONTRACT_V1",
+        "RulesetContractVersion": "CONTRACT_V1",
+        "MappingStatus": "READY",
+        "ReplaySemanticsVersion": "REPLAY_V0_1",
+        "SetupFamily": "FAILED_BREAK_RECLAIM_SHORT",
+        "Direction": "SHORT",
+        "EligibleEventTypes": "FAILED_BREAK_UP",
+        "ReplayIntegrationStatus": "READY_FOR_BINDING",
+    }
+    row.update(overrides)
+    return pd.DataFrame([row])
+
+
 def test_determinism_same_input_produces_identical_rows_and_order_and_ids():
     first, _ = build_backtest_rulesets(_shortlist_df(), _research_summary_df())
     second, _ = build_backtest_rulesets(_shortlist_df(), _research_summary_df())
@@ -290,3 +308,75 @@ def test_notes_are_neutral_and_include_source_mode_not_hardcoded_constants_text(
 
     assert "SETUP_TTL_BARS=12" not in rulesets.loc[0, "notes"]
     assert "source_formalization_mode=SHORTLIST_FIRST" in rulesets.loc[0, "notes"]
+
+
+def test_phase3_mapping_only_materializes_single_explicit_ruleset_row():
+    rulesets, warnings = build_backtest_rulesets(
+        shortlist_df=_shortlist_df(),
+        research_summary_df=_research_summary_df(),
+        ruleset_mapping_df=_phase3_mapping_df(),
+        source_formalization_mode="PHASE3_MAPPING_ONLY",
+    )
+
+    assert len(rulesets) == 1
+    assert warnings == []
+    assert rulesets.loc[0, "ruleset_id"] == "RULESET::report::SetupType::FAILED_BREAK_RECLAIM_SHORT::CONTRACT_V1"
+    assert rulesets.loc[0, "source_lineage_artifact"] == "phase3_ruleset_mapping.csv"
+    assert rulesets.loc[0, "direction"] == "SHORT"
+    assert rulesets.loc[0, "setup_type"] == "FAILED_BREAK_RECLAIM_SHORT"
+    assert rulesets.loc[0, "eligible_event_types"] == "FAILED_BREAK_UP"
+    assert rulesets.loc[0, "replay_semantics_version"] == "REPLAY_V0_1"
+
+
+def test_phase3_mapping_only_rejects_more_than_one_mapping_row():
+    mapping_df = pd.concat([_phase3_mapping_df(), _phase3_mapping_df(RulesetId="RULESET_2")], ignore_index=True)
+
+    with pytest.raises(ValueError, match="at most one mapping row"):
+        build_backtest_rulesets(
+            shortlist_df=_shortlist_df(),
+            research_summary_df=_research_summary_df(),
+            ruleset_mapping_df=mapping_df,
+            source_formalization_mode="PHASE3_MAPPING_ONLY",
+        )
+
+
+def test_phase3_mapping_only_rejects_unresolved_critical_field():
+    with pytest.raises(ValueError, match="Critical mapping field 'SetupFamily' is unresolved"):
+        build_backtest_rulesets(
+            shortlist_df=_shortlist_df(),
+            research_summary_df=_research_summary_df(),
+            ruleset_mapping_df=_phase3_mapping_df(SetupFamily="UNRESOLVED_SETUP_FAMILY_REVIEW_REQUIRED"),
+            source_formalization_mode="PHASE3_MAPPING_ONLY",
+        )
+
+
+def test_phase3_mapping_only_rejects_missing_required_columns():
+    mapping_df = _phase3_mapping_df().drop(columns=["ReplayIntegrationStatus"])
+
+    with pytest.raises(KeyError, match="Missing required columns"):
+        build_backtest_rulesets(
+            shortlist_df=_shortlist_df(),
+            research_summary_df=_research_summary_df(),
+            ruleset_mapping_df=mapping_df,
+            source_formalization_mode="PHASE3_MAPPING_ONLY",
+        )
+
+
+def test_phase3_mapping_only_rejects_non_acceptable_mapping_status():
+    with pytest.raises(ValueError, match="MappingStatus is not acceptable"):
+        build_backtest_rulesets(
+            shortlist_df=_shortlist_df(),
+            research_summary_df=_research_summary_df(),
+            ruleset_mapping_df=_phase3_mapping_df(MappingStatus="PARTIAL"),
+            source_formalization_mode="PHASE3_MAPPING_ONLY",
+        )
+
+
+def test_phase3_mapping_only_rejects_non_acceptable_integration_status():
+    with pytest.raises(ValueError, match="ReplayIntegrationStatus is not acceptable"):
+        build_backtest_rulesets(
+            shortlist_df=_shortlist_df(),
+            research_summary_df=_research_summary_df(),
+            ruleset_mapping_df=_phase3_mapping_df(ReplayIntegrationStatus="NOT_INTEGRATED"),
+            source_formalization_mode="PHASE3_MAPPING_ONLY",
+        )
