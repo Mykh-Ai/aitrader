@@ -51,6 +51,30 @@ HARVESTED_CANDIDATE_COLUMNS = [
     "ResearchPriorities",
 ]
 
+FORMALIZATION_CANDIDATE_COLUMNS = [
+    "SourceReport",
+    "GroupType",
+    "GroupValue",
+    "DistinctRunCount",
+    "OccurrenceCount",
+    "FirstSeenRunDate",
+    "LastSeenRunDate",
+    "RankingMethods",
+    "RunIds",
+    "RunDates",
+    "RankingScoreMean",
+    "SelectionDecisions",
+    "RankingLabels",
+    "ResearchPriorities",
+    "FormalizationStatus",
+    "ReadinessFlag",
+    "KnownCaveats",
+]
+
+FORMALIZATION_STATUS_UNDER_REVIEW = "CANDIDATE_UNDER_REVIEW"
+FORMALIZATION_READINESS_REVIEW_REQUIRED = "REVIEW_REQUIRED"
+FORMALIZATION_CAVEAT_RESEARCH_ONLY = "RESEARCH_ONLY_NOT_YET_RULESET"
+
 GROUP_KEY_COLUMNS = ["SourceReport", "GroupType", "GroupValue"]
 
 
@@ -196,6 +220,43 @@ def harvest_phase2_candidates(runs_root: str | Path, output_path: str | Path) ->
     return output
 
 
+def build_phase2_formalization_candidates(harvested: pd.DataFrame) -> pd.DataFrame:
+    """Build a deterministic single-candidate handoff surface for P3 formalization review."""
+    if harvested.empty:
+        return pd.DataFrame(columns=FORMALIZATION_CANDIDATE_COLUMNS)
+
+    stable_leads = harvested.loc[harvested["StableLead"] == True].copy()  # noqa: E712
+    if stable_leads.empty:
+        return pd.DataFrame(columns=FORMALIZATION_CANDIDATE_COLUMNS)
+
+    selected = stable_leads.sort_values(
+        by=["DistinctRunCount", "OccurrenceCount", "SourceReport", "GroupType", "GroupValue"],
+        ascending=[False, False, True, True, True],
+        kind="stable",
+    ).head(1)
+
+    selected = selected.assign(
+        FormalizationStatus=FORMALIZATION_STATUS_UNDER_REVIEW,
+        ReadinessFlag=FORMALIZATION_READINESS_REVIEW_REQUIRED,
+        KnownCaveats=FORMALIZATION_CAVEAT_RESEARCH_ONLY,
+    )
+    return selected[FORMALIZATION_CANDIDATE_COLUMNS].reset_index(drop=True)
+
+
+def build_and_save_phase2_formalization_candidates(
+    runs_root: str | Path, output_path: str | Path
+) -> Path:
+    """Harvest and materialize a single deterministic formalization candidate CSV."""
+    source_rows = harvest_source_rows(runs_root)
+    harvested = build_phase2_harvested_candidates(source_rows)
+    formalization_candidates = build_phase2_formalization_candidates(harvested)
+
+    output = Path(output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    formalization_candidates.to_csv(output, index=False)
+    return output
+
+
 def main() -> None:
     import argparse
 
@@ -208,10 +269,19 @@ def main() -> None:
         default="phase2_harvested_candidates.csv",
         help="Path to output harvested candidates CSV",
     )
+    parser.add_argument(
+        "--formalization-output",
+        default="phase2_formalization_candidates.csv",
+        help="Path to output single-candidate formalization handoff CSV",
+    )
     args = parser.parse_args()
 
     out_path = harvest_phase2_candidates(args.runs_root, args.output)
+    formalization_out = build_and_save_phase2_formalization_candidates(
+        args.runs_root, args.formalization_output
+    )
     print(f"✅ Harvested candidates saved: {out_path}")
+    print(f"✅ Formalization candidates saved: {formalization_out}")
 
 
 if __name__ == "__main__":
