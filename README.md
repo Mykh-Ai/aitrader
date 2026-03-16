@@ -50,7 +50,7 @@ Binance Futures API (fstream / fapi)
 
 Package: `backtester/`
 
-- Implemented modules: `rulesets.py`, `engine.py`, `ledger.py`, `metrics.py`, `validation.py`, `robustness.py`, `promotion.py`, `orchestrator.py`.
+- Implemented modules: `rulesets.py`, `ruleset_validation.py`, `engine.py`, `ledger.py`, `metrics.py`, `validation.py`, `robustness.py`, `promotion.py`, `orchestrator.py`.
 - End-to-end orchestration entrypoint: `backtester/orchestrator.py` (`run_backtester`, `orchestrate_backtest`).
 - Boundary: consumes pre-generated Analyzer CSV artifacts; does not call `analyzer.pipeline.run()` implicitly.
 - Raw feed resolution for replay is now explicit and compatibility-safe:
@@ -66,6 +66,12 @@ Package: `backtester/`
   - `backtest_engine_events.csv` is written as a valid header-only CSV when replay emits zero events
   - orchestration can complete with `ruleset_count=0`, `engine_event_count=0`, and `trade_count=0`
   - `backtest_orchestration_manifest.json` remains the authoritative summary for such runs
+- `PHASE3_MAPPING_ONLY` now includes a strict Phase 4 pre-replay validation gate:
+  - validates structural fields, placeholders, readiness statuses, semantics whitelist, and optional contract/draft lineage checks
+  - does not auto-promote `PARTIAL`/`NOT_INTEGRATED` rows
+  - writes explicit artifacts: `phase4_ruleset_validation_summary.csv`, `phase4_ruleset_validation_details.csv`
+  - baseline emits strict binary validation statuses (`VALID` or `INVALID`); `REVIEW_REQUIRED` is reserved for future policy extension
+  - blocks replay when no replay-eligible mapping row exists
 
 Current output artifacts include:
 

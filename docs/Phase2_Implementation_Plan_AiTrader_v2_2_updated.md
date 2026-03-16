@@ -539,7 +539,7 @@ analyzer → formalization → ruleset → validation (Phase 4) → replay → r
 | P1 | Research honesty, ranking transparency | DONE |
 | P2 | Structural & context hardening | DONE |
 | P3 | Formalization candidate | DONE |
-| Phase 4 | Ruleset validation layer | TODO |
+| Phase 4 | Ruleset validation layer | BASELINE IMPLEMENTED (mapping-only pre-replay gate) |
 | Phase 5 | Experiment registry / batch evaluation | TODO |
 
 ---
