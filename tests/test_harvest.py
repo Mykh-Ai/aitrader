@@ -7,7 +7,10 @@ import pandas as pd
 import pytest
 
 from analyzer.harvest import (
+    FORMALIZATION_CANDIDATE_COLUMNS,
     HARVESTED_CANDIDATE_COLUMNS,
+    build_and_save_phase2_formalization_candidates,
+    build_phase2_formalization_candidates,
     harvest_phase2_candidates,
     harvest_source_rows,
 )
@@ -183,3 +186,138 @@ def test_harvest_source_rows_uses_run_date_as_input_raw_date_without_input_date_
     assert len(source_rows) == 1
     assert source_rows.iloc[0]["InputRawDate"] == "2026-01-03"
     assert pd.isna(source_rows.iloc[0]["AnalyzerVersion"])
+
+
+def test_build_phase2_formalization_candidates_selects_single_deterministic_stable_lead() -> None:
+    harvested = pd.DataFrame(
+        [
+            {
+                "SourceReport": "setup_report",
+                "GroupType": "SetupType",
+                "GroupValue": "FAILED_BREAK_RECLAIM_SHORT",
+                "OccurrenceCount": 2,
+                "DistinctRunCount": 2,
+                "FirstSeenRunDate": "2026-01-01",
+                "LastSeenRunDate": "2026-01-02",
+                "StableLead": True,
+                "RankingScoreMean": 0.4,
+                "RunIds": "run_1;run_2",
+                "RunDates": "2026-01-01;2026-01-02",
+                "AnalyzerVersions": "abc",
+                "ArtifactContractVersions": "phase2.analyzer-run.v1",
+                "RankingMethods": "delta_weighted",
+                "InputRawDates": "2026-01-01;2026-01-02",
+                "SelectionDecisions": "REVIEW",
+                "RankingLabels": "B",
+                "ResearchPriorities": "MEDIUM",
+            },
+            {
+                "SourceReport": "setup_report",
+                "GroupType": "SetupType",
+                "GroupValue": "FAILED_BREAK_RECLAIM_LONG",
+                "OccurrenceCount": 3,
+                "DistinctRunCount": 2,
+                "FirstSeenRunDate": "2026-01-01",
+                "LastSeenRunDate": "2026-01-03",
+                "StableLead": True,
+                "RankingScoreMean": 0.6,
+                "RunIds": "run_1;run_2;run_3",
+                "RunDates": "2026-01-01;2026-01-02;2026-01-03",
+                "AnalyzerVersions": "abc",
+                "ArtifactContractVersions": "phase2.analyzer-run.v1",
+                "RankingMethods": "delta_weighted",
+                "InputRawDates": "2026-01-01;2026-01-02;2026-01-03",
+                "SelectionDecisions": "SELECT",
+                "RankingLabels": "A",
+                "ResearchPriorities": "HIGH",
+            },
+            {
+                "SourceReport": "setup_report",
+                "GroupType": "SetupType",
+                "GroupValue": "ABSORPTION_LONG",
+                "OccurrenceCount": 5,
+                "DistinctRunCount": 1,
+                "FirstSeenRunDate": "2026-01-03",
+                "LastSeenRunDate": "2026-01-03",
+                "StableLead": False,
+                "RankingScoreMean": 0.9,
+                "RunIds": "run_3",
+                "RunDates": "2026-01-03",
+                "AnalyzerVersions": "abc",
+                "ArtifactContractVersions": "phase2.analyzer-run.v1",
+                "RankingMethods": "delta_weighted",
+                "InputRawDates": "2026-01-03",
+                "SelectionDecisions": "SELECT",
+                "RankingLabels": "A",
+                "ResearchPriorities": "HIGH",
+            },
+        ]
+    )
+
+    formalization = build_phase2_formalization_candidates(harvested)
+
+    assert list(formalization.columns) == FORMALIZATION_CANDIDATE_COLUMNS
+    assert len(formalization) == 1
+    assert formalization.iloc[0]["GroupValue"] == "FAILED_BREAK_RECLAIM_LONG"
+    assert formalization.iloc[0]["FormalizationStatus"] == "CANDIDATE_UNDER_REVIEW"
+    assert formalization.iloc[0]["ReadinessFlag"] == "REVIEW_REQUIRED"
+    assert formalization.iloc[0]["KnownCaveats"] == "RESEARCH_ONLY_NOT_YET_RULESET"
+
+
+def test_build_and_save_phase2_formalization_candidates_writes_exactly_one_row(tmp_path: Path) -> None:
+    runs_root = tmp_path / "analyzer_runs"
+
+    _write_run(
+        runs_root / "run_001",
+        run_id="run_001",
+        run_date="2026-01-01",
+        rows=[
+            {
+                "SourceReport": "setup_report",
+                "GroupType": "SetupType",
+                "GroupValue": "FAILED_BREAK_RECLAIM_LONG",
+                "SelectionDecision": "SELECT",
+                "RankingLabel": "A",
+                "RankingScore": 0.55,
+                "ResearchPriority": "HIGH",
+                "RankingMethod": "delta_weighted",
+            }
+        ],
+    )
+
+    _write_run(
+        runs_root / "run_002",
+        run_id="run_002",
+        run_date="2026-01-02",
+        rows=[
+            {
+                "SourceReport": "setup_report",
+                "GroupType": "SetupType",
+                "GroupValue": "FAILED_BREAK_RECLAIM_LONG",
+                "SelectionDecision": "SELECT",
+                "RankingLabel": "A",
+                "RankingScore": 0.60,
+                "ResearchPriority": "HIGH",
+                "RankingMethod": "delta_weighted",
+            },
+            {
+                "SourceReport": "setup_report",
+                "GroupType": "SetupType",
+                "GroupValue": "FAILED_BREAK_RECLAIM_SHORT",
+                "SelectionDecision": "REVIEW",
+                "RankingLabel": "B",
+                "RankingScore": 0.30,
+                "ResearchPriority": "MEDIUM",
+                "RankingMethod": "delta_weighted",
+            },
+        ],
+    )
+
+    output_path = tmp_path / "phase2_formalization_candidates.csv"
+    build_and_save_phase2_formalization_candidates(runs_root, output_path)
+
+    written = pd.read_csv(output_path)
+
+    assert list(written.columns) == FORMALIZATION_CANDIDATE_COLUMNS
+    assert len(written) == 1
+    assert written.iloc[0]["GroupValue"] == "FAILED_BREAK_RECLAIM_LONG"
