@@ -56,7 +56,7 @@ def _phase3_mapping_df(**overrides) -> pd.DataFrame:
         "SetupFamily": "FAILED_BREAK_RECLAIM_SHORT",
         "Direction": "SHORT",
         "EligibleEventTypes": "FAILED_BREAK_UP",
-        "ReplayIntegrationStatus": "INTEGRATED",
+        "ReplayIntegrationStatus": "READY_FOR_BINDING",
     }
     row.update(overrides)
     return pd.DataFrame([row])
@@ -367,7 +367,7 @@ def test_phase3_mapping_only_rejects_non_acceptable_mapping_status():
         build_backtest_rulesets(
             shortlist_df=_shortlist_df(),
             research_summary_df=_research_summary_df(),
-            ruleset_mapping_df=_phase3_mapping_df(MappingStatus="MAPPING_DEFINED_PARTIAL"),
+            ruleset_mapping_df=_phase3_mapping_df(MappingStatus="PARTIAL"),
             source_formalization_mode="PHASE3_MAPPING_ONLY",
         )
 
