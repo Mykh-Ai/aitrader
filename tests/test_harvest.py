@@ -271,7 +271,7 @@ def test_build_phase2_formalization_candidates_selects_single_deterministic_stab
     assert list(formalization.columns) == FORMALIZATION_CANDIDATE_COLUMNS
     assert len(formalization) == 1
     assert formalization.iloc[0]["GroupValue"] == "FAILED_BREAK_RECLAIM_LONG"
-    assert formalization.iloc[0]["FormalizationStatus"] == "CANDIDATE_UNDER_REVIEW"
+    assert formalization.iloc[0]["FormalizationStatus"] == "UNDER_REVIEW"
     assert formalization.iloc[0]["ReadinessFlag"] == "REVIEW_REQUIRED"
     assert formalization.iloc[0]["KnownCaveats"] == "RESEARCH_ONLY_NOT_YET_RULESET"
 
@@ -353,7 +353,7 @@ def test_build_phase2_formalization_review_extends_single_candidate_with_review_
                 "SelectionDecisions": "SELECT",
                 "RankingLabels": "A",
                 "ResearchPriorities": "HIGH",
-                "FormalizationStatus": "CANDIDATE_UNDER_REVIEW",
+                "FormalizationStatus": "UNDER_REVIEW",
                 "ReadinessFlag": "REVIEW_REQUIRED",
                 "KnownCaveats": "RESEARCH_ONLY_NOT_YET_RULESET",
             }
@@ -449,7 +449,7 @@ def test_build_phase3_ruleset_draft_materializes_single_explicit_draft_row() -> 
                 "SelectionDecisions": "SELECT",
                 "RankingLabels": "A",
                 "ResearchPriorities": "HIGH",
-                "FormalizationStatus": "CANDIDATE_UNDER_REVIEW",
+                "FormalizationStatus": "UNDER_REVIEW",
                 "ReadinessFlag": "REVIEW_REQUIRED",
                 "KnownCaveats": "RESEARCH_ONLY_NOT_YET_RULESET",
                 "ProposedSetupFamily": "FAILED_BREAK_RECLAIM_LONG",
@@ -510,7 +510,7 @@ def test_build_phase3_ruleset_draft_preserves_unresolved_safe_defaults() -> None
                 "SelectionDecisions": "REVIEW",
                 "RankingLabels": "B",
                 "ResearchPriorities": "MEDIUM",
-                "FormalizationStatus": "CANDIDATE_UNDER_REVIEW",
+                "FormalizationStatus": "UNDER_REVIEW",
                 "ReadinessFlag": "REVIEW_REQUIRED",
                 "KnownCaveats": "RESEARCH_ONLY_NOT_YET_RULESET",
                 "ProposedSetupFamily": "UNRESOLVED_SETUP_FAMILY_REVIEW_REQUIRED",
@@ -551,7 +551,7 @@ def test_build_and_save_phase3_ruleset_draft_writes_exactly_one_row(tmp_path: Pa
                 "SelectionDecisions": "SELECT",
                 "RankingLabels": "A",
                 "ResearchPriorities": "HIGH",
-                "FormalizationStatus": "CANDIDATE_UNDER_REVIEW",
+                "FormalizationStatus": "UNDER_REVIEW",
                 "ReadinessFlag": "REVIEW_REQUIRED",
                 "KnownCaveats": "RESEARCH_ONLY_NOT_YET_RULESET",
                 "ProposedSetupFamily": "FAILED_BREAK_RECLAIM_LONG",
@@ -590,7 +590,7 @@ def test_build_phase3_ruleset_contract_materializes_single_explicit_contract_row
                 "SelectionDecisions": "SELECT",
                 "RankingLabels": "A",
                 "ResearchPriorities": "HIGH",
-                "FormalizationStatus": "CANDIDATE_UNDER_REVIEW",
+                "FormalizationStatus": "UNDER_REVIEW",
                 "ReadinessFlag": "REVIEW_REQUIRED",
                 "KnownCaveats": "RESEARCH_ONLY_NOT_YET_RULESET",
                 "ProposedSetupFamily": "FAILED_BREAK_RECLAIM_LONG",
@@ -623,7 +623,7 @@ def test_build_phase3_ruleset_contract_materializes_single_explicit_contract_row
     row = contract.iloc[0]
     assert row["RulesetId"] == "RULESET::setup_report::SetupType::FAILED_BREAK_RECLAIM_LONG::CONTRACT_V1"
     assert row["RulesetContractVersion"] == "CONTRACT_V1"
-    assert row["ContractStatus"] == "CONTRACT_DEFINED_PARTIAL"
+    assert row["ContractStatus"] == "PARTIAL"
     assert row["ReplayReadinessStatus"] == "NOT_READY_FOR_REPLAY"
     assert row["SetupFamily"] == "FAILED_BREAK_RECLAIM_LONG"
     assert row["Direction"] == "LONG"
@@ -664,7 +664,7 @@ def test_build_and_save_phase3_ruleset_contract_writes_exactly_one_row(tmp_path:
                 "SelectionDecisions": "SELECT",
                 "RankingLabels": "A",
                 "ResearchPriorities": "HIGH",
-                "FormalizationStatus": "CANDIDATE_UNDER_REVIEW",
+                "FormalizationStatus": "UNDER_REVIEW",
                 "ReadinessFlag": "REVIEW_REQUIRED",
                 "KnownCaveats": "RESEARCH_ONLY_NOT_YET_RULESET",
                 "ProposedSetupFamily": "FAILED_BREAK_RECLAIM_LONG",
@@ -709,7 +709,7 @@ def test_build_phase3_ruleset_mapping_materializes_single_explicit_mapping_row()
                 "RulesetVersion": "DRAFT_V1",
                 "RulesetId": "RULESET::setup_report::SetupType::FAILED_BREAK_RECLAIM_LONG::CONTRACT_V1",
                 "RulesetContractVersion": "CONTRACT_V1",
-                "ContractStatus": "CONTRACT_DEFINED_PARTIAL",
+                "ContractStatus": "PARTIAL",
                 "ReplayReadinessStatus": "NOT_READY_FOR_REPLAY",
                 "SetupFamily": "FAILED_BREAK_RECLAIM_LONG",
                 "Direction": "LONG",
@@ -733,7 +733,7 @@ def test_build_phase3_ruleset_mapping_materializes_single_explicit_mapping_row()
     assert row["RulesetId"] == "RULESET::setup_report::SetupType::FAILED_BREAK_RECLAIM_LONG::CONTRACT_V1"
     assert row["RulesetContractVersion"] == "CONTRACT_V1"
     assert row["MappingVersion"] == "MAPPING_V1"
-    assert row["MappingStatus"] == "MAPPING_DEFINED_PARTIAL"
+    assert row["MappingStatus"] == "PARTIAL"
     assert row["ReplaySemanticsVersion"] == "REPLAY_V0_1"
     assert row["SetupFamily"] == "FAILED_BREAK_RECLAIM_LONG"
     assert row["Direction"] == "LONG"
@@ -767,7 +767,7 @@ def test_build_and_save_phase3_ruleset_mapping_writes_exactly_one_row(tmp_path: 
                 "RulesetVersion": "DRAFT_V1",
                 "RulesetId": "RULESET::setup_report::SetupType::FAILED_BREAK_RECLAIM_LONG::CONTRACT_V1",
                 "RulesetContractVersion": "CONTRACT_V1",
-                "ContractStatus": "CONTRACT_DEFINED_PARTIAL",
+                "ContractStatus": "PARTIAL",
                 "ReplayReadinessStatus": "NOT_READY_FOR_REPLAY",
                 "SetupFamily": "FAILED_BREAK_RECLAIM_LONG",
                 "Direction": "LONG",
