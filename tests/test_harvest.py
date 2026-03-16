@@ -664,11 +664,7 @@ def test_build_and_save_phase3_ruleset_contract_writes_exactly_one_row(tmp_path:
                 "SelectionDecisions": "SELECT",
                 "RankingLabels": "A",
                 "ResearchPriorities": "HIGH",
-<<<<<<< codex/implement-phase3_ruleset_contract.csv-artifact
-                "FormalizationStatus": "CANDIDATE_UNDER_REVIEW",
-=======
                 "FormalizationStatus": "UNDER_REVIEW",
->>>>>>> main
                 "ReadinessFlag": "REVIEW_REQUIRED",
                 "KnownCaveats": "RESEARCH_ONLY_NOT_YET_RULESET",
                 "ProposedSetupFamily": "FAILED_BREAK_RECLAIM_LONG",
@@ -700,8 +696,6 @@ def test_build_and_save_phase3_ruleset_contract_writes_exactly_one_row(tmp_path:
     assert list(written.columns) == PHASE3_RULESET_CONTRACT_COLUMNS
     assert len(written) == 1
     assert written.iloc[0]["ReplayReadinessStatus"] == "NOT_READY_FOR_REPLAY"
-<<<<<<< codex/implement-phase3_ruleset_contract.csv-artifact
-=======
 
 
 def test_build_phase3_ruleset_mapping_materializes_single_explicit_mapping_row() -> None:
@@ -795,4 +789,3 @@ def test_build_and_save_phase3_ruleset_mapping_writes_exactly_one_row(tmp_path: 
     assert list(written.columns) == PHASE3_RULESET_MAPPING_COLUMNS
     assert len(written) == 1
     assert written.iloc[0]["ReplayIntegrationStatus"] == "NOT_INTEGRATED"
->>>>>>> main
