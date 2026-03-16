@@ -184,6 +184,8 @@ PHASE3_RULESET_MAPPING_COLUMNS = [
     "RiskMapping",
     "ReplayIntegrationStatus",
     "KnownUnresolvedMappings",
+    "NextAction",
+]
 
 RULE_DRAFT_STATUS_NOT_DRAFTED = "NOT_DRAFTED"
 OPEN_QUESTIONS_RULE_BOUNDARY_REVIEW = "NEED_EXPLICIT_RULE_BOUNDARY_REVIEW"
