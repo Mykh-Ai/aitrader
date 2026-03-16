@@ -36,6 +36,7 @@ REQUIRED_ANALYZER_ARTIFACTS = {
 OPTIONAL_ANALYZER_ARTIFACTS = {
     "events": "analyzer_events.csv",
     "lineage": "analyzer_setup_shortlist_explanations.csv",
+    "ruleset_mapping": "phase3_ruleset_mapping.csv",
 }
 
 ORCHESTRATION_MANIFEST_NAME = "backtest_orchestration_manifest.json"
@@ -171,6 +172,7 @@ def run_backtester(
     raw_artifact_filename: str = "raw.csv",
     events_artifact_filename: str | None = None,
     lineage_artifact_filename: str | None = None,
+    ruleset_mapping_artifact_filename: str | None = None,
     cost_models: Mapping[str, CostModelHook] | None = None,
     same_bar_policies: Mapping[str, SameBarPolicyHook] | None = None,
 ) -> OrchestrationResult:
@@ -197,10 +199,22 @@ def run_backtester(
 
     shortlist_df = _load_csv(required_paths["shortlist"], label="shortlist")
     research_summary_df = _load_csv(required_paths["research_summary"], label="research_summary")
+    ruleset_mapping_df = None
+
+    if ruleset_source_formalization_mode == "PHASE3_MAPPING_ONLY":
+        mapping_name = ruleset_mapping_artifact_filename or OPTIONAL_ANALYZER_ARTIFACTS["ruleset_mapping"]
+        mapping_path = artifact_root / mapping_name
+        if not mapping_path.exists() or not mapping_path.is_file():
+            raise ReplayContractError(
+                "PHASE3_MAPPING_ONLY requires phase3 ruleset mapping artifact: "
+                f"ruleset_mapping={mapping_path}"
+            )
+        ruleset_mapping_df = _load_csv(mapping_path, label="phase3_ruleset_mapping")
 
     rulesets_df, mapping_warnings = build_backtest_rulesets(
         shortlist_df=shortlist_df,
         research_summary_df=research_summary_df,
+        ruleset_mapping_df=ruleset_mapping_df,
         variant_names=variant_names,
         source_formalization_mode=ruleset_source_formalization_mode,
         cost_model_id=cost_model_id,
