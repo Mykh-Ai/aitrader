@@ -306,3 +306,99 @@ def test_phase3_mapping_only_mode_requires_mapping_artifact(tmp_path: Path):
             generation_timestamp="2024-01-01T00:00:00+00:00",
             cost_models={"COST_MODEL_ZERO_SKELETON_ONLY": ZeroCostSkeletonModel()},
         )
+
+
+
+
+def test_phase3_mapping_only_phase4_gate_happy_path_writes_artifacts_and_runs(tmp_path: Path):
+    artifact_dir = tmp_path / "analyzer_run"
+    output_dir = tmp_path / "out"
+    _write_analyzer_artifacts(artifact_dir)
+
+    pd.DataFrame(
+        [
+            {
+                "SourceReport": "report",
+                "GroupType": "SetupType",
+                "GroupValue": "FAILED_BREAK_RECLAIM_SHORT",
+                "RulesetId": "RULESET_1",
+                "RulesetContractVersion": "CONTRACT_V1",
+                "MappingVersion": "MAPPING_V1",
+                "MappingStatus": "READY",
+                "ReplaySemanticsVersion": "REPLAY_V0_1",
+                "SetupFamily": "FAILED_BREAK_RECLAIM_SHORT",
+                "Direction": "SHORT",
+                "EligibleEventTypes": "FAILED_BREAK_UP",
+                "EntryTriggerMapping": "EXPLICIT_TRIGGER",
+                "EntryBoundaryMapping": "EXPLICIT_ENTRY_BOUNDARY",
+                "ExitBoundaryMapping": "EXPLICIT_EXIT_BOUNDARY",
+                "RiskMapping": "EXPLICIT_RISK",
+                "ReplayIntegrationStatus": "READY_FOR_BINDING",
+                "KnownUnresolvedMappings": "",
+                "NextAction": "",
+            }
+        ]
+    ).to_csv(artifact_dir / "phase3_ruleset_mapping.csv", index=False)
+
+    result = run_backtester(
+        artifact_dir=artifact_dir,
+        output_dir=output_dir,
+        ruleset_source_formalization_mode="PHASE3_MAPPING_ONLY",
+        variant_names=("BASE",),
+        cost_model_id="COST_MODEL_ZERO_SKELETON_ONLY",
+        same_bar_policy_id="SAME_BAR_CONSERVATIVE_V0_1",
+        replay_semantics_version="REPLAY_V0_1",
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models={"COST_MODEL_ZERO_SKELETON_ONLY": ZeroCostSkeletonModel()},
+    )
+
+    assert result.rulesets_path.exists()
+    assert (output_dir / "backtest_rulesets.csv").exists()
+    assert (output_dir / "phase4_ruleset_validation_summary.csv").exists()
+    assert (output_dir / "phase4_ruleset_validation_details.csv").exists()
+
+    orchestration_manifest = json.loads(result.orchestration_manifest_path.read_text(encoding="utf-8"))
+    assert orchestration_manifest["phase4_validation_paths"]["summary"]
+    assert orchestration_manifest["phase4_validation_paths"]["details"]
+
+def test_phase3_mapping_only_phase4_gate_blocks_when_no_replay_eligible_ruleset(tmp_path: Path):
+    artifact_dir = tmp_path / "analyzer_run"
+    _write_analyzer_artifacts(artifact_dir)
+
+    pd.DataFrame(
+        [
+            {
+                "SourceReport": "report",
+                "GroupType": "SetupType",
+                "GroupValue": "FAILED_BREAK_RECLAIM_SHORT",
+                "RulesetId": "RULESET_1",
+                "RulesetContractVersion": "CONTRACT_V1",
+                "MappingVersion": "MAPPING_V1",
+                "MappingStatus": "PARTIAL",
+                "ReplaySemanticsVersion": "REPLAY_V0_1",
+                "SetupFamily": "FAILED_BREAK_RECLAIM_SHORT",
+                "Direction": "SHORT",
+                "EligibleEventTypes": "FAILED_BREAK_UP",
+                "EntryTriggerMapping": "MANUAL_MAPPING_REQUIRED",
+                "EntryBoundaryMapping": "MANUAL_MAPPING_REQUIRED",
+                "ExitBoundaryMapping": "MANUAL_MAPPING_REQUIRED",
+                "RiskMapping": "MANUAL_MAPPING_REQUIRED",
+                "ReplayIntegrationStatus": "NOT_INTEGRATED",
+                "KnownUnresolvedMappings": "ENTRY_EXIT_RISK_REPLAY_MAPPING_UNRESOLVED",
+                "NextAction": "MANUAL_RULESET_TO_REPLAY_BINDING",
+            }
+        ]
+    ).to_csv(artifact_dir / "phase3_ruleset_mapping.csv", index=False)
+
+    with pytest.raises(ReplayContractError, match="Phase 4 ruleset validation gate blocked replay"):
+        run_backtester(
+            artifact_dir=artifact_dir,
+            output_dir=tmp_path / "out",
+            ruleset_source_formalization_mode="PHASE3_MAPPING_ONLY",
+            variant_names=("BASE",),
+            cost_model_id="COST_MODEL_ZERO_SKELETON_ONLY",
+            same_bar_policy_id="SAME_BAR_CONSERVATIVE_V0_1",
+            replay_semantics_version="REPLAY_V0_1",
+            generation_timestamp="2024-01-01T00:00:00+00:00",
+            cost_models={"COST_MODEL_ZERO_SKELETON_ONLY": ZeroCostSkeletonModel()},
+        )

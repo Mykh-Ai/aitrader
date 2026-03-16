@@ -73,6 +73,12 @@ Research-summary bridge contract (v0.1 hardening):
 - Non-eligible rows preserve research lineage but are intentionally excluded from ruleset generation.
 - No-setups fallback is explicit: `SetupType` rows with `_LONG`/`_SHORT` suffix may remain eligible; `Direction` rows must fail loud because setup-family lineage is unavailable.
 
+### `backtester/ruleset_validation.py`
+- **Responsibility:** Deterministic Phase 4 pre-replay validation gate for `phase3_ruleset_mapping.csv` in `PHASE3_MAPPING_ONLY` execution.
+- **Inputs:** Mapping artifact; optional contract (`phase3_ruleset_contract.csv`) and draft (`phase3_ruleset_draft.csv`) artifacts when available.
+- **Outputs:** `phase4_ruleset_validation_summary.csv`, `phase4_ruleset_validation_details.csv`.
+- **Non-responsibilities:** Auto-fixing mappings, status auto-promotion, heuristic contract repair.
+
 ### `backtester/engine.py`
 - **Responsibility:** Time-ordered replay of bars/events using versioned replay semantics and cost model hooks.
 - **Inputs:** Features/events/setup-level observables, canonical rulesets, replay semantics version, cost model version.
@@ -114,6 +120,7 @@ Research-summary bridge contract (v0.1 hardening):
 - **Inputs:** Analyzer artifact directory + run controls (ruleset mode, variants, model ids, semantics version).
 - **Outputs:** Full baseline artifact set + `backtest_orchestration_manifest.json`.
 - **Non-responsibilities:** Analyzer generation, live execution authorization.
+- **Phase 4 gate behavior:** In `PHASE3_MAPPING_ONLY`, runs `ruleset_validation.py` after mapping load and before replay; replay is blocked unless exactly one mapping row is `VALID`/replay-eligible.
 
 ---
 
@@ -123,6 +130,7 @@ High-level dataflow:
 
 `Analyzer artifacts`  
 `→ ruleset definitions`  
+`→ Phase 4 ruleset validation gate (mapping-only path)`  
 `→ replay engine`  
 `→ trade ledger`  
 `→ trade metrics`  
@@ -147,6 +155,8 @@ Implemented baseline artifacts:
 - `backtest_promotion_decisions.csv`
 - `backtest_promotion_details.csv`
 - `backtest_orchestration_manifest.json`
+- `phase4_ruleset_validation_summary.csv` (mapping-only mode)
+- `phase4_ruleset_validation_details.csv` (mapping-only mode)
 
 Manifest model is currently two-layered:
 
