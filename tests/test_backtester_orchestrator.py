@@ -288,3 +288,21 @@ def test_no_event_path_writes_valid_engine_csv_and_manifest_and_does_not_break_l
     orchestration_manifest = json.loads(result.orchestration_manifest_path.read_text(encoding="utf-8"))
     assert orchestration_manifest["engine_event_count"] == 0
     assert orchestration_manifest["trade_count"] == 0
+
+
+def test_phase3_mapping_only_mode_requires_mapping_artifact(tmp_path: Path):
+    artifact_dir = tmp_path / "analyzer_run"
+    _write_analyzer_artifacts(artifact_dir)
+
+    with pytest.raises(ReplayContractError, match="PHASE3_MAPPING_ONLY requires phase3 ruleset mapping artifact"):
+        run_backtester(
+            artifact_dir=artifact_dir,
+            output_dir=tmp_path / "out",
+            ruleset_source_formalization_mode="PHASE3_MAPPING_ONLY",
+            variant_names=("BASE",),
+            cost_model_id="COST_MODEL_ZERO_SKELETON_ONLY",
+            same_bar_policy_id="SAME_BAR_CONSERVATIVE_V0_1",
+            replay_semantics_version="REPLAY_V0_1",
+            generation_timestamp="2024-01-01T00:00:00+00:00",
+            cost_models={"COST_MODEL_ZERO_SKELETON_ONLY": ZeroCostSkeletonModel()},
+        )
