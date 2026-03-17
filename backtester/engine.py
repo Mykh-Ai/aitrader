@@ -63,6 +63,15 @@ REPLAY_EVENT_COLUMNS = (
 
 ENTRY_TIMING_BASELINE = "SIGNAL_BAR_CLOSE__ENTRY_NEXT_BAR_OPEN"
 ENTRY_PRICE_BASELINE = "NEXT_BAR_OPEN"
+STOP_PRICE_KEYS = ("StopPrice", "stop_price", "InitialStopPrice", "initial_stop_price")
+TARGET_PRICE_KEYS = (
+    "TargetPrice",
+    "target_price",
+    "TakeProfitPrice",
+    "take_profit_price",
+    "InitialTargetPrice",
+    "initial_target_price",
+)
 
 
 class ReplayContractError(ValueError):
@@ -290,6 +299,26 @@ def _validate_close_reason_category(category: str, ruleset_id: str, setup_id: st
     return normalized
 
 
+def _first_numeric(row: pd.Series, keys: tuple[str, ...]) -> float | None:
+    for key in keys:
+        if key in row and pd.notna(row[key]):
+            return float(row[key])
+    return None
+
+
+def _hit_flags(*, direction: str, low: float, high: float, stop_price: float | None, target_price: float | None) -> tuple[bool, bool]:
+    side = direction.upper()
+    if side == "LONG":
+        stop_hit = stop_price is not None and low <= stop_price
+        target_hit = target_price is not None and high >= target_price
+        return stop_hit, target_hit
+    if side == "SHORT":
+        stop_hit = stop_price is not None and high >= stop_price
+        target_hit = target_price is not None and low <= target_price
+        return stop_hit, target_hit
+    return False, False
+
+
 def run_replay_engine(
     inputs: ReplayInputs,
     *,
@@ -486,6 +515,18 @@ def run_replay_engine(
                 notes="entry_price_convention=next_bar_open",
             )
 
+            stop_price = _first_numeric(setup, STOP_PRICE_KEYS)
+            target_price = _first_numeric(setup, TARGET_PRICE_KEYS)
+            bar_low = float(bar_row["Low"])
+            bar_high = float(bar_row["High"])
+            stop_hit, target_hit = _hit_flags(
+                direction=direction,
+                low=bar_low,
+                high=bar_high,
+                stop_price=stop_price,
+                target_price=target_price,
+            )
+
             emit_event(
                 ruleset_id=str(ruleset["ruleset_id"]),
                 event_type="STOP_EVALUATED",
@@ -495,7 +536,7 @@ def run_replay_engine(
                 direction=direction,
                 state_before="ENTRY_ACTIVE",
                 state_after="ENTRY_ACTIVE",
-                price_raw=None,
+                price_raw=stop_price,
                 price_effective=None,
                 same_bar_policy_id=same_bar_policy_id,
                 same_bar_outcome="NONE",
@@ -506,7 +547,11 @@ def run_replay_engine(
                 close_resolved=False,
                 close_price_raw=None,
                 close_price_effective=None,
-                notes="stop_evaluation_not_implemented_step2a",
+                notes=(
+                    "stop_level_missing"
+                    if stop_price is None
+                    else ("stop_hit" if stop_hit else "stop_not_hit")
+                ),
             )
             emit_event(
                 ruleset_id=str(ruleset["ruleset_id"]),
@@ -517,7 +562,7 @@ def run_replay_engine(
                 direction=direction,
                 state_before="ENTRY_ACTIVE",
                 state_after="ENTRY_ACTIVE",
-                price_raw=None,
+                price_raw=target_price,
                 price_effective=None,
                 same_bar_policy_id=same_bar_policy_id,
                 same_bar_outcome="NONE",
@@ -528,7 +573,11 @@ def run_replay_engine(
                 close_resolved=False,
                 close_price_raw=None,
                 close_price_effective=None,
-                notes="target_evaluation_not_implemented_step2a",
+                notes=(
+                    "target_level_missing"
+                    if target_price is None
+                    else ("target_hit" if target_hit else "target_not_hit")
+                ),
             )
 
             force_collision = bool(setup.get("ForceSameBarCollision", False))
@@ -540,7 +589,7 @@ def run_replay_engine(
             close_reason_category = "UNRESOLVED"
             close_resolved = False
             close_price_raw = None
-            if force_collision:
+            if force_collision or (stop_hit and target_hit):
                 policy = same_bar_policies[same_bar_policy_id]
                 outcome = _validate_same_bar_outcome(
                     policy.resolve(ruleset_row=ruleset, setup_row=setup, bar_row=bar_row),
@@ -551,24 +600,39 @@ def run_replay_engine(
                 close_state = "CLOSE_POLICY_ROUTED"
                 close_notes = "same_bar_collision_routed_to_policy"
                 if outcome == "STOP_WINS":
-                    close_reason = "SAME_BAR_STOP_WINS_POLICY"
+                    close_reason = "STOP_LOSS"
                     close_reason_category = "STOP"
                     close_resolved = True
-                    close_price_raw = float(bar_row["Low"]) if direction.upper() == "LONG" else float(bar_row["High"])
+                    close_price_raw = stop_price
                 elif outcome == "TARGET_WINS":
-                    close_reason = "SAME_BAR_TARGET_WINS_POLICY"
+                    close_reason = "TAKE_PROFIT"
                     close_reason_category = "TARGET"
                     close_resolved = True
-                    close_price_raw = float(bar_row["High"]) if direction.upper() == "LONG" else float(bar_row["Low"])
+                    close_price_raw = target_price
                 elif outcome in {"UNRESOLVED", "DEFERRED"}:
                     close_reason = f"SAME_BAR_{outcome}"
                     close_reason_category = "UNRESOLVED"
                     close_resolved = False
 
+            elif stop_hit:
+                close_state = "CLOSED_STOP"
+                close_notes = "stop_hit_resolved"
+                close_reason = "STOP_LOSS"
+                close_reason_category = "STOP"
+                close_resolved = True
+                close_price_raw = stop_price
+            elif target_hit:
+                close_state = "CLOSED_TARGET"
+                close_notes = "target_hit_resolved"
+                close_reason = "TAKE_PROFIT"
+                close_reason_category = "TARGET"
+                close_resolved = True
+                close_price_raw = target_price
+
             if force_expiry_close:
                 close_state = "CLOSED_EXPIRY"
                 close_notes = "expiry_close_forced"
-                close_reason = "EXPIRY_CLOSE"
+                close_reason = "EXPIRY"
                 close_reason_category = "EXPIRY"
                 close_resolved = True
                 close_price_raw = float(bar_row["Close"])
