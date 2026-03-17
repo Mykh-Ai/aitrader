@@ -74,6 +74,24 @@ TARGET_PRICE_KEYS = (
 )
 
 
+def _parse_expiry_bars(ruleset: pd.Series) -> int | None:
+    """Best-effort parser for baseline bar-based expiry semantics."""
+    model = str(ruleset.get("expiry_model", "")).strip()
+    if not model:
+        return None
+    prefix = "BARS_AFTER_ACTIVATION:"
+    if not model.upper().startswith(prefix):
+        return None
+    tail = model[len(prefix) :].strip()
+    if not tail:
+        return None
+    try:
+        bars = int(tail)
+    except ValueError:
+        return None
+    return bars if bars >= 0 else None
+
+
 class ReplayContractError(ValueError):
     """Raised when replay contract assumptions are violated."""
 
@@ -345,6 +363,7 @@ def run_replay_engine(
     }
 
     pending_by_ts: dict[pd.Timestamp, list[dict[str, Any]]] = {}
+    active_positions: list[dict[str, Any]] = []
     events: list[dict[str, Any]] = []
     event_counter = 1
 
@@ -515,8 +534,34 @@ def run_replay_engine(
                 notes="entry_price_convention=next_bar_open",
             )
 
-            stop_price = _first_numeric(setup, STOP_PRICE_KEYS)
-            target_price = _first_numeric(setup, TARGET_PRICE_KEYS)
+            active_positions.append(
+                {
+                    "ruleset": ruleset,
+                    "setup": setup,
+                    "direction": direction,
+                    "cost_model_id": cost_model_id,
+                    "same_bar_policy_id": same_bar_policy_id,
+                    "stop_price": _first_numeric(setup, STOP_PRICE_KEYS),
+                    "target_price": _first_numeric(setup, TARGET_PRICE_KEYS),
+                    "activation_ts": bar_ts,
+                    "activation_idx": timestamp_index[bar_ts],
+                    "expiry_bars": _parse_expiry_bars(ruleset),
+                    "force_expiry_close": bool(setup.get("ForceExpiryClose", False)),
+                    "force_collision": bool(setup.get("ForceSameBarCollision", False)),
+                }
+            )
+
+        next_active_positions: list[dict[str, Any]] = []
+        for position in active_positions:
+            ruleset = position["ruleset"]
+            setup = position["setup"]
+            direction = str(position["direction"])
+            cost_model_id = str(position["cost_model_id"])
+            same_bar_policy_id = str(position["same_bar_policy_id"])
+            cost_model = cost_models[cost_model_id]
+
+            stop_price = position["stop_price"]
+            target_price = position["target_price"]
             bar_low = float(bar_row["Low"])
             bar_high = float(bar_row["High"])
             stop_hit, target_hit = _hit_flags(
@@ -580,8 +625,12 @@ def run_replay_engine(
                 ),
             )
 
-            force_collision = bool(setup.get("ForceSameBarCollision", False))
-            force_expiry_close = bool(setup.get("ForceExpiryClose", False))
+            force_collision = bool(position["force_collision"])
+            force_expiry_close = bool(position["force_expiry_close"])
+            expiry_bars = position["expiry_bars"]
+            bars_since_activation = timestamp_index[bar_ts] - int(position["activation_idx"])
+            expiry_due = bool(expiry_bars is not None and bars_since_activation >= expiry_bars)
+
             close_state = "ENTRY_ACTIVE"
             same_bar_outcome = "NONE"
             close_notes = "close_not_resolved_step2a"
@@ -589,7 +638,8 @@ def run_replay_engine(
             close_reason_category = "UNRESOLVED"
             close_resolved = False
             close_price_raw = None
-            if force_collision or (stop_hit and target_hit):
+            collision_forced = force_collision
+            if collision_forced or (stop_hit and target_hit):
                 policy = same_bar_policies[same_bar_policy_id]
                 outcome = _validate_same_bar_outcome(
                     policy.resolve(ruleset_row=ruleset, setup_row=setup, bar_row=bar_row),
@@ -629,9 +679,13 @@ def run_replay_engine(
                 close_resolved = True
                 close_price_raw = target_price
 
-            if force_expiry_close:
+            if (force_expiry_close or expiry_due) and not close_resolved:
                 close_state = "CLOSED_EXPIRY"
-                close_notes = "expiry_close_forced"
+                close_notes = (
+                    "expiry_close_forced"
+                    if force_expiry_close
+                    else f"expiry_hit_bars_after_activation={expiry_bars}"
+                )
                 close_reason = "EXPIRY"
                 close_reason_category = "EXPIRY"
                 close_resolved = True
@@ -694,10 +748,19 @@ def run_replay_engine(
                 close_price_raw=None,
                 close_price_effective=None,
                 notes=(
-                    f"expiry_start_semantics={ruleset['expiry_start_semantics']}"
-                    " (placeholder routing only)"
+                    f"expiry_start_semantics={ruleset['expiry_start_semantics']}; "
+                    f"expiry_model={ruleset.get('expiry_model', '')}; "
+                    f"bars_since_activation={bars_since_activation}; "
+                    f"expiry_due={expiry_due}"
                 ),
             )
+
+            position["force_collision"] = False
+
+            if not close_resolved:
+                next_active_positions.append(position)
+
+        active_positions = next_active_positions
 
     events_df = pd.DataFrame(events, columns=REPLAY_EVENT_COLUMNS)
     manifest = {
