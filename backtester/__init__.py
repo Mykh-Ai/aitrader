@@ -57,6 +57,21 @@ from .orchestrator import (
     run_backtester,
 )
 
+
+from .experiment_registry import (
+    REGISTRY_COLUMNS,
+    REGISTRY_FILENAME,
+    append_registry_row,
+    build_registry_row_for_completed_run,
+)
+
+from .campaign import (
+    CAMPAIGN_MANIFEST_FILENAME,
+    CAMPAIGN_RUN_INDEX_FILENAME,
+    CAMPAIGN_SUMMARY_FILENAME,
+    CampaignResult,
+    run_backtest_campaign,
+)
 from .promotion import (
     PROMOTION_COLUMNS,
     PROMOTION_DETAIL_COLUMNS,
@@ -114,4 +129,14 @@ __all__ = [
     "run_backtester",
     "orchestrate_backtest",
     "result_as_dict",
+
+    "REGISTRY_COLUMNS",
+    "REGISTRY_FILENAME",
+    "build_registry_row_for_completed_run",
+    "append_registry_row",
+    "CAMPAIGN_MANIFEST_FILENAME",
+    "CAMPAIGN_RUN_INDEX_FILENAME",
+    "CAMPAIGN_SUMMARY_FILENAME",
+    "CampaignResult",
+    "run_backtest_campaign",
 ]

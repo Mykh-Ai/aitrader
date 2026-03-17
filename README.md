@@ -50,8 +50,10 @@ Binance Futures API (fstream / fapi)
 
 Package: `backtester/`
 
-- Implemented modules: `rulesets.py`, `ruleset_validation.py`, `engine.py`, `ledger.py`, `metrics.py`, `validation.py`, `robustness.py`, `promotion.py`, `orchestrator.py`.
+- Implemented modules: `rulesets.py`, `ruleset_validation.py`, `engine.py`, `ledger.py`, `metrics.py`, `validation.py`, `robustness.py`, `promotion.py`, `orchestrator.py`, `campaign.py`, `experiment_registry.py`.
 - End-to-end orchestration entrypoint: `backtester/orchestrator.py` (`run_backtester`, `orchestrate_backtest`).
+- Phase 5 baseline utility layer: `backtester/campaign.py` runs multi-run historical campaigns via `run_backtester(...)`; `backtester/experiment_registry.py` records completed runs in append-only `phase5_experiment_registry.csv`.
+- Campaign outputs are observational only (`backtest_campaign_manifest.json`, `backtest_campaign_run_index.csv`, `backtest_campaign_summary.csv`) and do not perform ranking, winner selection, or auto-promotion.
 - Boundary: consumes pre-generated Analyzer CSV artifacts; does not call `analyzer.pipeline.run()` implicitly.
 - Raw feed resolution for replay is now explicit and compatibility-safe:
   1. explicit `raw_path`
