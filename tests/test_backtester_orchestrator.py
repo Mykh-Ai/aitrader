@@ -58,6 +58,7 @@ def _write_analyzer_artifacts(artifact_dir: Path, *, raw_output_path: Path | Non
                 "DetectedAt": "2024-01-01T00:00:00Z",
                 "SetupBarTs": "2024-01-01T00:00:00Z",
                 "ReferenceEventType": "FAILED_BREAK_DOWN",
+                "ReferenceLevel": 99.0,
             }
         ]
     )
@@ -126,6 +127,10 @@ def test_end_to_end_smoke_produces_full_phase3_artifact_set(tmp_path: Path):
     as_dict = result_as_dict(result)
     assert as_dict["rulesets_path"].endswith("backtest_rulesets.csv")
     assert as_dict["engine_events_path"].endswith("backtest_engine_events.csv")
+
+    trades = pd.read_csv(output_dir / "backtest_trades.csv")
+    assert trades.iloc[0]["initial_stop_price"] == pytest.approx(99.0)
+    assert trades.iloc[0]["initial_target_price"] == pytest.approx(104.0)
 
 
 def test_deterministic_runs_same_input_same_artifacts_with_fixed_timestamp(tmp_path: Path):
