@@ -55,29 +55,40 @@ def _features_df() -> pd.DataFrame:
     )
 
 
-def _setups_df(force_collision: bool = False, force_expiry_close: bool = False) -> pd.DataFrame:
+def _setups_df(
+    force_collision: bool = False,
+    force_expiry_close: bool = False,
+    direction: str = "LONG",
+    stop_price: float | None = 100.0,
+    target_price: float | None = 103.0,
+) -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
                 "SetupId": "S1",
                 "SetupType": "FAILED_BREAK_RECLAIM_LONG",
-                "Direction": "LONG",
+                "Direction": direction,
                 "DetectedAt": "2024-01-01T00:00:00Z",
                 "SetupBarTs": "2024-01-01T00:00:00Z",
                 "ReferenceEventType": "FAILED_BREAK_DOWN",
                 "ForceSameBarCollision": force_collision,
                 "ForceExpiryClose": force_expiry_close,
+                "StopPrice": stop_price,
+                "TargetPrice": target_price,
             }
         ]
     )
 
 
-def _rulesets_df(cost_model_id: str = "COST_MODEL_ZERO_SKELETON_ONLY") -> pd.DataFrame:
+def _rulesets_df(
+    cost_model_id: str = "COST_MODEL_ZERO_SKELETON_ONLY",
+    direction: str = "LONG",
+) -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
                 "ruleset_id": "RULESET_001",
-                "direction": "LONG",
+                "direction": direction,
                 "setup_type": "FAILED_BREAK_RECLAIM_LONG",
                 "entry_timing": "SIGNAL_BAR_CLOSE__ENTRY_NEXT_BAR_OPEN",
                 "entry_price_convention": "NEXT_BAR_OPEN",
@@ -96,12 +107,21 @@ def _inputs(
     force_collision: bool = False,
     force_expiry_close: bool = False,
     cost_model_id: str = "COST_MODEL_ZERO_SKELETON_ONLY",
+    direction: str = "LONG",
+    stop_price: float | None = 100.0,
+    target_price: float | None = 103.0,
 ) -> ReplayInputs:
     return ReplayInputs(
         raw_df=_raw_df(),
         features_df=_features_df(),
-        setups_df=_setups_df(force_collision=force_collision, force_expiry_close=force_expiry_close),
-        rulesets_df=_rulesets_df(cost_model_id=cost_model_id),
+        setups_df=_setups_df(
+            force_collision=force_collision,
+            force_expiry_close=force_expiry_close,
+            direction=direction,
+            stop_price=stop_price,
+            target_price=target_price,
+        ),
+        rulesets_df=_rulesets_df(cost_model_id=cost_model_id, direction=direction),
     )
 
 
@@ -189,7 +209,7 @@ def test_cost_model_honesty_no_silent_zero_cost_fallback_for_production_like_id(
         )
 
 
-def test_stop_target_placeholder_safety_no_fake_plus_minus_levels_by_default():
+def test_stop_target_evaluations_emit_levels_and_hit_flags():
     events, _ = run_replay_engine(
         _inputs(),
         generation_timestamp="2024-01-01T00:00:00+00:00",
@@ -198,10 +218,10 @@ def test_stop_target_placeholder_safety_no_fake_plus_minus_levels_by_default():
 
     stop_row = events.loc[events["event_type"] == "STOP_EVALUATED"].iloc[0]
     target_row = events.loc[events["event_type"] == "TARGET_EVALUATED"].iloc[0]
-    assert pd.isna(stop_row["price_raw"])
-    assert pd.isna(target_row["price_raw"])
-    assert stop_row["notes"] == "stop_evaluation_not_implemented_step2a"
-    assert target_row["notes"] == "target_evaluation_not_implemented_step2a"
+    assert stop_row["price_raw"] == 100.0
+    assert target_row["price_raw"] == 103.0
+    assert stop_row["notes"] == "stop_hit"
+    assert target_row["notes"] == "target_hit"
 
 
 def test_same_bar_policy_routing_materializes_explicit_outcome_not_notes_only():
@@ -276,7 +296,7 @@ def test_close_resolved_emits_explicit_structured_fields_for_same_bar_stop():
         same_bar_policies={"SAME_BAR_CONSERVATIVE_V0_1": StopWinsPolicy()},
     )
     close_row = events.loc[events["event_type"] == "CLOSE_RESOLVED"].iloc[0]
-    assert close_row["close_reason"] == "SAME_BAR_STOP_WINS_POLICY"
+    assert close_row["close_reason"] == "STOP_LOSS"
     assert close_row["close_reason_category"] == "STOP"
     assert close_row["close_resolved"] == True
     assert close_row["same_bar_outcome"] == "STOP_WINS"
@@ -294,7 +314,7 @@ def test_close_resolved_emits_explicit_structured_fields_for_same_bar_target():
         same_bar_policies={"SAME_BAR_CONSERVATIVE_V0_1": TargetWinsPolicy()},
     )
     close_row = events.loc[events["event_type"] == "CLOSE_RESOLVED"].iloc[0]
-    assert close_row["close_reason"] == "SAME_BAR_TARGET_WINS_POLICY"
+    assert close_row["close_reason"] == "TAKE_PROFIT"
     assert close_row["close_reason_category"] == "TARGET"
     assert close_row["close_resolved"] == True
 
@@ -306,7 +326,7 @@ def test_expiry_close_emits_explicit_structured_close_truth():
         cost_models=_cost_models(),
     )
     close_row = events.loc[events["event_type"] == "CLOSE_RESOLVED"].iloc[0]
-    assert close_row["close_reason"] == "EXPIRY_CLOSE"
+    assert close_row["close_reason"] == "EXPIRY"
     assert close_row["close_reason_category"] == "EXPIRY"
     assert close_row["close_resolved"] == True
     assert close_row["close_price_raw"] == 102.0
@@ -328,6 +348,52 @@ def test_same_bar_unresolved_emits_structured_unresolved_not_notes_only():
     assert close_row["close_reason_category"] == "UNRESOLVED"
     assert close_row["close_resolved"] == False
 
+
+
+def test_close_resolved_long_stop_only_path():
+    events, _ = run_replay_engine(
+        _inputs(stop_price=100.0, target_price=104.0),
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models=_cost_models(),
+    )
+    close_row = events.loc[events["event_type"] == "CLOSE_RESOLVED"].iloc[0]
+    assert close_row["close_reason"] == "STOP_LOSS"
+    assert close_row["close_reason_category"] == "STOP"
+    assert close_row["close_resolved"] == True
+
+
+def test_close_resolved_long_target_only_path():
+    events, _ = run_replay_engine(
+        _inputs(stop_price=99.0, target_price=102.0),
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models=_cost_models(),
+    )
+    close_row = events.loc[events["event_type"] == "CLOSE_RESOLVED"].iloc[0]
+    assert close_row["close_reason"] == "TAKE_PROFIT"
+    assert close_row["close_reason_category"] == "TARGET"
+    assert close_row["close_resolved"] == True
+
+
+def test_close_resolved_short_stop_only_path():
+    events, _ = run_replay_engine(
+        _inputs(direction="SHORT", stop_price=102.0, target_price=99.0),
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models=_cost_models(),
+    )
+    close_row = events.loc[events["event_type"] == "CLOSE_RESOLVED"].iloc[0]
+    assert close_row["close_reason"] == "STOP_LOSS"
+    assert close_row["close_reason_category"] == "STOP"
+
+
+def test_close_resolved_short_target_only_path():
+    events, _ = run_replay_engine(
+        _inputs(direction="SHORT", stop_price=104.0, target_price=100.0),
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models=_cost_models(),
+    )
+    close_row = events.loc[events["event_type"] == "CLOSE_RESOLVED"].iloc[0]
+    assert close_row["close_reason"] == "TAKE_PROFIT"
+    assert close_row["close_reason_category"] == "TARGET"
 
 def test_no_eligible_setups_returns_empty_events_with_canonical_schema():
     inputs = ReplayInputs(
