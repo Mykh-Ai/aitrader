@@ -160,7 +160,151 @@ def test_bar_driven_causality_event_order_matches_replay_progression_without_pos
         "TARGET_EVALUATED",
         "CLOSE_RESOLVED",
         "EXPIRY_EVALUATED",
+        "STOP_EVALUATED",
+        "TARGET_EVALUATED",
+        "CLOSE_RESOLVED",
+        "EXPIRY_EVALUATED",
     ]
+
+
+def test_multi_bar_long_target_close_re_evaluates_until_later_bar_resolution():
+    raw = pd.DataFrame(
+        [
+            {"Timestamp": "2024-01-01T00:00:00Z", "Open": 100.0, "High": 101.0, "Low": 99.0, "Close": 100.0, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:01:00Z", "Open": 101.0, "High": 101.5, "Low": 100.2, "Close": 101.0, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:02:00Z", "Open": 101.0, "High": 102.0, "Low": 100.5, "Close": 101.8, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:03:00Z", "Open": 101.8, "High": 104.2, "Low": 101.0, "Close": 103.9, "IsSynthetic": 0},
+        ]
+    )
+    features = pd.DataFrame([{"Timestamp": ts} for ts in raw["Timestamp"].tolist()])
+    setups = _setups_df(stop_price=99.0, target_price=104.0)
+    rulesets = _rulesets_df()
+    events, _ = run_replay_engine(
+        ReplayInputs(raw_df=raw, features_df=features, setups_df=setups, rulesets_df=rulesets),
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models=_cost_models(),
+    )
+
+    activation_ts = events.loc[events["event_type"] == "ENTRY_ACTIVATED", "timestamp"].iloc[0]
+    close_row = events[(events["event_type"] == "CLOSE_RESOLVED") & (events["close_resolved"] == True)].iloc[-1]
+    assert close_row["timestamp"] > activation_ts
+    assert close_row["close_reason"] == "TAKE_PROFIT"
+    assert events[events["event_type"] == "STOP_EVALUATED"]["timestamp"].nunique() >= 2
+    assert events[events["event_type"] == "TARGET_EVALUATED"]["timestamp"].nunique() >= 2
+
+
+def test_multi_bar_long_stop_close_re_evaluates_until_later_bar_resolution():
+    raw = pd.DataFrame(
+        [
+            {"Timestamp": "2024-01-01T00:00:00Z", "Open": 100.0, "High": 101.0, "Low": 99.0, "Close": 100.0, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:01:00Z", "Open": 101.0, "High": 101.5, "Low": 100.2, "Close": 101.0, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:02:00Z", "Open": 101.0, "High": 101.4, "Low": 100.3, "Close": 101.2, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:03:00Z", "Open": 101.2, "High": 101.3, "Low": 99.6, "Close": 100.0, "IsSynthetic": 0},
+        ]
+    )
+    features = pd.DataFrame([{"Timestamp": ts} for ts in raw["Timestamp"].tolist()])
+    setups = _setups_df(stop_price=100.0, target_price=105.0)
+    rulesets = _rulesets_df()
+    events, _ = run_replay_engine(
+        ReplayInputs(raw_df=raw, features_df=features, setups_df=setups, rulesets_df=rulesets),
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models=_cost_models(),
+    )
+    activation_ts = events.loc[events["event_type"] == "ENTRY_ACTIVATED", "timestamp"].iloc[0]
+    close_row = events[(events["event_type"] == "CLOSE_RESOLVED") & (events["close_resolved"] == True)].iloc[-1]
+    assert close_row["timestamp"] > activation_ts
+    assert close_row["close_reason"] == "STOP_LOSS"
+
+
+def test_multi_bar_short_target_close_re_evaluates_until_later_bar_resolution():
+    raw = pd.DataFrame(
+        [
+            {"Timestamp": "2024-01-01T00:00:00Z", "Open": 100.0, "High": 101.0, "Low": 99.0, "Close": 100.0, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:01:00Z", "Open": 101.0, "High": 101.2, "Low": 100.4, "Close": 101.0, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:02:00Z", "Open": 101.0, "High": 101.1, "Low": 100.2, "Close": 100.6, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:03:00Z", "Open": 100.6, "High": 100.8, "Low": 99.8, "Close": 100.0, "IsSynthetic": 0},
+        ]
+    )
+    features = pd.DataFrame([{"Timestamp": ts} for ts in raw["Timestamp"].tolist()])
+    setups = _setups_df(direction="SHORT", stop_price=104.0, target_price=100.0)
+    rulesets = _rulesets_df(direction="SHORT")
+    events, _ = run_replay_engine(
+        ReplayInputs(raw_df=raw, features_df=features, setups_df=setups, rulesets_df=rulesets),
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models=_cost_models(),
+    )
+    activation_ts = events.loc[events["event_type"] == "ENTRY_ACTIVATED", "timestamp"].iloc[0]
+    close_row = events[(events["event_type"] == "CLOSE_RESOLVED") & (events["close_resolved"] == True)].iloc[-1]
+    assert close_row["timestamp"] > activation_ts
+    assert close_row["close_reason"] == "TAKE_PROFIT"
+
+
+def test_multi_bar_short_stop_close_re_evaluates_until_later_bar_resolution():
+    raw = pd.DataFrame(
+        [
+            {"Timestamp": "2024-01-01T00:00:00Z", "Open": 100.0, "High": 101.0, "Low": 99.0, "Close": 100.0, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:01:00Z", "Open": 101.0, "High": 101.2, "Low": 100.4, "Close": 101.0, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:02:00Z", "Open": 101.0, "High": 101.5, "Low": 100.3, "Close": 101.1, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:03:00Z", "Open": 101.1, "High": 102.4, "Low": 100.8, "Close": 102.0, "IsSynthetic": 0},
+        ]
+    )
+    features = pd.DataFrame([{"Timestamp": ts} for ts in raw["Timestamp"].tolist()])
+    setups = _setups_df(direction="SHORT", stop_price=102.0, target_price=99.0)
+    rulesets = _rulesets_df(direction="SHORT")
+    events, _ = run_replay_engine(
+        ReplayInputs(raw_df=raw, features_df=features, setups_df=setups, rulesets_df=rulesets),
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models=_cost_models(),
+    )
+
+    activation_ts = events.loc[events["event_type"] == "ENTRY_ACTIVATED", "timestamp"].iloc[0]
+    close_row = events[(events["event_type"] == "CLOSE_RESOLVED") & (events["close_resolved"] == True)].iloc[-1]
+    assert close_row["timestamp"] > activation_ts
+    assert close_row["close_reason"] == "STOP_LOSS"
+
+
+def test_same_bar_collision_on_later_bar_uses_policy_and_resolves_deterministically():
+    class TargetWinsPolicy:
+        def resolve(self, *, ruleset_row: pd.Series, setup_row: pd.Series, bar_row: pd.Series) -> str:
+            return "TARGET_WINS"
+
+    raw = pd.DataFrame(
+        [
+            {"Timestamp": "2024-01-01T00:00:00Z", "Open": 100.0, "High": 101.0, "Low": 99.0, "Close": 100.0, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:01:00Z", "Open": 101.0, "High": 101.2, "Low": 100.5, "Close": 101.0, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:02:00Z", "Open": 101.0, "High": 102.2, "Low": 99.8, "Close": 101.4, "IsSynthetic": 0},
+        ]
+    )
+    features = pd.DataFrame([{"Timestamp": ts} for ts in raw["Timestamp"].tolist()])
+    setups = _setups_df(stop_price=100.0, target_price=102.0)
+    rulesets = _rulesets_df()
+
+    events, _ = run_replay_engine(
+        ReplayInputs(raw_df=raw, features_df=features, setups_df=setups, rulesets_df=rulesets),
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models=_cost_models(),
+        same_bar_policies={"SAME_BAR_CONSERVATIVE_V0_1": TargetWinsPolicy()},
+    )
+    close_row = events[(events["event_type"] == "CLOSE_RESOLVED") & (events["close_resolved"] == True)].iloc[-1]
+    assert close_row["timestamp"] == pd.Timestamp("2024-01-01T00:02:00Z")
+    assert close_row["same_bar_outcome"] == "TARGET_WINS"
+    assert close_row["close_reason"] == "TAKE_PROFIT"
+
+
+def test_unresolved_activation_collision_survives_and_re_evaluates_next_bar():
+    events, _ = run_replay_engine(
+        _inputs(stop_price=100.0, target_price=103.0),
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models=_cost_models(),
+    )
+    activation_ts = events.loc[events["event_type"] == "ENTRY_ACTIVATED", "timestamp"].iloc[0]
+    unresolved_close = events[(events["event_type"] == "CLOSE_RESOLVED") & (events["close_resolved"] == False)].iloc[0]
+    assert unresolved_close["timestamp"] == activation_ts
+    later_stop_eval = events[
+        (events["event_type"] == "STOP_EVALUATED")
+        & (events["timestamp"] > activation_ts)
+    ]
+    assert not later_stop_eval.empty
 
 
 def test_no_lookahead_entry_not_activated_on_signal_bar_under_next_bar_open_contract():
@@ -425,3 +569,57 @@ def test_write_engine_outputs_persists_header_only_csv_for_empty_events(tmp_path
     assert written.empty
     assert list(written.columns) == list(REPLAY_EVENT_COLUMNS)
     assert manifest_path.exists()
+
+
+def test_force_same_bar_collision_is_one_shot_not_persistent_across_lifecycle_bars():
+    class UnresolvedPolicy:
+        def resolve(self, *, ruleset_row: pd.Series, setup_row: pd.Series, bar_row: pd.Series) -> str:
+            return "UNRESOLVED"
+
+    raw = pd.DataFrame(
+        [
+            {"Timestamp": "2024-01-01T00:00:00Z", "Open": 100.0, "High": 101.0, "Low": 99.0, "Close": 100.0, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:01:00Z", "Open": 101.0, "High": 101.4, "Low": 100.2, "Close": 101.1, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:02:00Z", "Open": 101.1, "High": 101.5, "Low": 100.4, "Close": 101.2, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:03:00Z", "Open": 101.2, "High": 101.4, "Low": 99.8, "Close": 100.1, "IsSynthetic": 0},
+        ]
+    )
+    features = pd.DataFrame([{"Timestamp": ts} for ts in raw["Timestamp"].tolist()])
+    setups = _setups_df(force_collision=True, stop_price=100.0, target_price=104.0)
+    rulesets = _rulesets_df()
+    events, _ = run_replay_engine(
+        ReplayInputs(raw_df=raw, features_df=features, setups_df=setups, rulesets_df=rulesets),
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models=_cost_models(),
+        same_bar_policies={"SAME_BAR_CONSERVATIVE_V0_1": UnresolvedPolicy()},
+    )
+
+    close_rows = events[events["event_type"] == "CLOSE_RESOLVED"].reset_index(drop=True)
+    assert close_rows.iloc[0]["same_bar_outcome"] == "UNRESOLVED"
+    assert close_rows.iloc[0]["close_resolved"] == False
+    assert close_rows.iloc[1]["same_bar_outcome"] == "NONE"
+    assert close_rows.iloc[1]["close_resolved"] == False
+
+
+def test_target_hit_wins_over_expiry_when_both_true_on_same_bar():
+    raw = pd.DataFrame(
+        [
+            {"Timestamp": "2024-01-01T00:00:00Z", "Open": 100.0, "High": 101.0, "Low": 99.0, "Close": 100.0, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:01:00Z", "Open": 101.0, "High": 101.4, "Low": 100.3, "Close": 101.1, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:02:00Z", "Open": 101.1, "High": 103.1, "Low": 100.7, "Close": 102.9, "IsSynthetic": 0},
+        ]
+    )
+    features = pd.DataFrame([{"Timestamp": ts} for ts in raw["Timestamp"].tolist()])
+    setups = _setups_df(stop_price=99.0, target_price=103.0)
+    rulesets = _rulesets_df().assign(expiry_model="BARS_AFTER_ACTIVATION:1")
+
+    events, _ = run_replay_engine(
+        ReplayInputs(raw_df=raw, features_df=features, setups_df=setups, rulesets_df=rulesets),
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models=_cost_models(),
+    )
+
+    close_row = events[(events["event_type"] == "CLOSE_RESOLVED") & (events["timestamp"] == pd.Timestamp("2024-01-01T00:02:00Z"))].iloc[0]
+    assert close_row["close_resolved"] == True
+    assert close_row["close_reason"] == "TAKE_PROFIT"
+    assert close_row["close_reason_category"] == "TARGET"
