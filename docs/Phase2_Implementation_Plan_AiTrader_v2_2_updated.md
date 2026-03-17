@@ -540,7 +540,7 @@ analyzer → formalization → ruleset → validation (Phase 4) → replay → r
 | P2 | Structural & context hardening | DONE |
 | P3 | Formalization candidate | DONE |
 | Phase 4 | Ruleset validation layer | BASELINE IMPLEMENTED (mapping-only pre-replay gate) |
-| Phase 5 | Experiment registry / batch evaluation | TODO |
+| Phase 5 | Experiment registry / batch evaluation | BASELINE IMPLEMENTED (append-only registry + campaign layer) |
 
 ---
 
@@ -858,11 +858,17 @@ One row per experiment (backtest/replay run).
 Expected implementation components:
 
 - `backtester/experiment_registry.py`
+- `backtester/campaign.py`
 - `tests/test_experiment_registry.py`
+- `tests/test_backtester_campaign.py`
+
+Baseline implementation note:
+
+- Implemented as an observational layer on top of `run_backtester(...)`; registry rows are appended for completed runs, and campaign artifacts summarize run outcomes without ranking or auto-promotion.
 
 Integration call site:
 
-- `backtester/orchestrator.py` — hook after run completion
+- campaign layer invokes `backtester/orchestrator.py::run_backtester(...)` per run
 
 Integration rules:
 
