@@ -63,14 +63,14 @@ REPLAY_EVENT_COLUMNS = (
 
 ENTRY_TIMING_BASELINE = "SIGNAL_BAR_CLOSE__ENTRY_NEXT_BAR_OPEN"
 ENTRY_PRICE_BASELINE = "NEXT_BAR_OPEN"
-STOP_PRICE_KEYS = ("StopPrice", "stop_price", "InitialStopPrice", "initial_stop_price")
+STOP_PRICE_KEYS = ("initial_stop_price", "InitialStopPrice", "StopPrice", "stop_price")
 TARGET_PRICE_KEYS = (
+    "initial_target_price",
+    "InitialTargetPrice",
     "TargetPrice",
     "target_price",
     "TakeProfitPrice",
     "take_profit_price",
-    "InitialTargetPrice",
-    "initial_target_price",
 )
 
 

@@ -35,6 +35,7 @@ def _write_analyzer_artifacts(artifact_dir: Path, *, shortlist_direction: str = 
                 "DetectedAt": "2024-01-01T00:00:00Z",
                 "SetupBarTs": "2024-01-01T00:00:00Z",
                 "ReferenceEventType": "FAILED_BREAK_DOWN",
+                "ReferenceLevel": 99.0,
             }
         ]
     ).to_csv(artifact_dir / "analyzer_setups.csv", index=False)

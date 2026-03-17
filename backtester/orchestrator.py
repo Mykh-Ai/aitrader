@@ -14,6 +14,7 @@ import pandas as pd
 from .engine import (
     CostModelHook,
     ReplayContractError,
+    ReplayInputs,
     SameBarPolicyHook,
     load_replay_inputs,
     run_replay_engine,
@@ -21,6 +22,7 @@ from .engine import (
 )
 from .ledger import build_trade_ledger, write_trade_ledger_csv
 from .metrics import build_trade_metrics_artifacts, write_trade_metrics_csvs
+from .placement import PlacementContractError, materialize_stop_target_levels
 from .promotion import build_promotion_artifacts, write_promotion_csvs
 from .robustness import build_robustness_artifacts, write_robustness_csvs
 from .rulesets import build_backtest_rulesets, validate_rulesets, write_backtest_rulesets_csv
@@ -272,6 +274,36 @@ def run_backtester(
     replay_artifact_paths.update(optional_paths)
 
     replay_inputs = load_replay_inputs(artifact_paths=replay_artifact_paths, rulesets=rulesets_path)
+
+    try:
+        setups_with_placement = materialize_stop_target_levels(
+            rulesets_df=rulesets_df,
+            setups_df=replay_inputs.setups_df,
+            raw_df=replay_inputs.raw_df,
+        )
+    except PlacementContractError as exc:
+        raise ReplayContractError(f"SL/TP placement materialization failed: {exc}") from exc
+
+    non_placed = setups_with_placement[setups_with_placement["placement_status"] != "PLACED"]
+    if not non_placed.empty:
+        details = [
+            f"setup_id={row.SetupId}:status={row.placement_status}:notes={row.placement_notes}"
+            for row in non_placed.itertuples(index=False)
+        ]
+        raise ReplayContractError(
+            "SL/TP placement materialization produced non-placed setups: " + "; ".join(details)
+        )
+
+    replay_inputs = ReplayInputs(
+        raw_df=replay_inputs.raw_df,
+        features_df=replay_inputs.features_df,
+        setups_df=setups_with_placement,
+        rulesets_df=replay_inputs.rulesets_df,
+        events_df=replay_inputs.events_df,
+        lineage_df=replay_inputs.lineage_df,
+        artifact_paths=replay_inputs.artifact_paths,
+    )
+
     engine_events_df, engine_manifest = run_replay_engine(
         replay_inputs,
         cost_models=cost_models,
