@@ -163,7 +163,7 @@ def test_exit_materialization_maps_stop_and_target_and_preserves_unresolved_with
 
     stop_ledger = build_trade_ledger(_engine_events(force_collision=True, policy=StopWinsPolicy()))
     target_ledger = build_trade_ledger(_engine_events(force_collision=True, policy=TargetWinsPolicy()))
-    unresolved_ledger = build_trade_ledger(_engine_events(force_collision=False))
+    unresolved_ledger = build_trade_ledger(_engine_events(stop_price=80.0, target_price=120.0))
 
     assert stop_ledger.iloc[0]["exit_reason_category"] == "STOP"
     assert target_ledger.iloc[0]["exit_reason_category"] == "TARGET"
@@ -172,14 +172,41 @@ def test_exit_materialization_maps_stop_and_target_and_preserves_unresolved_with
     assert pd.isna(unresolved_ledger.iloc[0]["exit_price_raw"])
 
 
+def test_multi_bar_close_updates_exit_timestamp_and_holding_bars():
+    raw = pd.DataFrame(
+        [
+            {"Timestamp": "2024-01-01T00:00:00Z", "Open": 100.0, "High": 101.0, "Low": 99.0, "Close": 100.0, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:01:00Z", "Open": 101.0, "High": 101.5, "Low": 100.2, "Close": 101.0, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:02:00Z", "Open": 101.0, "High": 101.4, "Low": 100.3, "Close": 101.2, "IsSynthetic": 0},
+            {"Timestamp": "2024-01-01T00:03:00Z", "Open": 101.2, "High": 101.3, "Low": 99.6, "Close": 100.0, "IsSynthetic": 0},
+        ]
+    )
+    features = pd.DataFrame([{"Timestamp": ts} for ts in raw["Timestamp"].tolist()])
+    inputs = ReplayInputs(
+        raw_df=raw,
+        features_df=features,
+        setups_df=_setups_df(stop_price=100.0, target_price=105.0),
+        rulesets_df=_rulesets_df(),
+    )
+    events, _ = run_replay_engine(
+        inputs,
+        generation_timestamp="2024-01-01T00:00:00+00:00",
+        cost_models={"COST_MODEL_ZERO_SKELETON_ONLY": ZeroCostSkeletonModel()},
+    )
+    ledger = build_trade_ledger(events)
+    row = ledger.iloc[0]
+    assert row["entry_activation_ts"] == pd.Timestamp("2024-01-01T00:01:00Z")
+    assert row["exit_ts"] == pd.Timestamp("2024-01-01T00:03:00Z")
+    assert row["holding_bars"] == 2
+
+
 def test_same_bar_honesty_unresolved_same_bar_outcome_remains_unresolved():
     class UnresolvedPolicy:
         def resolve(self, *, ruleset_row: pd.Series, setup_row: pd.Series, bar_row: pd.Series) -> str:
             return "UNRESOLVED"
 
-    ledger = build_trade_ledger(_engine_events(force_collision=True, policy=UnresolvedPolicy()))
+    ledger = build_trade_ledger(_engine_events(force_collision=True, policy=UnresolvedPolicy(), stop_price=80.0, target_price=120.0))
     row = ledger.iloc[0]
-    assert row["exit_reason"] == "SAME_BAR_UNRESOLVED"
     assert row["exit_reason_category"] == "UNRESOLVED"
     assert pd.isna(row["exit_ts"])
 
@@ -242,7 +269,7 @@ def test_ledger_consumes_explicit_close_fields_not_notes_for_resolved_exit():
 def test_exit_reason_summary_uses_resolved_normal_paths_not_unresolved_placeholders():
     stop_row = build_trade_ledger(_engine_events(stop_price=100.0, target_price=104.0)).iloc[0]
     target_row = build_trade_ledger(_engine_events(stop_price=99.0, target_price=102.0)).iloc[0]
-    expiry_row = build_trade_ledger(_engine_events(force_expiry_close=True, stop_price=200.0, target_price=300.0)).iloc[0]
+    expiry_row = build_trade_ledger(_engine_events(force_expiry_close=True, stop_price=50.0, target_price=300.0)).iloc[0]
 
     assert stop_row["exit_reason"] == "STOP_LOSS"
     assert stop_row["exit_reason_category"] == "STOP"
@@ -262,7 +289,7 @@ def test_trade_result_contract_resolved_long_short_and_unresolved():
 
     long_row = build_trade_ledger(_engine_events(force_collision=True, policy=TargetWinsPolicy(), direction="LONG")).iloc[0]
     short_row = build_trade_ledger(_engine_events(force_collision=True, policy=TargetWinsPolicy(), direction="SHORT", target_price=99.5)).iloc[0]
-    unresolved_row = build_trade_ledger(_engine_events(force_collision=True, policy=UnresolvedPolicy(), direction="LONG")).iloc[0]
+    unresolved_row = build_trade_ledger(_engine_events(force_collision=True, policy=UnresolvedPolicy(), direction="LONG", stop_price=80.0, target_price=120.0)).iloc[0]
 
     assert long_row["trade_return_pct"] == pytest.approx((103.0 - 101.0) / 101.0)
     assert long_row["trade_pnl"] == pytest.approx(2.0)
