@@ -39,16 +39,24 @@ Phase 2 Status: **Implemented**
 
 ### Planned (Phase 3+)
 
-Phase 2 is complete through shortlist generation, shortlist explanations, and the final
-research summary layer. Backtesting remains Phase 3 and is not implemented in Analyzer.
+Phase 2 is complete through shortlist generation, shortlist explanations, the final
+research summary layer, and the delivered Phase 2 stabilization metadata surfaces
+materialized in current Analyzer outputs. Backtesting remains Phase 3 and is not
+implemented in Analyzer.
 
 | Layer | Status |
 |-------|--------|
-| Session context features (`session`, `minutes_from_eu_open`, `minutes_from_us_open`) | 🔜 Planned |
 | Confidence scoring (Block 5) | 🔜 Planned |
 | Statistical edge validation | 🔜 Phase 3 |
 | Ruleset selection | 🔜 Phase 3 |
 | Live execution decisions | 🔜 Phase 4 |
+
+### Phase 2 Addendum Note
+
+`docs/Phase2_Implementation_Plan_AiTrader_v2_2_updated.md` is the later Phase 2
+stabilization/completion addendum for this spec. It clarifies implemented reproducibility,
+artifact-contract, and Phase 2→3 handoff surfaces, but does not replace the Analyzer
+boundary defined in this document.
 
 ---
 
@@ -150,7 +158,8 @@ dict with 11 in-memory DataFrames and 11 output file paths.
 and `FAILED_BREAK_UP` → `FAILED_BREAK_RECLAIM_SHORT` events. Enriches each setup with a context
 snapshot from the setup bar (AbsorptionScore_v1, 5 context flags, 4 numeric ratios).
 Annotates lifecycle (PENDING → INVALIDATED or EXPIRED) over `SETUP_TTL_BARS = 12` bars.
-SetupId is a deterministic hash of `event_type|source_tf|reference_event_ts|anchor_ts|level`.
+Setup artifact includes explicit `SourceTF` provenance. SetupId is a deterministic hash of
+`event_type|source_tf|reference_event_ts|anchor_ts|level`.
 
 **outcomes.py** — Computes forward-looking outcome metrics per setup over a `OUTCOME_HORIZON_BARS = 12`
 bar horizon: MFE_Pct (best favorable excursion), MAE_Pct (worst adverse excursion),
@@ -167,8 +176,9 @@ CtxRelVolumeSpike_v1, CtxDeltaSpike_v1, CtxOISpike_v1, CtxLiqSpike_v1, CtxWickRe
 and numeric feature tertile buckets (5 families: RelVolume_20, DeltaAbsRatio_20,
 OIChangeAbsRatio_20, LiqTotalRatio_20, AbsorptionScore_v1 — each bucketed LOW/MID/HIGH).
 
-**rankings.py** — Scores and ranks setup groups against the overall baseline using a composite
-RankingScore. Labels each group as `TOP`, `NEUTRAL`, `WEAK`, or `LOW_SAMPLE`
+**rankings.py** — Scores and ranks setup groups against the overall baseline using
+`RankingScore` with explicit `RankingMethod` provenance. Labels each group as
+`TOP`, `NEUTRAL`, `WEAK`, or `LOW_SAMPLE`
 (minimum sample threshold = 5).
 
 **selections.py** — Classifies each ranking row into a deterministic `SelectionDecision`
@@ -181,13 +191,19 @@ This is a research triage layer — not a trading decision.
 **shortlists.py** — Filters selections to `SELECT` + `REVIEW` rows only. Joins against rankings
 for validation. Sorts by selection priority (SELECT before REVIEW), then by RankingScore descending,
 SampleCount descending, and natural key ascending. Assigns sequential `ShortlistRank`.
-This is an export/review view — not execution logic.
+Adds `SemanticClass` and `FormalizationPath` to keep baseline-direct rows distinct from
+context/diagnostic-only research rows. This is an export/review view — not execution logic.
 
 **shortlist_explanations.py** — Derives human-readable categorical bands per shortlist row:
 `ScoreBand` (STRONG/MODERATE/WEAK_POSITIVE/NON_POSITIVE), `SampleBand` (LARGE/MEDIUM/SMALL),
 `DeltaDirection` and `PositiveRateDirection` (UP/FLAT/DOWN). Builds a composite pipe-delimited
 `ExplanationCode` joining all classification fields. Explanation is deterministic and compact —
 not free-form text, not trading advice.
+
+**research_summary.py** — Materializes deterministic research-surface honesty/status metadata,
+including `OutcomeSemantics`, `FormalizationEligible`, `EligibleEventTypes`,
+`ConfidenceModelStatus`, `AcceptedBreakSemanticsStatus`, `ContextFormalizationStatus`,
+`ExecutableEntrySemanticsStatus`, and `ContextModelVersion`.
 
 ---
 
@@ -297,10 +313,12 @@ The following are **not** part of the implemented Phase 1 + Phase 2 spec:
 - Live execution decisions, order sizing, stop placement
 - Advanced confidence scoring (Block 5 logic)
 - Event lifecycle metadata (`event_id`, `parent_event_id`, `status`)
-- Session context features (`session`, `minutes_from_eu_open`, `minutes_from_us_open`)
 - Swing lifecycle states (`ACTIVE`, `TESTED`, `CONSUMED`) — modeled in spec, not yet in pipeline
 - Parquet output format — current output is CSV
 - MetaJson population
+
+Backtester replay semantics, replay validation gates, promotion/registry policy, and
+execution-domain orchestration remain outside this Analyzer spec boundary.
 
 ---
 
@@ -438,7 +456,6 @@ Notes:
 
 Planned (not yet in pipeline):
 
-- Session context features
 - Confidence scoring (Block 5)
 - CVD divergence features
 
@@ -639,24 +656,22 @@ Used as a quick indicator of liquidation activity within the bar.
 
 ---
 
-### Session Context — Planned v1.1
+### Session Context — Implemented (runtime contract)
 
-> **Not implemented in Phase 1.** Columns `session`, `minutes_from_eu_open`,
-> `minutes_from_us_open` are listed in `FEATURE_COLUMNS_PLANNED` in `schema.py`
-> but are not computed by any current module.
+Columns `session`, `minutes_from_eu_open`, `minutes_from_us_open`, and
+`ContextModelVersion` are currently materialized by the pipeline.
 
 Derived from timestamp. Ліквідність на BTC розподілена нерівномірно по сесіях.
 
 #### session
 
-    ASIA     = 00:00–07:00 UTC
-    EU       = 07:00–13:30 UTC
-    US       = 13:30–20:00 UTC
-    LATE_US  = 20:00–00:00 UTC
+    ASIA     = all times outside EU/US windows
+    EU       = 08:00–13:29 UTC
+    US       = 13:30–20:59 UTC
 
 #### minutes_from_eu_open
 
-    minutes_from_eu_open = (ts - 07:00 UTC today) in minutes
+    minutes_from_eu_open = (ts - 08:00 UTC today) in minutes
     Може бути від'ємним (до відкриття) або додатнім (після)
 
 #### minutes_from_us_open
@@ -675,8 +690,9 @@ Sweep success rate суттєво відрізняється по сесіях:
 Sweep перед відкриттям сесії (12:45–13:30 UTC) — часто liquidity preparation
 перед US імпульсом. Це безкоштовний контекст для бектесту.
 
-Session features НЕ використовуються в Block 5 (confidence).
-Це аналітичні поля для pattern × session дослідження у Фазі 3.
+Session features are deterministic Analyzer context metadata. They may be used
+for research slicing and downstream formalization logic, but they do not imply
+implemented confidence scoring.
 
 ---
 
@@ -2313,7 +2329,7 @@ Current format: CSV. Parquet — planned for a later phase (типізація, 
 > the implemented pipeline uses PascalCase column names (e.g. `SwingHigh_H1_Price`,
 > `Sweep_H1_Up`, `FailedBreak_H1_Down`, `RelVolume_20`, `AbsorptionScore_v1`), and
 > some planned columns below (distance_to_swing_*_atr, is_sell_absorption,
-> is_buy_absorption, session, cluster prep) are not yet materialized.
+> is_buy_absorption, cluster prep) are not yet materialized.
 > The authoritative current column list is `FEATURE_COLUMNS_IMPLEMENTED` in code.
 
 Один рядок = одна 1-minute свічка.
@@ -2326,7 +2342,7 @@ Current format: CSV. Parquet — planned for a later phase (типізація, 
 
     - Timestamp must be unique (no duplicate rows)
     - Timestamp is bar open timestamp in UTC
-    - no gaps allowed (minutes with no trades are emitted as synthetic candles and marked IsSynthetic=1)
+    - timestamp gaps are preserved from input feed (no synthetic backfill by Analyzer)
     - columns order: raw fields first, then derived metrics
 
 ### Column list (planned full schema, Blocks 1-5)
@@ -2383,9 +2399,9 @@ Absorption (Block 4) — **implemented (context features v1):**
     Planned but not yet implemented:
     is_sell_absorption, is_buy_absorption (full detector)
 
-Session context (Block 1) — **not yet implemented:**
+Session context (Block 1) — **implemented:**
 
-    session, minutes_from_eu_open, minutes_from_us_open
+    session, minutes_from_eu_open, minutes_from_us_open, ContextModelVersion
 
 ---
 
