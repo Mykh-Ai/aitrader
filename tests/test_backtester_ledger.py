@@ -57,6 +57,8 @@ def _setups_df(
     force_collision: bool = False,
     force_expiry_close: bool = False,
     direction: str = "LONG",
+    stop_price: float | None = 100.0,
+    target_price: float | None = 103.0,
 ) -> pd.DataFrame:
     return pd.DataFrame(
         [
@@ -69,6 +71,8 @@ def _setups_df(
                 "ReferenceEventType": "FAILED_BREAK_DOWN",
                 "ForceSameBarCollision": force_collision,
                 "ForceExpiryClose": force_expiry_close,
+                "StopPrice": stop_price,
+                "TargetPrice": target_price,
             }
         ]
     )
@@ -99,6 +103,8 @@ def _engine_events(
     force_expiry_close: bool = False,
     policy: object | None = None,
     direction: str = "LONG",
+    stop_price: float | None = 100.0,
+    target_price: float | None = 103.0,
 ) -> pd.DataFrame:
     inputs = ReplayInputs(
         raw_df=_raw_df(),
@@ -107,6 +113,8 @@ def _engine_events(
             force_collision=force_collision,
             force_expiry_close=force_expiry_close,
             direction=direction,
+            stop_price=stop_price,
+            target_price=target_price,
         ),
         rulesets_df=_rulesets_df(direction=direction),
     )
@@ -226,9 +234,22 @@ def test_ledger_consumes_explicit_close_fields_not_notes_for_resolved_exit():
     events.loc[events["event_type"] == "CLOSE_RESOLVED", "notes"] = "misleading_notes_should_not_drive_exit"
     ledger = build_trade_ledger(events)
     row = ledger.iloc[0]
-    assert row["exit_reason"] == "SAME_BAR_STOP_WINS_POLICY"
+    assert row["exit_reason"] == "STOP_LOSS"
     assert row["exit_reason_category"] == "STOP"
 
+
+
+def test_exit_reason_summary_uses_resolved_normal_paths_not_unresolved_placeholders():
+    stop_row = build_trade_ledger(_engine_events(stop_price=100.0, target_price=104.0)).iloc[0]
+    target_row = build_trade_ledger(_engine_events(stop_price=99.0, target_price=102.0)).iloc[0]
+    expiry_row = build_trade_ledger(_engine_events(force_expiry_close=True, stop_price=200.0, target_price=300.0)).iloc[0]
+
+    assert stop_row["exit_reason"] == "STOP_LOSS"
+    assert stop_row["exit_reason_category"] == "STOP"
+    assert target_row["exit_reason"] == "TAKE_PROFIT"
+    assert target_row["exit_reason_category"] == "TARGET"
+    assert expiry_row["exit_reason"] == "EXPIRY"
+    assert expiry_row["exit_reason_category"] == "EXPIRY"
 
 def test_trade_result_contract_resolved_long_short_and_unresolved():
     class TargetWinsPolicy:
@@ -240,7 +261,7 @@ def test_trade_result_contract_resolved_long_short_and_unresolved():
             return "UNRESOLVED"
 
     long_row = build_trade_ledger(_engine_events(force_collision=True, policy=TargetWinsPolicy(), direction="LONG")).iloc[0]
-    short_row = build_trade_ledger(_engine_events(force_collision=True, policy=TargetWinsPolicy(), direction="SHORT")).iloc[0]
+    short_row = build_trade_ledger(_engine_events(force_collision=True, policy=TargetWinsPolicy(), direction="SHORT", target_price=99.5)).iloc[0]
     unresolved_row = build_trade_ledger(_engine_events(force_collision=True, policy=UnresolvedPolicy(), direction="LONG")).iloc[0]
 
     assert long_row["trade_return_pct"] == pytest.approx((103.0 - 101.0) / 101.0)
