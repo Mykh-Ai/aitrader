@@ -1,338 +1,80 @@
-# Стратегія Ші v1.0 — AI Trader
+# AiTrader — BTC research/backtesting stack (execution-first target)
 
-BTC research and analysis system built toward algorithmic trading.
-Currently at Phase 3 baseline: raw data collection + Analyzer research pipeline + Backtester baseline stack.
-Target execution: Binance Spot Margin BTC/USDC (isolated, max 2x) — planned Phase 4.
+AiTrader is a **research + deterministic backtesting system** for BTC market-structure setups (currently focused on failed-break reclaim family), with a **planned** production execution layer for Binance Spot.
 
-**Trading hypothesis:** Liquidity grab + failed break reclaim. Price sweeps a structural
-swing level (collecting stops), then reclaims back. If the reclaim is confirmed by volume
-spike + delta divergence — this is a mean-reversion entry after liquidity, not momentum.
-Failed break is the first implemented setup type; additional types are planned.
+Current strengths in this repository:
+- minute-level BTCUSDT collection and raw feed persistence,
+- Analyzer pipeline for deterministic research artifacts,
+- Backtester baseline for ruleset formalization, replay, validation/robustness/promotion,
+- campaign and experiment registry baseline for multi-run observational tracking.
 
-## System Architecture
+It is **not** a live execution bot yet. Executor concerns (exchange order lifecycle, reconciliation/state recovery, runtime invariants) remain a planned boundary.
 
-```
-Binance Futures API (fstream / fapi)
+## 1) Project overview
+
+- **What AiTrader currently is:** Collector + Analyzer + Backtester research runtime with deterministic artifact contracts.
+- **What it is strongest at now:** reproducible historical processing (raw feed → analyzer artifacts → replay/evaluation artifacts).
+- **What is still planned:** production execution runtime (Binance Spot integration, order state lifecycle, exchange reconciliation controls).
+
+## 2) Current system state (implemented vs planned)
+
+| Layer | Status | Notes |
+|---|---|---|
+| Collector / Aggregator | ✅ Implemented | `binance_aggregator_shi.py` builds BTCUSDT 1m futures-derived raw feed |
+| Analyzer | ✅ Implemented | Facts engine + setup research pipeline; deterministic CSV artifacts |
+| Backtester | ✅ Implemented (baseline) | Ruleset formalization, placement baseline, replay, ledger, metrics, validation, robustness, promotion, orchestration |
+| Campaign / Registry (Phase 5 baseline) | ✅ Implemented (baseline) | Multi-run campaign artifacts + append-only experiment registry |
+| Executor | 🔜 Planned | Live exchange runtime is not implemented in this repository |
+
+## 3) System architecture (participants/layers)
+
+```text
+Binance market data (WS/REST)
         │
-   [raw market data]
+Collector / Aggregator
+        │  raw daily CSV feed
+        ▼
+Analyzer
+        │  analyzer artifacts (features/events/setups/outcomes/reports/shortlist/...)
+        ▼
+Backtester
+  - rulesets / ruleset_validation / placement / engine / ledger
+  - metrics / validation / robustness / promotion / orchestrator
         │
-   Collector / Aggregator        ← Phase 1: IMPLEMENTED
-   BTCUSDT Perpetual 1m feed
-        │
-   Analyzer (facts engine)       ← Phase 1: IMPLEMENTED
-   schema → loader → base metrics
-   → swings → sweeps → failed breaks
-   → absorption → events
-        │
-   Setup Research Pipeline       ← Phase 2: IMPLEMENTED
-   setups → outcomes → reports
-   → context reports → rankings
-   → selections → shortlist → explanations
-   → research summary
-        │
-   Backtester                    ← Phase 3: IMPLEMENTED (baseline)
-   deterministic replay + ledger + metrics + validation + robustness + promotion
-        │
-   Executor                      ← Phase 4: PLANNED
-   Binance Spot Margin BTC/USDC (isolated, max 2x)
+        ├─ per-run artifacts (manifests, trades, metrics, validation, promotion)
+        └─ campaign + experiment_registry (multi-run observational tracking)
+
+Executor (planned; separate boundary)
 ```
 
-## Project Status
+Phase naming still exists in docs/specs, but this README is organized by **current module/layer boundaries first**.
 
-| Phase | Status | Description |
-|-------|--------|-------------|
-| 1. Raw feed + Analyzer facts engine | ✅ Implemented | 1m collector live; Analyzer computes all features and events |
-| 2. Setup research pipeline | ✅ Implemented | Setup extraction, outcomes, reports, context analysis, rankings, selections, shortlist, explanations, final research summary |
-| 3. Backtesting | ✅ Implemented (baseline) | Ruleset formalization, deterministic replay skeleton, trade ledger, metrics, validation, robustness, promotion, orchestration artifacts |
-| 4. Execution | 🔜 Planned | Live trading via Binance Spot Margin API |
+## 4) Responsibility boundaries
 
-## Backtester — Phase 3 baseline
+### Collector / Aggregator
+**Does:** collect minute-level market data and persist raw feed CSV by UTC day.
 
-Package: `backtester/`
+**Does not:** generate setups/rankings, run replay logic, or place orders.
 
-- Implemented modules: `rulesets.py`, `ruleset_validation.py`, `engine.py`, `ledger.py`, `metrics.py`, `validation.py`, `robustness.py`, `promotion.py`, `orchestrator.py`, `campaign.py`, `experiment_registry.py`.
-- End-to-end orchestration entrypoint: `backtester/orchestrator.py` (`run_backtester`, `orchestrate_backtest`).
-- Phase 5 baseline utility layer: `backtester/campaign.py` runs multi-run historical campaigns via `run_backtester(...)`; `backtester/experiment_registry.py` records completed runs in append-only `phase5_experiment_registry.csv`.
-- Campaign outputs are observational only (`backtest_campaign_manifest.json`, `backtest_campaign_run_index.csv`, `backtest_campaign_summary.csv`) and do not perform ranking, winner selection, or auto-promotion.
-- Boundary: consumes pre-generated Analyzer CSV artifacts; does not call `analyzer.pipeline.run()` implicitly.
-- Raw feed resolution for replay is now explicit and compatibility-safe:
-  1. explicit `raw_path`
-  2. `run_manifest.json -> input_feed_paths`
-  3. `artifact_dir/raw.csv` fallback compatibility mode
-- `artifact_dir/raw.csv` is **not** the canonical raw-lineage boundary for Phase 3; manifest lineage is the preferred source of truth when available.
-- Shortlist ingestion is formalization-safe by contract:
-  - baseline auto-formalization currently supports only `Direction` and `SetupType`
-  - rows with full explicit semantics (`Direction`, `SetupType`, `EligibleEventTypes`) are also accepted
-  - descriptive/context-only shortlist rows are skipped with structured warnings instead of causing fatal orchestration failure
-- No-event / no-trade replay path is now a valid contract:
-  - `backtest_engine_events.csv` is written as a valid header-only CSV when replay emits zero events
-  - orchestration can complete with `ruleset_count=0`, `engine_event_count=0`, and `trade_count=0`
-  - `backtest_orchestration_manifest.json` remains the authoritative summary for such runs
-- `PHASE3_MAPPING_ONLY` now includes a strict Phase 4 pre-replay validation gate:
-  - validates structural fields, placeholders, readiness statuses, semantics whitelist, and optional contract/draft lineage checks
-  - does not auto-promote `PARTIAL`/`NOT_INTEGRATED` rows
-  - writes explicit artifacts: `phase4_ruleset_validation_summary.csv`, `phase4_ruleset_validation_details.csv`
-  - baseline emits strict binary validation statuses (`VALID` or `INVALID`); `REVIEW_REQUIRED` is reserved for future policy extension
-  - blocks replay when no replay-eligible mapping row exists
+### Analyzer
+**Does:** transform raw feed into deterministic research artifacts (features/events/setups/outcomes/reports/rankings/selections/shortlist/research summary).
 
-Current output artifacts include:
+**Does not:** perform exchange execution, authorize live deployment, or run order lifecycle management.
 
-- `backtest_rulesets.csv`
-- `backtest_engine_events.csv`
-- `backtest_run_manifest.json`
-- `backtest_trades.csv`
-- `backtest_trade_metrics.csv`
-- `backtest_equity_curve.csv`
-- `backtest_drawdown.csv`
-- `backtest_exit_reason_summary.csv`
-- `backtest_validation_summary.csv`
-- `backtest_validation_details.csv`
-- `backtest_robustness_summary.csv`
-- `backtest_robustness_details.csv`
-- `backtest_promotion_decisions.csv`
-- `backtest_promotion_details.csv`
-- `backtest_orchestration_manifest.json`
+### Backtester
+**Does:** consume Analyzer artifacts and perform deterministic historical replay/evaluation with validation gates and campaign baseline outputs.
 
-Implemented baseline limitations (documented and explicit):
+**Does not:** call `analyzer.pipeline.run()` implicitly, execute live exchange trades, or replace execution-time reconciliation controls.
 
-- unresolved trade states are explicit (`NO_EXIT_RESOLVED_YET`, `UNRESOLVED`, `DEFERRED`)
-- ledger exit mapping is currently heuristic for unresolved/placeholder close paths
-- equity/drawdown basis is non-monetary by default (`RESOLVED_TRADE_COUNT`)
-- validation and robustness thresholds/splits are provisional heuristics
-- perturbation checks are external-surface only
-- regime robustness requires explicit regime labels
-- promotion decisions are research progression outputs only (not live-trading authorization)
+### Executor (planned)
+Target boundary for production order lifecycle, restart reconciliation with exchange as source of truth, runtime invariants, and fail-loud controls.
 
-### Phase 2 → Phase 3 bridge patches (P0.1–P0.3)
+## 5) Current repo module map
 
-These changes are intentionally documented because they define the current integration contract between Analyzer outputs and the Phase 3 backtester.
-
-**P0.1 — Raw-feed resolution hardening**
-- Phase 3 no longer assumes `artifact_dir/raw.csv` is the only replay raw source.
-- Replay raw bars are resolved in this order:
-  1. explicit `raw_path`
-  2. `run_manifest.json -> input_feed_paths`
-  3. `artifact_dir/raw.csv` fallback compatibility mode
-- This preserves backward compatibility while removing manual dependency on copied `raw.csv` files when manifest lineage is available.
-
-**P0.2 — Formalization-safe shortlist ingestion**
-- Phase 3 no longer assumes every shortlist row is directly formalizable into a ruleset.
-- Current baseline auto-formalization supports only:
-  - `GroupType=Direction`
-  - `GroupType=SetupType`
-- Descriptive/context shortlist rows (for example `AbsorptionScore_v1`, `Ctx*`, bucketed ratios, lifecycle/outcome-only rows) are treated as research surfaces, not direct ruleset definitions.
-- Unsupported descriptive/context rows are skipped with structured `mapping_warnings`; they do not crash orchestration.
-
-**P0.3 — No-event replay contract**
-- If replay emits zero events, `backtest_engine_events.csv` is still written as a valid header-only artifact using canonical replay event columns.
-- The no-event path is therefore a valid, controlled outcome rather than a broken artifact state.
-- In such runs, orchestration may complete with:
-  - `ruleset_count = 0`
-  - `engine_event_count = 0`
-  - `trade_count = 0`
-
-**Implication for future work**
-- Analyzer shortlist remains a research surface first, not a guaranteed ruleset source.
-- Phase 3 currently formalizes only a narrow subset of shortlist semantics.
-- Future enrichment of shortlist / research summary with explicit formalization fields should extend this bridge deliberately, not by inference.
-
-## Analyzer — Scope
-
-The Analyzer is a **facts engine + research pipeline**. It:
-
-- Computes derived features and metrics from raw 1m feed
-- Detects and normalizes structural events (swings, sweeps, failed breaks)
-- Extracts and enriches setup candidates (currently from failed-break events; additional setup types planned)
-- Computes forward-looking outcome metrics (MFE, MAE, close return)
-- Builds grouped research reports and context-bucketed statistics
-- Ranks setup groups against an overall baseline
-- Classifies ranked groups into research candidate selections (SELECT/REVIEW/REJECT)
-- Exports a deterministic shortlist of top candidates for review
-- Generates structured shortlist explanations with categorical bands and composite codes
-- Builds a deterministic final research summary surface from shortlist outputs
-
-All output is **research-only**. The Analyzer does **not**:
-
-- Open trades or generate live entry signals
-- Size positions or place orders
-- Perform strategy optimization or ruleset selection
-- Perform backtesting (this belongs to Phase 3)
-- Act as executor or interface with the exchange
-
-The selection, shortlist, and explanation layers are research triage tools —
-they surface candidates for human review, not automated trade decisions.
-
-## Analyzer — Module Architecture
-
-Package: `analyzer/`
-
-**Phase 1 — Facts engine:**
-
-| Module | Responsibility |
-|--------|---------------|
-| `schema.py` | Schema contracts: required raw input columns, numeric coercion contract, implemented/planned feature registry, `EVENT_COLUMNS`, and validation helpers/errors |
-| `loader.py` | Load and validate raw aggregator CSV: parse UTC timestamps, enforce required columns, coerce numerics, normalize `IsSynthetic`, reject duplicates |
-| `base_metrics.py` | Compute per-bar derived metrics: Delta, CVD, DeltaPct, BarRange, BodySize, UpperWick, LowerWick, CloseLocation, BodyToRange, wick ratios, OI_Change, LiqTotal |
-| `swings.py` | Detect H1/H4 structural fractal swings with confirmation delay; annotate feature table with `SwingHigh_*_Price`, `SwingHigh_*_ConfirmedAt`, `SwingLow_*` columns |
-| `sweeps.py` | Detect H1/H4 sweeps of confirmed swing levels on 1m bars; annotate `Sweep_*_Up`, `Sweep_*_Down`, direction, reference level/timestamp |
-| `failed_breaks.py` | Detect H1/H4 failed-break events: track bars-since-sweep forward in time; annotate `FailedBreak_*_Up`, `FailedBreak_*_Down`, confirmed timestamp |
-| `absorption.py` | Compute deterministic rolling-ratio context features: `RelVolume_20`, `DeltaAbsRatio_20`, `OIChangeAbsRatio_20`, `LiqTotalRatio_20`, context spike booleans, `AbsorptionScore_v1` |
-| `events.py` | Build normalized event table from materialized feature columns; emits `SWING_HIGH`, `SWING_LOW`, `SWEEP_UP`, `SWEEP_DOWN`, `FAILED_BREAK_UP`, `FAILED_BREAK_DOWN` |
-
-**Phase 2 — Setup research pipeline:**
-
-| Module | Responsibility |
-|--------|---------------|
-| `setups.py` | Extract setup candidates from `FAILED_BREAK_UP/DOWN` events; enrich with context snapshot from feature row; annotate lifecycle (PENDING/INVALIDATED/EXPIRED) over 12-bar TTL |
-| `outcomes.py` | Compute forward-looking outcome metrics per setup over 12-bar horizon: MFE_Pct, MAE_Pct, CloseReturn_Pct, BestHigh, BestLow, FinalClose |
-| `reports.py` | Aggregate setup/outcome statistics grouped by: overall, SetupType, Direction, LifecycleStatus, OutcomeStatus |
-| `context_reports.py` | Aggregate statistics by context flag families (binary) and numeric feature tertile buckets (LOW/MID/HIGH) |
-| `rankings.py` | Score and rank setup groups against overall baseline; label each group as TOP/NEUTRAL/WEAK/LOW_SAMPLE |
-| `selections.py` | Classify ranked groups into SELECT/REVIEW/REJECT decisions with deterministic threshold logic; research triage only |
-| `shortlists.py` | Filter to SELECT+REVIEW rows, sort by priority and score, assign ShortlistRank; export/review view only |
-| `shortlist_explanations.py` | Derive categorical bands (ScoreBand, SampleBand, DeltaDirection, PositiveRateDirection) and composite ExplanationCode per shortlist row |
-| `research_summary.py` | Build deterministic final research summary rows from shortlist + shortlist explanations; map research priority and enforce strict one-to-one joins |
-
-**Infrastructure:**
-
-| Module | Responsibility |
-|--------|---------------|
-| `io.py` | Output helpers: ensure output directory exists, save DataFrames to CSV |
-| `pipeline.py` | Orchestration entrypoint: wires the full layer sequence and saves all artifacts |
-
-### Data lineage
-
-```
-raw CSV → features (one row per 1m bar)
-features → events (structural events)
-features + events → setups (setup candidates from failed breaks — first implemented type)
-features + setups → outcomes (forward metrics: MFE, MAE, CloseReturn)
-setups + outcomes → report (grouped stats)
-setups + outcomes → context_report (bucketed stats)
-report + context_report → rankings (scored vs baseline)
-rankings → selections (SELECT/REVIEW/REJECT)
-rankings + selections → shortlist (top candidates ranked)
-shortlist → shortlist_explanations (categorical bands + code)
-shortlist + shortlist_explanations → research_summary (final surface)
-```
-
-### Tests
-
-`tests/` contains one test file per analyzer module:
-
-```
-tests/
-├── test_schema.py
-├── test_loader.py
-├── test_base_metrics.py
-├── test_swings.py
-├── test_sweeps.py
-├── test_failed_breaks.py
-├── test_absorption.py
-├── test_events.py
-├── test_setups.py
-├── test_outcomes.py
-├── test_reports.py
-├── test_context_reports.py
-├── test_rankings.py
-├── test_selections.py
-├── test_shortlists.py
-├── test_shortlist_explanations.py
-├── test_research_summary.py
-└── test_pipeline.py
-```
-
-`tests/fixtures/` holds minimal CSV files used as shared test inputs:
-
-```
-tests/fixtures/
-├── sample_raw_minimal.csv
-├── sample_raw_with_gap.csv
-└── sample_raw_with_synthetic.csv
-```
-
-`docs/Spec_v1.0.md` is the normative Analyzer contract. Tests are written against the spec.
-
-### Structural safety guards
-
-### Structural swing detection
-
-Swing detection is performed on a structure-only subset of the dataset:
-
-```python
-structure_df = df[df["IsSynthetic"] == 0]
-```
-
-Only real (traded) rows participate in structural analysis. Synthetic rows
-(`IsSynthetic == 1`) remain in the dataset for continuity and rolling metrics,
-but cannot define market structure, trigger sweeps, or confirm failed breaks.
-
-Confirmed swing levels are attached back to the full dataframe so that
-downstream layers can access them.
-
-### First-visibility materialization
-
-`ConfirmedAt` is the semantic structural confirmation time. In the full
-dataframe, confirmed swing state is first materialized on the first real
-row with `Timestamp >= ConfirmedAt`.
-
-Combined with synthetic-bar exclusion and TF completeness thresholds, this
-closes three classes of structural contamination:
-
-- **Synthetic contamination** — synthetic rows cannot define or confirm structure
-- **Sparse TF bucket contamination** — incomplete H1/H4 bars are excluded entirely
-- **First-visibility drift** — swing state appears only at the first real row after confirmation
-
-### Timeframe completeness policy
-
-Resampled H1 and H4 bars must meet minimum real-row completeness thresholds
-before they are eligible for swing detection:
-
-```python
-MIN_REAL_BARS_H1 = 45   # out of 60 possible 1m rows
-MIN_REAL_BARS_H4 = 180  # out of 240 possible 1m rows
-```
-
-Incomplete bars cannot serve as swing center, left neighbor, right neighbor,
-or confirmation source. This fail-closed policy prevents sparse data buckets
-or ingestion artifacts from generating false structural events.
-
-### Gap safety policy
-
-Stateful logic (such as failed-break confirmation) is protected from large
-timestamp discontinuities.
-
-If the time difference between consecutive rows exceeds:
-
-```python
-MAX_STATE_GAP_MINUTES = 3
-```
-
-the internal pending state is reset.
-
-This is a fail-closed safety mechanism designed to prevent structural
-misinterpretation after:
-
-- reconnects
-- packet loss
-- data gaps
-- delayed ingestion
-
-### Research note
-
-The value of `MAX_STATE_GAP_MINUTES` is currently a conservative safety choice.
-It may be adjusted after sufficient dataset collection and empirical analysis.
-
-The goal at this stage is structural data integrity rather than maximal
-event capture.
-
-## Repository Structure
-
-```
-Aitrader/
-├── binance_aggregator_shi.py   # Phase 1: raw 1m collector (LIVE)
-├── analyzer/                   # Analyzer package (Phase 1 + 2)
-│   ├── __init__.py
+```text
+/ (repo root)
+├── binance_aggregator_shi.py
+├── analyzer/
 │   ├── schema.py
 │   ├── loader.py
 │   ├── base_metrics.py
@@ -350,187 +92,293 @@ Aitrader/
 │   ├── shortlists.py
 │   ├── shortlist_explanations.py
 │   ├── research_summary.py
+│   ├── context.py
+│   ├── thresholds.py
+│   ├── harvest.py
 │   ├── io.py
-│   └── pipeline.py
-├── tests/                      # Unit tests for Analyzer
-│   ├── fixtures/               # Shared CSV test fixtures
-│   ├── test_schema.py
-│   ├── test_loader.py
-│   └── ...
+│   ├── pipeline.py
+│   └── run_daily.py
+├── backtester/
+│   ├── rulesets.py
+│   ├── ruleset_validation.py
+│   ├── placement.py
+│   ├── engine.py
+│   ├── ledger.py
+│   ├── metrics.py
+│   ├── validation.py
+│   ├── robustness.py
+│   ├── promotion.py
+│   ├── orchestrator.py
+│   ├── campaign.py
+│   └── experiment_registry.py
+├── scripts/run_analyzer_daily.sh
 ├── docs/
-│   └── Spec_v1.0.md            # Analyzer spec and contract
-├── feed/                       # 1m CSV files by day (not in git)
-│   └── YYYY-MM-DD.csv
-├── logs/                       # Aggregator logs (not in git)
-├── Dockerfile
-├── docker-compose.yml
-└── CLAUDE.md
+│   ├── Spec_v1.0.md
+│   ├── Phase2_Implementation_Plan_AiTrader_v2_2_updated.md
+│   ├── Backtesting_Architecture_v0.1.md
+│   └── Backtesting_Spec_v0.1.md
+└── tests/
 ```
 
-## Phase 1: Aggregator
+### Backtester baseline modules (what they do)
+
+- `rulesets.py` — formalizes replayable rulesets from analyzer shortlist/research outputs.
+- `ruleset_validation.py` — strict Phase 4 pre-replay validation for mapping artifacts.
+- `placement.py` — owned deterministic v1 SL/TP placement materialization before replay.
+- `engine.py` — deterministic multi-bar replay lifecycle and engine event stream.
+- `ledger.py` — trade ledger generation from replay outputs.
+- `metrics.py` — metrics/equity/drawdown/exit summaries.
+- `validation.py` — baseline validation decisions from replay results.
+- `robustness.py` — baseline robustness checks.
+- `promotion.py` — baseline research progression decisions.
+- `orchestrator.py` — end-to-end single-run orchestration and artifact writing.
+- `campaign.py` — multi-run campaign execution and campaign-level summaries/index/manifest.
+- `experiment_registry.py` — append-only registry records (`phase5_experiment_registry.csv`).
+
+### Analyzer module architecture (practical map)
+
+**Facts engine (Phase 1 scope):** `schema.py`, `loader.py`, `base_metrics.py`, `swings.py`, `sweeps.py`, `failed_breaks.py`, `absorption.py`, `events.py`.
+
+**Research pipeline (Phase 2 scope):** `setups.py`, `outcomes.py`, `reports.py`, `context_reports.py`, `rankings.py`, `selections.py`, `shortlists.py`, `shortlist_explanations.py`, `research_summary.py`.
+
+**Infrastructure/runtime:** `io.py`, `pipeline.py`, `run_daily.py`, plus context/threshold support modules.
+
+## 6) Artifact flow (maintainer-level)
+
+1. **Analyzer artifacts (single analyzer run)**
+   - Input: raw feed CSV (`feed/YYYY-MM-DD.csv` or explicit path).
+   - Key outputs: `analyzer_features.csv`, `analyzer_events.csv`, `analyzer_setups.csv`, `analyzer_setup_shortlist.csv`, `analyzer_research_summary.csv` (+ full intermediate report stack).
+   - Frozen-run mode writes run directory with `run_manifest.json`.
+
+2. **Backtest artifacts (single backtester run)**
+   - Input: analyzer artifact dir.
+   - Raw lineage resolution for replay: explicit `raw_path` → `run_manifest.json` input paths → compatibility fallback `artifact_dir/raw.csv`.
+   - Key outputs: `backtest_rulesets.csv`, `backtest_engine_events.csv`, `backtest_trades.csv`, `backtest_trade_metrics.csv`, `backtest_orchestration_manifest.json`.
+
+3. **Phase 4 validation artifacts**
+   - `phase4_ruleset_validation_summary.csv`
+   - `phase4_ruleset_validation_details.csv`
+
+4. **Validation / robustness / promotion artifacts**
+   - `backtest_validation_summary.csv`, `backtest_validation_details.csv`
+   - `backtest_robustness_summary.csv`, `backtest_robustness_details.csv`
+   - `backtest_promotion_decisions.csv`, `backtest_promotion_details.csv`
+
+5. **Campaign / registry artifacts (Phase 5 baseline)**
+   - `backtest_campaign_manifest.json`
+   - `backtest_campaign_run_index.csv`
+   - `backtest_campaign_summary.csv`
+   - registry row append to `phase5_experiment_registry.csv`
+
+## 7) Collector section (operational details preserved)
 
 ### Raw feed schema (1m candles)
 
 | Column | Source | Description |
-|--------|--------|-------------|
+|---|---|---|
 | Timestamp | system | UTC bar open time |
-| Open, High, Low, Close | aggTrade WS | OHLCV prices |
-| Volume | aggTrade WS | Total volume |
-| AggTrades | aggTrade WS | Number of Binance aggTrade messages (not individual fills) |
-| BuyQty | aggTrade WS | Taker buy volume (for delta) |
-| SellQty | aggTrade WS | Taker sell volume (for delta) |
-| VWAP | aggTrade WS | 1m volume-weighted average traded price |
-| OpenInterest | REST /fapi/v1/openInterest | Open interest snapshot (BTC) |
-| FundingRate | markPrice WS | Funding rate |
+| Open, High, Low, Close | aggTrade WS | OHLC prices |
+| Volume | aggTrade WS | Total traded volume |
+| AggTrades | aggTrade WS | Count of Binance aggTrade messages (not individual fills) |
+| BuyQty | aggTrade WS | Taker buy volume |
+| SellQty | aggTrade WS | Taker sell volume |
+| VWAP | aggTrade WS | 1m VWAP (`sum(price*qty)/sum(qty)`) |
+| OpenInterest | REST `/fapi/v1/openInterest` | OI snapshot |
+| FundingRate | markPrice WS | Funding rate snapshot |
 | LiqBuyQty | forceOrder WS | Short liquidation volume |
 | LiqSellQty | forceOrder WS | Long liquidation volume |
-| IsSynthetic | system | 1 = synthetic candle (no trades in interval) |
+| IsSynthetic | system | `1` for synthetic no-trade interval candle |
 
 ### Data notes
 
-**AggTrades** counts Binance aggTrade messages, not individual exchange fills. BuyQty / SellQty are accurate for delta and CVD. AggTrades should not be interpreted as true fill count.
+- **AggTrades** counts aggTrade messages, not full exchange fill count.
+- **BuyQty / SellQty** are taker-aggressor volumes useful for delta/CVD context; interpret together with price response.
+- **Synthetic candles (`IsSynthetic=1`)** keep continuity when interval has no trades; VWAP falls back to Close.
+- **Liquidation data** comes from `forceOrder` stream and should be treated as contextual observed events.
 
-**Synthetic candles** — when no trades occur during a 1m interval, the collector writes a synthetic candle using the last known price (mark price or last trade). Marked `IsSynthetic=1`. Analyzer modules may exclude these when computing compression or volatility features.
+### Storage pattern
 
-**Liquidation data** — derived from the `forceOrder` stream. Observed liquidation events; not a guaranteed complete record of all market liquidations. Intended for contextual analysis.
+- Raw feed files: `feed/YYYY-MM-DD.csv` (UTC-day partitioning).
+- Typical runtime dirs (deployment-style):
+  - feed: `/opt/aitrader/feed/`
+  - logs: `/opt/aitrader/logs/`
 
-**BuyQty / SellQty** — taker-aggressor volume. They indicate which side initiated market orders but do not by themselves indicate directional control. Always combine with price response (close location, wick structure, range behavior).
+### Sources
 
-**VWAP** — `sum(price * qty) / sum(qty)` per bar. Falls back to Close on synthetic candles.
+**WebSocket streams**
+- `btcusdt@aggTrade`
+- `btcusdt@forceOrder`
+- `btcusdt@markPrice@1s`
 
-### Storage
+**REST endpoint**
+- `GET /fapi/v1/openInterest?symbol=BTCUSDT` (minute snapshot)
 
-CSV by day: `feed/YYYY-MM-DD.csv`
-
-### WebSocket streams
-
-- `btcusdt@aggTrade` — trades
-- `btcusdt@forceOrder` — liquidations
-- `btcusdt@markPrice@1s` — funding rate, mark price
-
-### REST endpoints
-
-- `GET /fapi/v1/openInterest?symbol=BTCUSDT` — OI snapshot once per minute
-
-## Running
-
-### Collector — Docker (production)
+### Collector running instructions
 
 ```bash
 docker compose up -d --build
 docker logs -f shi-aggregator
 ```
 
-### Collector — Local (dev)
+Local dev:
 
 ```bash
-pip install websocket-client requests
 python binance_aggregator_shi.py
 ```
 
-Output: `feed/YYYY-MM-DD.csv` — one file per UTC day.
+## 8) Analyzer section (operational details preserved)
 
-### Analyzer pipeline
+### Scope
+
+Analyzer is the research layer that converts raw feed into deterministic artifacts for downstream review/backtesting. It does **not** execute on exchange.
+
+### Data lineage
+
+```text
+raw CSV → features → events → setups → outcomes
+        → report/context_report → rankings → selections
+        → shortlist → shortlist_explanations → research_summary
+```
+
+### Direct pipeline usage
 
 ```python
 from analyzer.pipeline import run
 
 result = run("feed/2024-03-15.csv", output_dir="output/")
-# writes: output/analyzer_features.csv
-#         output/analyzer_events.csv
-#         output/analyzer_setups.csv
-#         output/analyzer_setup_outcomes.csv
-#         output/analyzer_setup_report.csv
-#         output/analyzer_setup_context_report.csv
-#         output/analyzer_setup_rankings.csv
-#         output/analyzer_setup_selections.csv
-#         output/analyzer_setup_shortlist.csv
-#         output/analyzer_setup_shortlist_explanations.csv
-#         output/analyzer_research_summary.csv
-
-features                = result["features"]                # pd.DataFrame — one row per 1m bar
-events                  = result["events"]                  # pd.DataFrame — one row per detected event
-setups                  = result["setups"]                  # pd.DataFrame — one row per setup candidate
-outcomes                = result["outcomes"]                # pd.DataFrame — one row per setup with forward metrics
-report                  = result["report"]                  # pd.DataFrame — grouped setup statistics
-context_report          = result["context_report"]          # pd.DataFrame — context-bucketed statistics
-rankings                = result["rankings"]                # pd.DataFrame — scored and ranked setup groups
-selections              = result["selections"]              # pd.DataFrame — SELECT/REVIEW/REJECT per group
-shortlist               = result["shortlist"]               # pd.DataFrame — ranked shortlist for review
-shortlist_explanations  = result["shortlist_explanations"]  # pd.DataFrame — explanation bands per shortlist row
-research_summary        = result["research_summary"]        # pd.DataFrame — final research summary surface
-
-# Path keys also available for each artifact:
-# result["features_path"], result["events_path"], result["setups_path"],
-# result["outcomes_path"], result["report_path"], result["context_report_path"],
-# result["rankings_path"], result["selections_path"], result["shortlist_path"],
-# result["shortlist_explanations_path"], result["research_summary_path"]
+# key files written under output/: analyzer_features.csv, analyzer_events.csv,
+# analyzer_setups.csv, analyzer_setup_outcomes.csv, analyzer_setup_report.csv,
+# analyzer_setup_context_report.csv, analyzer_setup_rankings.csv,
+# analyzer_setup_selections.csv, analyzer_setup_shortlist.csv,
+# analyzer_setup_shortlist_explanations.csv, analyzer_research_summary.csv
 ```
 
-### Analyzer — daily operational run
+### Daily-run operational mode
 
-At the current project stage, Analyzer is intended to run as a separate daily cron job.
-Aggregator continuously writes raw UTC-day CSV files to `feed/YYYY-MM-DD.csv`.
-Analyzer should run once per day after UTC rollover and process yesterday's completed UTC file.
+Recommended current baseline: run Analyzer once per day after UTC rollover on the previous UTC-day feed file.
 
-Example: at `2026-03-14 00:05 UTC`, Analyzer input should be `feed/2026-03-13.csv`.
+Example:
 
-Cron is the default operational path for the current phase.
-Manual Analyzer runs are only for development, debugging, validation, or troubleshooting.
+```bash
+python -m analyzer.run_daily /opt/aitrader/feed/2026-03-13.csv --runs-root /opt/aitrader/analyzer_runs
+```
 
-Minimum recommended pre-run checks:
+Cron wrapper: `scripts/run_analyzer_daily.sh`.
 
-- yesterday raw CSV exists
-- today's new UTC CSV already exists
-- yesterday file is non-empty
-- yesterday file contains the expected CSV header
-- target analyzer run directory is unique
+### Structural safety notes (kept practical)
 
-These are operational recommendations for the current runtime mode, not claims about already enforced code-level checks unless documented elsewhere.
-A future continuously running container/service mode is possible later, but it is outside the current scope and is not the current deployment contract.
+- Structural swing detection excludes synthetic rows from structure-defining logic.
+- H1/H4 completeness thresholds protect against sparse bucket contamination.
+- Stateful logic resets on large timestamp gaps (`MAX_STATE_GAP_MINUTES`) as fail-closed safety.
 
-Requires `pandas`. Tests: `pytest tests/`.
+Normative analyzer contract: `docs/Spec_v1.0.md`.
 
-### Environment variables
+## 9) Backtester section
+
+### Current baseline scope
+
+Backtester consumes pre-generated analyzer artifacts and runs deterministic replay + evaluation. This includes ruleset formalization, optional strict Phase 4 mapping validation, deterministic v1 placement materialization, replay engine, ledger, metrics, validation/robustness/promotion, and orchestration artifacts.
+
+### Boundary contract
+
+- Backtester **consumes analyzer artifacts**.
+- Backtester **does not call analyzer implicitly** and is not an execution runtime.
+- Campaign/registry outputs are observational research tracking, not live execution authorization.
+
+### Phase 4 gate and v1 placement notes
+
+- `PHASE3_MAPPING_ONLY` mode includes strict pre-replay validation gate with explicit summary/details artifacts.
+- SL/TP placement is currently deterministic **v1 baseline** (`placement.py`) and should not be treated as full execution-grade order lifecycle handling.
+
+## 10) Operational usage
+
+### Collector
+
+```bash
+docker compose up -d --build
+docker logs -f shi-aggregator
+```
+
+### Analyzer
+
+```bash
+python -m analyzer.run_daily /opt/aitrader/feed/<YYYY-MM-DD>.csv --runs-root /opt/aitrader/analyzer_runs
+```
+
+### Backtester (single run)
+
+```python
+from backtester.orchestrator import run_backtester
+
+run_backtester(
+    artifact_dir="/opt/aitrader/analyzer_runs/<run_id>",
+    output_dir="/opt/aitrader/backtests/<bt_run_id>",
+    ruleset_source_formalization_mode="PHASE3_MAPPING_ONLY",
+    variant_names=("BASE",),
+    cost_model_id="DEFAULT_COST_V1",
+    same_bar_policy_id="DEFAULT_SAME_BAR_V1",
+    replay_semantics_version="REPLAY_V0_1",
+)
+```
+
+### Campaign baseline
+
+```python
+from backtester.campaign import run_backtest_campaign
+
+run_backtest_campaign(
+    artifact_dirs=["/opt/aitrader/analyzer_runs/<run_id_1>", "/opt/aitrader/analyzer_runs/<run_id_2>"],
+    output_dir="/opt/aitrader/backtests/campaigns/<campaign_id>",
+    campaign_label="baseline",
+    ruleset_source_formalization_mode="PHASE3_MAPPING_ONLY",
+    variant_names=("BASE",),
+    cost_model_id="DEFAULT_COST_V1",
+    same_bar_policy_id="DEFAULT_SAME_BAR_V1",
+    replay_semantics_version="REPLAY_V0_1",
+)
+```
+
+### Environment quick reference
 
 | Variable | Default | Description |
-|----------|---------|-------------|
-| FEED_DIR | ./feed | CSV data directory |
-| LOGS_DIR | ./logs | Log directory |
+|---|---|---|
+| `FEED_DIR` | `./feed` | Collector CSV directory |
+| `LOGS_DIR` | `./logs` | Collector log directory |
 
-## Infrastructure
+## 11) Known current limitations
 
-- **Server:** VPS 95.216.139.172 (Ubuntu 24.04, 4GB RAM, 38GB disk)
-- **Location:** /opt/aitrader
-- **Container:** shi-aggregator
-- **Data:** /opt/aitrader/feed/ (mounted as volume)
-- **Logs:** /opt/aitrader/logs/aggregator.log
+- Several Backtester components are baseline-policy level (validation thresholds, robustness surfaces, promotion semantics).
+- SL/TP placement is deterministic v1 baseline and not execution-grade order lifecycle logic.
+- Analyzer + Backtester are research/progression layers; they do not replace exchange-execution safeguards.
+- Executor/live exchange integration is planned and not implemented in this repository.
 
-## Health monitoring
+## 12) Source-of-truth docs
 
-Every 5 minutes:
-```
+When wording differs, prefer current runtime/code behavior and these aligned docs:
+- `docs/Spec_v1.0.md`
+- `docs/Phase2_Implementation_Plan_AiTrader_v2_2_updated.md`
+- `docs/Backtesting_Architecture_v0.1.md`
+- `docs/Backtesting_Spec_v0.1.md`
+
+---
+
+## Infrastructure / health quick reference (operational note)
+
+- Typical deployment location: `/opt/aitrader`
+- Typical collector container name: `shi-aggregator`
+- Typical data path: `/opt/aitrader/feed/`
+- Typical log path: `/opt/aitrader/logs/aggregator.log`
+
+Example health log format:
+
+```text
 💓 Health: WS=✅ | OI=83287 | FR=0.000027 | Mark=70400.00 | Candles=120/1440
 ```
 
-## Target Architecture Constraints (Phase 4)
+## Target architecture constraints (execution layer, planned)
 
-The following are fixed design constraints for the eventual execution layer.
-They are not yet implemented — execution is Phase 4.
+These are design constraints for planned execution runtime, not currently implemented runtime behavior.
 
-**Regulatory (MiCA / EU):**
-- Futures trading prohibited for EU residents
-- Futures public API (signal data) — no restrictions
-- Execution: Binance Spot Margin BTC/USDC (max 10x, design target: 2x)
-
-**Risk management (fixed, non-negotiable):**
-- Risk per trade: 1%
-- Position sizing: Risk / StopDistance
-- Mode: Isolated Margin, max 2x leverage
-- No cross margin, no martingale, no manual intervention
-- Drawdown halt: 3% / day, 7% / week
-
-**Scope constraints:**
-- BTC only — no altcoins
-- No parameter changes during drawdown
-- No risk increases after a loss
+- Regulatory context: futures market data can be used for research; execution target is Binance Spot (margin constraints per deployment policy).
+- Risk constraints (design target): fixed per-trade risk, isolated-margin discipline, explicit drawdown halts.
+- Scope constraints: BTC-first execution scope; no hidden auto-risk escalation.
