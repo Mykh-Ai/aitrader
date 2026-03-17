@@ -122,6 +122,18 @@ Research-summary bridge contract (v0.1 hardening):
 - **Non-responsibilities:** Analyzer generation, live execution authorization.
 - **Phase 4 gate behavior:** In `PHASE3_MAPPING_ONLY`, runs `ruleset_validation.py` after mapping load and before replay; replay is blocked unless exactly one mapping row is `VALID`/replay-eligible.
 
+### `backtester/campaign.py`
+- **Responsibility:** Deterministic batch orchestration over multiple analyzer artifact directories by delegating each run to `run_backtester(...)`.
+- **Inputs:** Ordered artifact dir list + shared run controls.
+- **Outputs:** `backtest_campaign_manifest.json`, `backtest_campaign_run_index.csv`, `backtest_campaign_summary.csv`.
+- **Non-responsibilities:** Replay semantics ownership, ruleset optimization, winner selection, auto-promotion.
+
+### `backtester/experiment_registry.py`
+- **Responsibility:** Append-only Phase 5 experiment journal for completed runs.
+- **Inputs:** Existing per-run artifacts (`backtest_orchestration_manifest.json`, `backtest_run_manifest.json`, ruleset/validation/promotion CSVs).
+- **Outputs:** `phase5_experiment_registry.csv` (one appended row per completed run).
+- **Non-responsibilities:** Replay blocking, artifact mutation, cross-experiment ranking logic.
+
 ---
 
 ## 5. Artifact flow
@@ -136,7 +148,8 @@ High-level dataflow:
 `→ trade metrics`  
 `→ validation`  
 `→ robustness`  
-`→ promotion decisions`
+`→ promotion decisions`  
+`→ registry / campaign summary (optional Phase 5 observational layer)`
 
 Implemented baseline artifacts:
 
