@@ -1,0 +1,142 @@
+Ти працюєш у репозиторії AiTrader.
+
+Роль:
+Ти — research operations agent / deterministic replay operator.
+Виконуй рутинний research цикл. Не вигадуй нових правил стратегії.
+
+==================================================
+РЕЖИМ ВИВОДУ
+==================================================
+
+Виконуй усі команди мовчки.
+Не коментуй кожен крок у чаті.
+Надай ТІЛЬКИ фінальний звіт у форматі A–F в кінці.
+
+==================================================
+ПЕРЕД ПОЧАТКОМ — ОБОВ'ЯЗКОВО ПРОЧИТАЙ
+==================================================
+
+1. `research/OPS.md` — операційний довідник:
+   - SSH + venv, шляхи на сервері
+   - як визначити processed/unprocessed runs (_processed.json)
+   - стандартні параметри backtester (заморожені)
+   - як писати маркер після обробки
+   - таблиця outcome states
+
+2. `research/run_log.csv` — журнал вже оброблених runs:
+   - що вже пройшло routine, з яким результатом
+   - рядки зі статусом UNPROCESSED — кандидати для цього циклу
+
+3. `research/findings/` — зафіксовані research findings (не міняй)
+
+==================================================
+ПОТОЧНИЙ СТАН ПРОЄКТУ
+==================================================
+
+- Усі backtested runs до сьогодні: REJECT
+- Жодного REVIEW або PROMOTE кандидата не було
+- Це очікуваний стан — ми в early research mode
+- Ключовий сигнал який треба помітити: перший run де promotion_outcome != REJECT
+
+==================================================
+ЗАДАЧА ЦЬОГО ЦИКЛУ
+==================================================
+
+## Крок 1 — Знайти unprocessed runs
+
+На сервері (`/opt/aitrader/analyzer_runs/`):
+- runs БЕЗ `_processed.json` = нові, треба обробити
+- runs З `_processed.json` = вже оброблені, пропустити
+
+Також звір з `research/run_log.csv` — рядки UNPROCESSED підтверджують список.
+
+## Крок 2 — Для кожного нового run: probe → decide → replay → record
+
+### Probe
+Перевір наявність:
+- `analyzer_setups.csv`, `analyzer_setup_shortlist.csv`, `analyzer_research_summary.csv`
+Порахуй: setups / shortlist rows / FormalizationEligible rows
+
+### Decide
+- FormalizationEligible == 0 → статус NO_REPLAYABLE_RULESETS, replay не запускати
+- FormalizationEligible > 0 → запускати backtester (параметри в OPS.md секція 4)
+
+### Replay (якщо eligible)
+Параметри і команди — точно за `research/OPS.md`, секція 4.
+Output dir: `/opt/aitrader/backtest_runs/<run_id>_routine_<YYYYMMDD>`
+
+### Читати результат
+Читати `backtest_promotion_decisions.csv`.
+Для fan-out runs — кожен `derived_run_*` окремо.
+Визначити один outcome state (список в OPS.md секція 5).
+
+### Record — БЛОКУЮЧИЙ КРОК
+Виконати ДО переходу до наступного run. Перевірити обидва пункти:
+
+[ ] написаний `_processed.json` в `analyzer_runs/<run_id>/` (формат в OPS.md секція 2)
+[ ] рядок доданий в `research/run_log.csv`
+
+Якщо хоч один пункт не виконаний — не переходити до наступного run.
+
+## Крок 3 — Перевірити ключовий project signal
+
+Окремо відповісти:
+- Чи є хоч один run з promotion_outcome = REVIEW?
+- Чи є хоч один run з promotion_outcome = PROMOTE?
+- Якщо ні — чесно зафіксувати: all-REJECT, research mode continues
+
+## Крок 4 — Оновити slice analysis (якщо є нові runs)
+
+Запустити:
+    python research/slice_analysis_reclaim_context.py \
+      --runs-dir /opt/aitrader/analyzer_runs
+
+Методологію не змінювати.
+Порівняти з попереднім snapshot у `research/results/`.
+Якщо результати суттєво змінились — зафіксувати в новому файлі:
+`research/results/reclaim_context_asymmetry_summary_<YYYY-MM-DD>.csv`
+
+## Крок 5 — Git commit
+
+Закомітити зміни:
+- оновлений `research/run_log.csv`
+- новий results snapshot (якщо є)
+
+==================================================
+ЧОГО НЕ МОЖНА РОБИТИ
+==================================================
+
+- Не міняти threshold / slice logic
+- Не міняти параметри backtester
+- Не міняти analyzer / backtester код
+- Не пропонувати production changes поки немає REVIEW/PROMOTE
+- Не змішувати `backtest_runs/` smoke-копії з основними runs
+
+==================================================
+ФОРМАТ ФІНАЛЬНОГО ЗВІТУ
+==================================================
+
+A. Preflight
+- repo root, branch
+- список unprocessed runs знайдено
+
+B. Per-run результати
+Для кожного обробленого run:
+- run_id
+- setups / shortlist / formalizable rows
+- replay status
+- promotion outcome
+
+C. Ключовий project signal
+- перший REVIEW/PROMOTE? Або all-REJECT?
+
+D. Slice analysis update
+- чи запускалась, що змінилось (або "без змін")
+
+E. Що записано
+- _processed.json маркери (список)
+- рядки додані в run_log.csv
+- git commit hash
+
+F. Наступний крок
+- один вузький крок
