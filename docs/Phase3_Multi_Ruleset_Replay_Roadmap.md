@@ -226,7 +226,7 @@ Add orchestration behavior so that one analyzer artifact may produce multiple re
 Expected behavior:
 
 - if replayable ruleset count is `0`:
-  - preserve current no-replay behavior
+  - fail loudly before placement
 - if replayable ruleset count is `1`:
   - preserve current single-run baseline behavior
 - if replayable ruleset count is `N > 1`:
@@ -238,6 +238,7 @@ Expected behavior:
 - deterministic per-ruleset run naming
 - no silent dropping of valid replayable rows
 - no implicit collapse to first row
+- if a later child run fails, earlier completed child runs remain usable and are not invalidated by the parent failure
 
 ### Deliverable
 - fan-out replay policy
@@ -263,6 +264,7 @@ Each derived run must clearly preserve:
 - source analyzer artifact reference
 - source `RulesetId`
 - local derived run path / identifier
+- child manifest semantics as the replay-completed unit, with any parent manifest limited to lineage/orchestration scope only
 
 ### Deliverable
 - per-ruleset run directory structure
@@ -279,6 +281,7 @@ Campaign must support:
 - preserving current many-artifact-dir behavior
 - tracking multiple child replay runs under one analyzer lineage
 - stable campaign manifest entries for derived runs
+- partial-failure accounting where completed child runs may still append campaign rows while the failed parent execution is also recorded
 
 ### Important constraint
 
@@ -370,6 +373,8 @@ Documentation must explicitly describe:
 - derived replay runs
 - per-ruleset lineage
 - preserved single-ruleset baseline compatibility
+- parent fan-out manifests as lineage/orchestration shells rather than synthetic merged replay results
+- partial-failure behavior without sibling aggregation, best-of selection, or auto-promotion
 
 ### Deliverable
 - documentation aligned with implementation
@@ -400,6 +405,7 @@ Every derived run must be traceable to:
 
 ### 8.4 Registry
 - registry records one fact row per completed derived run
+- partial fan-out failure may leave completed child rows present while also recording the failed parent execution
 - no aggregation is introduced
 - no auto-promotion is introduced
 
