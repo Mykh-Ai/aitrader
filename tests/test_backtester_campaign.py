@@ -253,7 +253,7 @@ def test_campaign_partial_fanout_failure_keeps_completed_child_rows_when_continu
 
     def _patched_single(*args, **kwargs):
         out_dir = kwargs["out_dir"]
-        if str(kwargs["artifact_root"]).endswith("/ok") and out_dir.name.startswith("derived_run_0002_"):
+        if Path(kwargs["artifact_root"]).name == "ok" and out_dir.name.startswith("derived_run_0002_"):
             raise ReplayContractError("simulated child failure")
         return original_single(*args, **kwargs)
 
