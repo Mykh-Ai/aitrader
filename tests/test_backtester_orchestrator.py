@@ -11,7 +11,12 @@ from backtester.engine import ReplayContractError, ZeroCostSkeletonModel
 from backtester.orchestrator import ORCHESTRATION_MANIFEST_NAME, result_as_dict, run_backtester
 
 
-def _write_analyzer_artifacts(artifact_dir: Path, *, raw_output_path: Path | None = None) -> None:
+def _write_analyzer_artifacts(
+    artifact_dir: Path,
+    *,
+    raw_output_path: Path | None = None,
+    shortlist_rows: list[dict[str, object]] | None = None,
+) -> None:
     artifact_dir.mkdir(parents=True, exist_ok=True)
 
     raw = pd.DataFrame(
@@ -63,7 +68,8 @@ def _write_analyzer_artifacts(artifact_dir: Path, *, raw_output_path: Path | Non
         ]
     )
     shortlist = pd.DataFrame(
-        [
+        shortlist_rows
+        or [
             {
                 "SourceReport": "REPORT_A",
                 "GroupType": "Direction",
@@ -407,3 +413,107 @@ def test_phase3_mapping_only_phase4_gate_blocks_when_no_replay_eligible_ruleset(
             generation_timestamp="2024-01-01T00:00:00+00:00",
             cost_models={"COST_MODEL_ZERO_SKELETON_ONLY": ZeroCostSkeletonModel()},
         )
+
+
+def test_zero_ruleset_path_fails_loudly_before_placement(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    artifact_dir = tmp_path / "analyzer_run"
+    output_dir = tmp_path / "backtest_run"
+    _write_analyzer_artifacts(artifact_dir)
+
+    empty_shortlist = pd.DataFrame(columns=["SourceReport", "GroupType", "GroupValue", "SelectionDecision"])
+    empty_shortlist.to_csv(artifact_dir / "analyzer_setup_shortlist.csv", index=False)
+    empty_shortlist.to_csv(artifact_dir / "analyzer_research_summary.csv", index=False)
+
+    def _placement_must_not_run(*args, **kwargs):
+        raise AssertionError("placement must not run when no replayable rulesets materialize")
+
+    monkeypatch.setattr("backtester.orchestrator.materialize_stop_target_levels", _placement_must_not_run)
+
+    with pytest.raises(ReplayContractError, match="No replayable canonical rulesets materialized"):
+        _run(artifact_dir, output_dir)
+
+    saved_rulesets = pd.read_csv(output_dir / "backtest_rulesets.csv")
+    assert saved_rulesets.empty
+
+
+
+def test_multi_ruleset_fanout_creates_one_row_child_runs_without_parent_collapse(tmp_path: Path):
+    artifact_dir = tmp_path / "analyzer_run"
+    output_dir = tmp_path / "backtest_run"
+    _write_analyzer_artifacts(
+        artifact_dir,
+        shortlist_rows=[
+            {
+                "SourceReport": "REPORT_A",
+                "GroupType": "Direction",
+                "GroupValue": "LONG",
+                "SelectionDecision": "SELECT",
+            },
+            {
+                "SourceReport": "REPORT_B",
+                "GroupType": "Direction",
+                "GroupValue": "SHORT",
+                "SelectionDecision": "SELECT",
+            },
+        ],
+    )
+
+    result = _run(artifact_dir, output_dir)
+
+    parent_rulesets = pd.read_csv(output_dir / "backtest_rulesets.csv")
+    assert parent_rulesets["ruleset_id"].tolist() == [
+        "RULESET_REPORT_A_DIRECTION_LONG_V1_LONG_BASE",
+        "RULESET_REPORT_B_DIRECTION_SHORT_V1_SHORT_BASE",
+    ]
+
+    derived_names = [path.name for path in result.derived_run_dirs]
+    assert derived_names[0].startswith("derived_run_0001_")
+    assert derived_names[1].startswith("derived_run_0002_")
+    assert derived_names == sorted(derived_names)
+
+    child_ruleset_ids: list[str] = []
+    for child_dir in result.derived_run_dirs:
+        child_rulesets = pd.read_csv(child_dir / "backtest_rulesets.csv")
+        assert len(child_rulesets.index) == 1
+        child_ruleset_ids.append(str(child_rulesets.iloc[0]["ruleset_id"]))
+
+        child_manifest = json.loads((child_dir / ORCHESTRATION_MANIFEST_NAME).read_text(encoding="utf-8"))
+        assert child_manifest["ruleset_count"] == 1
+        assert child_manifest["derived_run_count"] == 0
+
+    assert child_ruleset_ids == parent_rulesets["ruleset_id"].tolist()
+
+    parent_manifest = json.loads((output_dir / ORCHESTRATION_MANIFEST_NAME).read_text(encoding="utf-8"))
+    assert parent_manifest["derived_run_count"] == 2
+    assert parent_manifest["engine_event_count"] is None
+    assert parent_manifest["trade_count"] is None
+
+
+def test_multi_ruleset_fanout_preserves_placement_single_ruleset_contract(tmp_path: Path):
+    artifact_dir = tmp_path / "analyzer_run"
+    output_dir = tmp_path / "backtest_run"
+    _write_analyzer_artifacts(
+        artifact_dir,
+        shortlist_rows=[
+            {
+                "SourceReport": "REPORT_A",
+                "GroupType": "Direction",
+                "GroupValue": "LONG",
+                "SelectionDecision": "SELECT",
+            },
+            {
+                "SourceReport": "REPORT_B",
+                "GroupType": "Direction",
+                "GroupValue": "SHORT",
+                "SelectionDecision": "SELECT",
+            },
+        ],
+    )
+
+    result = _run(artifact_dir, output_dir)
+
+    assert len(result.derived_run_dirs) == 2
+    for child_dir in result.derived_run_dirs:
+        assert (child_dir / "backtest_run_manifest.json").exists()
+        child_rulesets = pd.read_csv(child_dir / "backtest_rulesets.csv")
+        assert len(child_rulesets.index) == 1
