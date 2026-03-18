@@ -17,7 +17,7 @@ from .experiment_registry import (
     append_registry_row,
     build_registry_row_for_completed_run,
 )
-from .orchestrator import run_backtester
+from .orchestrator import FanoutReplayError, run_backtester
 
 CAMPAIGN_MANIFEST_FILENAME = "backtest_campaign_manifest.json"
 CAMPAIGN_SUMMARY_FILENAME = "backtest_campaign_summary.csv"
@@ -134,6 +134,53 @@ def run_backtest_campaign(
 
     shared_kwargs = dict(backtester_kwargs or {})
 
+    def _append_completed_run_rows(
+        *,
+        completed_run_dirs: Sequence[Path],
+        artifact_dir: Path,
+        experiment_id: str,
+        experiment_label: str,
+        duration_seconds: float,
+    ) -> None:
+        for derived_idx, completed_run_dir in enumerate(completed_run_dirs, start=1):
+            derived_experiment_id = experiment_id
+            derived_experiment_label = experiment_label
+            derived_notes = "campaign completed run"
+            if len(completed_run_dirs) > 1:
+                derived_suffix = f"derived_{derived_idx:04d}"
+                derived_experiment_id = f"{experiment_id}__{derived_suffix}"
+                derived_experiment_label = f"{experiment_label}__{derived_suffix}"
+                derived_notes = "campaign completed derived replay run"
+
+            registry_row = build_registry_row_for_completed_run(
+                run_dir=completed_run_dir,
+                input_artifact_dir=artifact_dir,
+                experiment_id=derived_experiment_id,
+                experiment_label=derived_experiment_label,
+                duration_seconds=duration_seconds,
+                run_timestamp=run_timestamp,
+                notes=derived_notes,
+            )
+            append_registry_row(registry_path=resolved_registry_path, row=registry_row)
+
+            run_index_rows.append(
+                {
+                    "RunId": run_idx,
+                    "ExperimentId": derived_experiment_id,
+                    "ArtifactDir": str(artifact_dir),
+                    "RunDir": str(completed_run_dir),
+                    "RulesetId": registry_row["RulesetId"],
+                    "ValidationSummaryStatus": registry_row["ValidationSummaryStatus"],
+                    "PromotionSummaryStatus": registry_row["PromotionSummaryStatus"],
+                    "TradeCount": registry_row["TradeCount"],
+                    "ResolvedTradeCount": registry_row["ResolvedTradeCount"],
+                    "DurationSeconds": registry_row["DurationSeconds"],
+                    "GitCommit": registry_row["GitCommit"],
+                    "CompletionState": "COMPLETED",
+                    "Error": "",
+                }
+            )
+
     for run_idx, artifact_dir in enumerate(artifact_dir_list, start=1):
         run_dir = out_dir / f"run_{run_idx:04d}"
         run_dirs.append(run_dir)
@@ -156,45 +203,62 @@ def run_backtest_campaign(
             )
             duration_seconds = time.monotonic() - started
             completed_run_dirs = list(run_result.derived_run_dirs) or [run_dir]
-
-            for derived_idx, completed_run_dir in enumerate(completed_run_dirs, start=1):
-                derived_experiment_id = experiment_id
-                derived_experiment_label = experiment_label
-                derived_notes = "campaign completed run"
-                if len(completed_run_dirs) > 1:
-                    derived_suffix = f"derived_{derived_idx:04d}"
-                    derived_experiment_id = f"{experiment_id}__{derived_suffix}"
-                    derived_experiment_label = f"{experiment_label}__{derived_suffix}"
-                    derived_notes = "campaign completed derived replay run"
-
-                registry_row = build_registry_row_for_completed_run(
-                    run_dir=completed_run_dir,
-                    input_artifact_dir=artifact_dir,
-                    experiment_id=derived_experiment_id,
-                    experiment_label=derived_experiment_label,
+            _append_completed_run_rows(
+                completed_run_dirs=completed_run_dirs,
+                artifact_dir=artifact_dir,
+                experiment_id=experiment_id,
+                experiment_label=experiment_label,
+                duration_seconds=duration_seconds,
+            )
+        except FanoutReplayError as exc:
+            duration_seconds = time.monotonic() - started
+            completed_run_dirs = list(exc.completed_derived_run_dirs)
+            if completed_run_dirs:
+                _append_completed_run_rows(
+                    completed_run_dirs=completed_run_dirs,
+                    artifact_dir=artifact_dir,
+                    experiment_id=experiment_id,
+                    experiment_label=experiment_label,
                     duration_seconds=duration_seconds,
-                    run_timestamp=run_timestamp,
-                    notes=derived_notes,
                 )
-                append_registry_row(registry_path=resolved_registry_path, row=registry_row)
-
-                run_index_rows.append(
-                    {
-                        "RunId": run_idx,
-                        "ExperimentId": derived_experiment_id,
-                        "ArtifactDir": str(artifact_dir),
-                        "RunDir": str(completed_run_dir),
-                        "RulesetId": registry_row["RulesetId"],
-                        "ValidationSummaryStatus": registry_row["ValidationSummaryStatus"],
-                        "PromotionSummaryStatus": registry_row["PromotionSummaryStatus"],
-                        "TradeCount": registry_row["TradeCount"],
-                        "ResolvedTradeCount": registry_row["ResolvedTradeCount"],
-                        "DurationSeconds": registry_row["DurationSeconds"],
-                        "GitCommit": registry_row["GitCommit"],
-                        "CompletionState": "COMPLETED",
-                        "Error": "",
-                    }
-                )
+            run_index_rows.append(
+                {
+                    "RunId": run_idx,
+                    "ExperimentId": experiment_id,
+                    "ArtifactDir": str(artifact_dir),
+                    "RunDir": str(run_dir),
+                    "RulesetId": "",
+                    "ValidationSummaryStatus": "",
+                    "PromotionSummaryStatus": "",
+                    "TradeCount": "",
+                    "ResolvedTradeCount": "",
+                    "DurationSeconds": round(duration_seconds, 6),
+                    "GitCommit": "",
+                    "CompletionState": "FAILED",
+                    "Error": str(exc),
+                }
+            )
+            if not continue_on_error:
+                manifest = {
+                    "CampaignId": campaign_id,
+                    "CampaignLabel": campaign_label,
+                    "RunTimestamp": run_timestamp,
+                    "ArtifactDirs": [str(path) for path in artifact_dir_list],
+                    "RunCountPlanned": len(artifact_dir_list),
+                    "RunCountCompleted": sum(1 for row in run_index_rows if row["CompletionState"] == "COMPLETED"),
+                    "RulesetSourceMode": ruleset_source_formalization_mode,
+                    "CostModelId": cost_model_id,
+                    "SameBarPolicyId": same_bar_policy_id,
+                    "ReplaySemanticsVersion": replay_semantics_version,
+                    "RulesetId": "",
+                    "GitCommit": next((row.get("GitCommit", "") for row in run_index_rows if row.get("GitCommit")), ""),
+                    "Notes": notes,
+                    "RegistryPath": str(resolved_registry_path),
+                    "CampaignSummaryPath": str(out_dir / CAMPAIGN_SUMMARY_FILENAME),
+                    "CampaignRunIndexPath": str(out_dir / CAMPAIGN_RUN_INDEX_FILENAME),
+                }
+                _write_campaign_outputs(output_dir=out_dir, manifest=manifest, run_index_rows=run_index_rows)
+                raise
         except Exception as exc:
             run_index_rows.append(
                 {

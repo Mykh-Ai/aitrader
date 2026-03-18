@@ -478,13 +478,19 @@ def test_multi_ruleset_fanout_creates_one_row_child_runs_without_parent_collapse
         child_ruleset_ids.append(str(child_rulesets.iloc[0]["ruleset_id"]))
 
         child_manifest = json.loads((child_dir / ORCHESTRATION_MANIFEST_NAME).read_text(encoding="utf-8"))
+        assert child_manifest["run_type"] == "SINGLE_REPLAY_RUN"
+        assert child_manifest["completion_state"] == "COMPLETED"
         assert child_manifest["ruleset_count"] == 1
         assert child_manifest["derived_run_count"] == 0
 
     assert child_ruleset_ids == parent_rulesets["ruleset_id"].tolist()
 
     parent_manifest = json.loads((output_dir / ORCHESTRATION_MANIFEST_NAME).read_text(encoding="utf-8"))
+    assert parent_manifest["run_type"] == "FANOUT_PARENT_LINEAGE_ONLY"
+    assert parent_manifest["completion_state"] == "COMPLETED"
     assert parent_manifest["derived_run_count"] == 2
+    assert parent_manifest["derived_run_dirs"] == [str(path) for path in result.derived_run_dirs]
+    assert parent_manifest["planned_derived_run_dirs"] == [str(path) for path in result.derived_run_dirs]
     assert parent_manifest["engine_event_count"] is None
     assert parent_manifest["trade_count"] is None
 
@@ -517,3 +523,52 @@ def test_multi_ruleset_fanout_preserves_placement_single_ruleset_contract(tmp_pa
         assert (child_dir / "backtest_run_manifest.json").exists()
         child_rulesets = pd.read_csv(child_dir / "backtest_rulesets.csv")
         assert len(child_rulesets.index) == 1
+
+
+def test_multi_ruleset_fanout_partial_failure_writes_parent_lineage_manifest_with_completed_children(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    artifact_dir = tmp_path / "analyzer_run"
+    output_dir = tmp_path / "backtest_run"
+    _write_analyzer_artifacts(
+        artifact_dir,
+        shortlist_rows=[
+            {
+                "SourceReport": "REPORT_A",
+                "GroupType": "Direction",
+                "GroupValue": "LONG",
+                "SelectionDecision": "SELECT",
+            },
+            {
+                "SourceReport": "REPORT_B",
+                "GroupType": "Direction",
+                "GroupValue": "SHORT",
+                "SelectionDecision": "SELECT",
+            },
+        ],
+    )
+
+    original = run_backtester.__globals__["_run_single_backtester"]
+
+    def _fail_second_child(*args, **kwargs):
+        out_dir = kwargs["out_dir"]
+        if out_dir.name.startswith("derived_run_0002_"):
+            raise ReplayContractError("simulated child failure")
+        return original(*args, **kwargs)
+
+    monkeypatch.setitem(run_backtester.__globals__, "_run_single_backtester", _fail_second_child)
+
+    with pytest.raises(ReplayContractError, match="failed_ruleset_id="):
+        _run(artifact_dir, output_dir)
+
+    first_child = next(output_dir.glob("derived_run_0001_*"))
+    assert (first_child / "backtest_run_manifest.json").exists()
+
+    parent_manifest = json.loads((output_dir / ORCHESTRATION_MANIFEST_NAME).read_text(encoding="utf-8"))
+    assert parent_manifest["run_type"] == "FANOUT_PARENT_LINEAGE_ONLY"
+    assert parent_manifest["completion_state"] == "PARTIAL_FAILURE"
+    assert parent_manifest["derived_run_count"] == 1
+    assert len(parent_manifest["derived_run_dirs"]) == 1
+    assert len(parent_manifest["planned_derived_run_dirs"]) == 2
+    assert parent_manifest["failed_ruleset_id"] == "RULESET_REPORT_B_DIRECTION_SHORT_V1_SHORT_BASE"
