@@ -220,3 +220,59 @@ def test_campaign_multi_ruleset_fanout_appends_one_registry_row_per_child_run(tm
     assert run_index["ExperimentId"].str.endswith(("__derived_0001", "__derived_0002")).all()
     assert run_index["ExperimentId"].is_unique
     assert run_index["ExperimentId"].str.contains("derived_").all()
+
+
+def test_campaign_partial_fanout_failure_keeps_completed_child_rows_when_continuing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    ok = tmp_path / "ok"
+    later = tmp_path / "later"
+    _write_analyzer_artifacts(
+        ok,
+        shortlist_rows=[
+            {
+                "SourceReport": "REPORT_A",
+                "GroupType": "Direction",
+                "GroupValue": "LONG",
+                "SelectionDecision": "SELECT",
+            },
+            {
+                "SourceReport": "REPORT_B",
+                "GroupType": "Direction",
+                "GroupValue": "SHORT",
+                "SelectionDecision": "SELECT",
+            },
+        ],
+    )
+    _write_analyzer_artifacts(later)
+
+    original = run_backtest_campaign.__globals__["run_backtester"]
+    # Intercept orchestrator helper used by run_backtester so the first campaign item partially succeeds.
+    original_single = original.__globals__["_run_single_backtester"]
+
+    def _patched_single(*args, **kwargs):
+        out_dir = kwargs["out_dir"]
+        if str(kwargs["artifact_root"]).endswith("/ok") and out_dir.name.startswith("derived_run_0002_"):
+            raise ReplayContractError("simulated child failure")
+        return original_single(*args, **kwargs)
+
+    monkeypatch.setitem(original.__globals__, "_run_single_backtester", _patched_single)
+
+    result = run_backtest_campaign(
+        artifact_dirs=[ok, later],
+        output_dir=tmp_path / "campaign",
+        continue_on_error=True,
+        **_campaign_kwargs(),
+    )
+
+    registry = pd.read_csv(result.registry_path)
+    assert registry["RulesetId"].tolist() == [
+        "RULESET_REPORT_A_DIRECTION_LONG_V1_LONG_BASE",
+        "RULESET_REPORT_A_DIRECTION_LONG_V1_LONG_BASE",
+    ]
+
+    run_index = pd.read_csv(result.campaign_run_index_path)
+    assert run_index["CompletionState"].tolist() == ["COMPLETED", "FAILED", "COMPLETED"]
+    assert "derived_run_0001_" in run_index.iloc[0]["RunDir"]
+    assert "failed_ruleset_id=RULESET_REPORT_B_DIRECTION_SHORT_V1_SHORT_BASE" in run_index.iloc[1]["Error"]

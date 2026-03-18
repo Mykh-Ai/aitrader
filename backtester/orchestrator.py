@@ -73,6 +73,23 @@ class OrchestrationResult:
     derived_run_dirs: list[Path] = field(default_factory=list)
 
 
+class FanoutReplayError(ReplayContractError):
+    """Raised when a multi-ruleset fan-out run partially completes before a child fails."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        completed_derived_run_dirs: list[Path],
+        failed_derived_run_dir: Path,
+        failed_ruleset_id: str,
+    ) -> None:
+        super().__init__(message)
+        self.completed_derived_run_dirs = list(completed_derived_run_dirs)
+        self.failed_derived_run_dir = failed_derived_run_dir
+        self.failed_ruleset_id = failed_ruleset_id
+
+
 
 
 def _sanitize_ruleset_token(value: str) -> str:
@@ -188,6 +205,8 @@ def _run_single_backtester(
     orchestration_manifest = {
         "artifact_dir": str(artifact_root),
         "output_dir": str(out_dir),
+        "run_type": "SINGLE_REPLAY_RUN",
+        "completion_state": "COMPLETED",
         "ruleset_source_mode": ruleset_source_formalization_mode,
         "variant_names": [str(v) for v in variant_names],
         "cost_model_id": cost_model_id,
@@ -447,31 +466,82 @@ def run_backtester(
         return result
 
     derived_run_dirs: list[Path] = []
-    for index, (_, ruleset_row) in enumerate(rulesets_df.iterrows(), start=1):
-        child_dir = out_dir / f"derived_run_{index:04d}_{_sanitize_ruleset_token(ruleset_row['ruleset_id'])}"
+    planned_derived_run_dirs = [
+        out_dir / f"derived_run_{index:04d}_{_sanitize_ruleset_token(ruleset_row['ruleset_id'])}"
+        for index, (_, ruleset_row) in enumerate(rulesets_df.iterrows(), start=1)
+    ]
+    for index, ((_, ruleset_row), child_dir) in enumerate(
+        zip(rulesets_df.iterrows(), planned_derived_run_dirs, strict=True),
+        start=1,
+    ):
         child_rulesets_df = pd.DataFrame([ruleset_row.to_dict()], columns=rulesets_df.columns).reset_index(drop=True)
-        _run_single_backtester(
-            artifact_root=artifact_root,
-            out_dir=child_dir,
-            required_paths=required_paths,
-            optional_paths=optional_paths,
-            rulesets_df=child_rulesets_df,
-            ruleset_source_formalization_mode=ruleset_source_formalization_mode,
-            variant_names=variant_names,
-            cost_model_id=cost_model_id,
-            same_bar_policy_id=same_bar_policy_id,
-            replay_semantics_version=replay_semantics_version,
-            resolved_generation_timestamp=resolved_generation_timestamp,
-            mapping_warnings=mapping_warnings,
-            phase4_validation_paths=phase4_validation_paths,
-            cost_models=cost_models,
-            same_bar_policies=same_bar_policies,
-        )
+        try:
+            _run_single_backtester(
+                artifact_root=artifact_root,
+                out_dir=child_dir,
+                required_paths=required_paths,
+                optional_paths=optional_paths,
+                rulesets_df=child_rulesets_df,
+                ruleset_source_formalization_mode=ruleset_source_formalization_mode,
+                variant_names=variant_names,
+                cost_model_id=cost_model_id,
+                same_bar_policy_id=same_bar_policy_id,
+                replay_semantics_version=replay_semantics_version,
+                resolved_generation_timestamp=resolved_generation_timestamp,
+                mapping_warnings=mapping_warnings,
+                phase4_validation_paths=phase4_validation_paths,
+                cost_models=cost_models,
+                same_bar_policies=same_bar_policies,
+            )
+        except Exception as exc:
+            failed_ruleset_id = str(ruleset_row["ruleset_id"])
+            orchestration_manifest = {
+                "artifact_dir": str(artifact_root),
+                "output_dir": str(out_dir),
+                "run_type": "FANOUT_PARENT_LINEAGE_ONLY",
+                "completion_state": "PARTIAL_FAILURE",
+                "ruleset_source_mode": ruleset_source_formalization_mode,
+                "variant_names": [str(v) for v in variant_names],
+                "cost_model_id": cost_model_id,
+                "same_bar_policy_id": same_bar_policy_id,
+                "replay_semantics_version": replay_semantics_version,
+                "ruleset_count": int(len(rulesets_df)),
+                "ruleset_ids": rulesets_df["ruleset_id"].astype(str).tolist(),
+                "mapping_warnings": list(mapping_warnings),
+                "phase4_validation_paths": phase4_validation_paths,
+                "derived_run_count": len(derived_run_dirs),
+                "derived_run_dirs": [str(path) for path in derived_run_dirs],
+                "planned_derived_run_dirs": [str(path) for path in planned_derived_run_dirs],
+                "failed_derived_run_dir": str(child_dir),
+                "failed_ruleset_id": failed_ruleset_id,
+                "engine_event_count": None,
+                "trade_count": None,
+                "validation_scopes": [],
+                "robustness_scopes": [],
+                "promotion_scopes": [],
+                "generation_timestamp": resolved_generation_timestamp,
+                "git_commit": _git_commit_or_unknown(),
+                "notes": _BOUNDARY_NOTES + ["fan-out replay: one isolated child run per canonical ruleset"],
+            }
+            _write_orchestration_manifest(
+                output_path=out_dir / ORCHESTRATION_MANIFEST_NAME,
+                payload=orchestration_manifest,
+            )
+            raise FanoutReplayError(
+                "Multi-ruleset fan-out replay partially completed before child failure: "
+                f"failed_ruleset_id={failed_ruleset_id}; completed_children={len(derived_run_dirs)}; "
+                f"failed_child_dir={child_dir}; cause={exc}",
+                completed_derived_run_dirs=derived_run_dirs,
+                failed_derived_run_dir=child_dir,
+                failed_ruleset_id=failed_ruleset_id,
+            ) from exc
         derived_run_dirs.append(child_dir)
 
     orchestration_manifest = {
         "artifact_dir": str(artifact_root),
         "output_dir": str(out_dir),
+        "run_type": "FANOUT_PARENT_LINEAGE_ONLY",
+        "completion_state": "COMPLETED",
         "ruleset_source_mode": ruleset_source_formalization_mode,
         "variant_names": [str(v) for v in variant_names],
         "cost_model_id": cost_model_id,
@@ -483,6 +553,7 @@ def run_backtester(
         "phase4_validation_paths": phase4_validation_paths,
         "derived_run_count": len(derived_run_dirs),
         "derived_run_dirs": [str(path) for path in derived_run_dirs],
+        "planned_derived_run_dirs": [str(path) for path in planned_derived_run_dirs],
         "engine_event_count": None,
         "trade_count": None,
         "validation_scopes": [],
