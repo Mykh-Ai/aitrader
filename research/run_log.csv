@@ -1,0 +1,10 @@
+processed_at,analyzer_run_id,backtest_output_dir,formalizable_rows,promotion_outcome,routine_status,notes
+2026-03-18,2026-03-12_to_2026-03-12_run_003,backtest_runs/smoke_2026-03-12_run_003_after_p03,1,REJECT,BACKTESTED_REJECT,Long ruleset REJECT; historical smoke run
+2026-03-18,2026-03-13_to_2026-03-13_run_002,backtest_runs/2026-03-13_to_2026-03-13_run_002_smoke_batch,1,REJECT,BACKTESTED_REJECT,Short ruleset REJECT; historical smoke run
+2026-03-18,2026-03-14_to_2026-03-14_run_001,backtest_runs/smoke_2026-03-14_run_001_after_p03,0,N/A,BACKTESTED_REJECT,No ruleset-level rows; ALL_TRADES REJECT
+2026-03-18,2026-03-14_to_2026-03-14_run_002,N/A,0,N/A,DUPLICATE_SKIP,Same-day re-run; identical SetupIds as run_001
+2026-03-18,2026-03-14_to_2026-03-14_run_003,N/A,0,N/A,DUPLICATE_SKIP,Same-day re-run; identical SetupIds as run_001
+2026-03-18,2026-03-14_to_2026-03-14_run_004,backtest_runs/smoke_2026-03-14_run_004_after_p1,0,N/A,BACKTESTED_REJECT,No ruleset-level rows; ALL_TRADES REJECT
+2026-03-18,2026-03-15_to_2026-03-15_run_001,N/A,UNKNOWN,UNKNOWN,UNPROCESSED,Not yet through routine
+2026-03-18,2026-03-16_to_2026-03-16_run_001,N/A,UNKNOWN,UNKNOWN,UNPROCESSED,Not yet through routine
+2026-03-18,2026-03-17_to_2026-03-17_run_001,N/A,UNKNOWN,UNKNOWN,UNPROCESSED,Not yet through routine
