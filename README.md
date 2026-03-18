@@ -154,6 +154,9 @@ Target boundary for production order lifecycle, restart reconciliation with exch
    - Input: analyzer artifact dir.
    - Raw lineage resolution for replay: explicit `raw_path` → `run_manifest.json` input paths → compatibility fallback `artifact_dir/raw.csv`.
    - Key outputs: `backtest_rulesets.csv`, `backtest_engine_events.csv`, `backtest_trades.csv`, `backtest_trade_metrics.csv`, `backtest_orchestration_manifest.json`.
+   - For `N > 1` replayable rulesets, replay fans out into `N` isolated child runs; each child remains a normal replay-completed unit with its own one-row canonical ruleset input.
+   - The parent fan-out manifest is lineage/orchestration-only: it is not a merged replay result, does not aggregate siblings, and does not auto-promote any child.
+   - If a later child fails after earlier children completed, completed child artifacts remain valid; the parent manifest records partial failure explicitly and campaign outputs may retain completed child rows while also recording the failed parent execution.
 
 3. **Phase 4 validation artifacts**
    - `phase4_ruleset_validation_summary.csv`
