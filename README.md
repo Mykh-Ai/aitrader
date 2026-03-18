@@ -308,6 +308,146 @@ docker logs -f shi-aggregator
 python -m analyzer.run_daily /opt/aitrader/feed/<YYYY-MM-DD>.csv --runs-root /opt/aitrader/analyzer_runs
 ```
 
+### Practical server workflow: probe Analyzer run before Backtester
+
+Activate the virtual environment first:
+
+```bash
+cd /opt/aitrader
+source .venv/bin/activate
+```
+
+Choose the exact Analyzer run directory. Keep dates in `YYYY-MM-DD` format and the run directory in `YYYY-MM-DD_to_YYYY-MM-DD_run_001` format.
+
+**Template**
+
+```text
+/opt/aitrader/analyzer_runs/YYYY-MM-DD_to_YYYY-MM-DD_run_001
+```
+
+**Example**
+
+```text
+/opt/aitrader/analyzer_runs/2026-03-14_to_2026-03-14_run_001
+```
+
+Inspect the shortlist artifact first.
+
+**Template**
+
+```bash
+python - <<'PY'
+import pandas as pd
+run_dir = "/opt/aitrader/analyzer_runs/YYYY-MM-DD_to_YYYY-MM-DD_run_001"
+df = pd.read_csv(f"{run_dir}/analyzer_setup_shortlist.csv")
+print(df.head(20).to_string(index=False))
+PY
+```
+
+**Example**
+
+```bash
+python - <<'PY'
+import pandas as pd
+run_dir = "/opt/aitrader/analyzer_runs/2026-03-14_to_2026-03-14_run_001"
+df = pd.read_csv(f"{run_dir}/analyzer_setup_shortlist.csv")
+print(df.head(20).to_string(index=False))
+PY
+```
+
+Inspect the research summary artifact next.
+
+**Template**
+
+```bash
+python - <<'PY'
+import pandas as pd
+run_dir = "/opt/aitrader/analyzer_runs/YYYY-MM-DD_to_YYYY-MM-DD_run_001"
+df = pd.read_csv(f"{run_dir}/analyzer_research_summary.csv")
+print(df.head(30).to_string(index=False))
+PY
+```
+
+Inspect only formalizable rows before starting Backtester.
+
+**Template**
+
+```bash
+python - <<'PY'
+import pandas as pd
+run_dir = "/opt/aitrader/analyzer_runs/YYYY-MM-DD_to_YYYY-MM-DD_run_001"
+df = pd.read_csv(f"{run_dir}/analyzer_research_summary.csv")
+formalizable = df[df["FormalizationEligible"] == True]
+print(formalizable.to_string(index=False))
+print(f"\nFormalizationEligible rows: {len(formalizable)}")
+PY
+```
+
+Practical interpretation:
+
+- `FormalizationEligible == 0` rows after the filter means Backtester will stop before placement.
+- `FormalizationEligible > 0` means replayable canonical rulesets may exist and Backtester can be run.
+
+Run Backtester only after the probe above.
+
+**Template**
+
+```bash
+python - <<'PY'
+from backtester.orchestrator import run_backtester
+
+run_backtester(
+    artifact_dir="/opt/aitrader/analyzer_runs/YYYY-MM-DD_to_YYYY-MM-DD_run_001",
+    output_dir="/opt/aitrader/backtests/smoke_YYYYMMDD_manual",
+    ruleset_source_formalization_mode="SHORTLIST_FIRST",
+    variant_names=("BASE",),
+    cost_model_id="COST_MODEL_ZERO_SKELETON_ONLY",
+    same_bar_policy_id="SAME_BAR_CONSERVATIVE_V0_1",
+    replay_semantics_version="REPLAY_V0_1",
+)
+PY
+```
+
+**Example**
+
+```bash
+python - <<'PY'
+from backtester.orchestrator import run_backtester
+
+run_backtester(
+    artifact_dir="/opt/aitrader/analyzer_runs/2026-03-14_to_2026-03-14_run_001",
+    output_dir="/opt/aitrader/backtests/smoke_20260314_manual",
+    ruleset_source_formalization_mode="SHORTLIST_FIRST",
+    variant_names=("BASE",),
+    cost_model_id="COST_MODEL_ZERO_SKELETON_ONLY",
+    same_bar_policy_id="SAME_BAR_CONSERVATIVE_V0_1",
+    replay_semantics_version="REPLAY_V0_1",
+)
+PY
+```
+
+Read promotion output first after the run finishes. For fan-out runs, inspect each `derived_run_*` child separately.
+
+**Template**
+
+```bash
+python - <<'PY'
+from pathlib import Path
+import pandas as pd
+
+out_dir = Path("/opt/aitrader/backtests/smoke_YYYYMMDD_manual")
+for child in sorted(out_dir.glob("derived_run_*")):
+    print(f"\n== {child.name} ==")
+    print(pd.read_csv(child / "backtest_rulesets.csv").to_string(index=False))
+    print(pd.read_csv(child / "backtest_promotion_decisions.csv").to_string(index=False))
+PY
+```
+
+Very short interpretation:
+
+- Start with each child `derived_run_*` directory, not the parent shell, as the first post-run summary surface.
+- Read `backtest_rulesets.csv` together with `backtest_promotion_decisions.csv` before deeper artifact inspection.
+
 ### Backtester (single run)
 
 ```python
