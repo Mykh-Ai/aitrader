@@ -10,7 +10,12 @@ from backtester.campaign import run_backtest_campaign
 from backtester.engine import ReplayContractError, ZeroCostSkeletonModel
 
 
-def _write_analyzer_artifacts(artifact_dir: Path, *, shortlist_direction: str = "LONG") -> None:
+def _write_analyzer_artifacts(
+    artifact_dir: Path,
+    *,
+    shortlist_direction: str = "LONG",
+    shortlist_rows: list[dict[str, object]] | None = None,
+) -> None:
     artifact_dir.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(
         [
@@ -39,26 +44,16 @@ def _write_analyzer_artifacts(artifact_dir: Path, *, shortlist_direction: str = 
             }
         ]
     ).to_csv(artifact_dir / "analyzer_setups.csv", index=False)
-    pd.DataFrame(
-        [
-            {
-                "SourceReport": "REPORT_A",
-                "GroupType": "Direction",
-                "GroupValue": shortlist_direction,
-                "SelectionDecision": "SELECT",
-            }
-        ]
-    ).to_csv(artifact_dir / "analyzer_setup_shortlist.csv", index=False)
-    pd.DataFrame(
-        [
-            {
-                "SourceReport": "REPORT_A",
-                "GroupType": "Direction",
-                "GroupValue": shortlist_direction,
-                "SelectionDecision": "SELECT",
-            }
-        ]
-    ).to_csv(artifact_dir / "analyzer_research_summary.csv", index=False)
+    shortlist_payload = shortlist_rows or [
+        {
+            "SourceReport": "REPORT_A",
+            "GroupType": "Direction",
+            "GroupValue": shortlist_direction,
+            "SelectionDecision": "SELECT",
+        }
+    ]
+    pd.DataFrame(shortlist_payload).to_csv(artifact_dir / "analyzer_setup_shortlist.csv", index=False)
+    pd.DataFrame(shortlist_payload).to_csv(artifact_dir / "analyzer_research_summary.csv", index=False)
 
 
 def _campaign_kwargs() -> dict:
@@ -183,3 +178,45 @@ def test_campaign_continue_on_error_keeps_later_runs(tmp_path: Path):
     summary = pd.read_csv(result.campaign_summary_path)
     assert int(summary.iloc[0]["RunCountCompleted"]) == 2
     assert int(summary.iloc[0]["RunCountFailed"]) == 1
+
+
+def test_campaign_multi_ruleset_fanout_appends_one_registry_row_per_child_run(tmp_path: Path):
+    artifact_dir = tmp_path / "fanout"
+    _write_analyzer_artifacts(
+        artifact_dir,
+        shortlist_rows=[
+            {
+                "SourceReport": "REPORT_A",
+                "GroupType": "Direction",
+                "GroupValue": "LONG",
+                "SelectionDecision": "SELECT",
+            },
+            {
+                "SourceReport": "REPORT_B",
+                "GroupType": "Direction",
+                "GroupValue": "SHORT",
+                "SelectionDecision": "SELECT",
+            },
+        ],
+    )
+
+    result = run_backtest_campaign(
+        artifact_dirs=[artifact_dir],
+        output_dir=tmp_path / "campaign",
+        **_campaign_kwargs(),
+    )
+
+    registry = pd.read_csv(result.registry_path)
+    assert len(registry.index) == 2
+    assert registry["RulesetId"].tolist() == [
+        "RULESET_REPORT_A_DIRECTION_LONG_V1_LONG_BASE",
+        "RULESET_REPORT_B_DIRECTION_SHORT_V1_SHORT_BASE",
+    ]
+
+    run_index = pd.read_csv(result.campaign_run_index_path)
+    assert len(run_index.index) == 2
+    assert run_index["RunId"].tolist() == [1, 1]
+    assert run_index["RunDir"].str.contains("derived_run_").all()
+    assert run_index["ExperimentId"].str.endswith(("__derived_0001", "__derived_0002")).all()
+    assert run_index["ExperimentId"].is_unique
+    assert run_index["ExperimentId"].str.contains("derived_").all()
