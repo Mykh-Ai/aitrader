@@ -58,6 +58,24 @@ stabilization/completion addendum for this spec. It clarifies implemented reprod
 artifact-contract, and Phase 2→3 handoff surfaces, but does not replace the Analyzer
 boundary defined in this document.
 
+### Phase 3 Replay Cardinality Extension
+
+In shortlist-based formalization, canonical replay inputs may contain more than one
+replayable ruleset. The confirmed Phase 3 baseline seam is at the replay boundary
+between orchestration and placement: formalization may already produce `0..N`
+canonical rulesets, while replay entry still assumes one canonical ruleset per replay
+run.
+
+For the first Phase 3 extension baseline, canonical multi-ruleset replay is introduced
+through one analyzer artifact that fans out into many derived isolated replay runs,
+with one derived replay run per canonical ruleset. This preserves the current
+single-ruleset baseline as a valid path and keeps the existing placement-side
+exact-one-ruleset contract valid for each derived run.
+
+This extension does not expand Analyzer scope, change promotion policy, or introduce
+registry aggregation or auto-promotion language into the spec. Implementation detail
+and rollout sequencing are defined in `docs/Phase3_Multi_Ruleset_Replay_Roadmap.md`.
+
 ---
 
 ## Implemented Analyzer Architecture
