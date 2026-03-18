@@ -142,7 +142,7 @@ def run_backtest_campaign(
 
         started = time.monotonic()
         try:
-            run_backtester(
+            run_result = run_backtester(
                 artifact_dir=artifact_dir,
                 output_dir=run_dir,
                 ruleset_source_formalization_mode=ruleset_source_formalization_mode,
@@ -155,34 +155,46 @@ def run_backtest_campaign(
                 **shared_kwargs,
             )
             duration_seconds = time.monotonic() - started
-            registry_row = build_registry_row_for_completed_run(
-                run_dir=run_dir,
-                input_artifact_dir=artifact_dir,
-                experiment_id=experiment_id,
-                experiment_label=experiment_label,
-                duration_seconds=duration_seconds,
-                run_timestamp=run_timestamp,
-                notes="campaign completed run",
-            )
-            append_registry_row(registry_path=resolved_registry_path, row=registry_row)
+            completed_run_dirs = list(run_result.derived_run_dirs) or [run_dir]
 
-            run_index_rows.append(
-                {
-                    "RunId": run_idx,
-                    "ExperimentId": experiment_id,
-                    "ArtifactDir": str(artifact_dir),
-                    "RunDir": str(run_dir),
-                    "RulesetId": registry_row["RulesetId"],
-                    "ValidationSummaryStatus": registry_row["ValidationSummaryStatus"],
-                    "PromotionSummaryStatus": registry_row["PromotionSummaryStatus"],
-                    "TradeCount": registry_row["TradeCount"],
-                    "ResolvedTradeCount": registry_row["ResolvedTradeCount"],
-                    "DurationSeconds": registry_row["DurationSeconds"],
-                    "GitCommit": registry_row["GitCommit"],
-                    "CompletionState": "COMPLETED",
-                    "Error": "",
-                }
-            )
+            for derived_idx, completed_run_dir in enumerate(completed_run_dirs, start=1):
+                derived_experiment_id = experiment_id
+                derived_experiment_label = experiment_label
+                derived_notes = "campaign completed run"
+                if len(completed_run_dirs) > 1:
+                    derived_suffix = f"derived_{derived_idx:04d}"
+                    derived_experiment_id = f"{experiment_id}__{derived_suffix}"
+                    derived_experiment_label = f"{experiment_label}__{derived_suffix}"
+                    derived_notes = "campaign completed derived replay run"
+
+                registry_row = build_registry_row_for_completed_run(
+                    run_dir=completed_run_dir,
+                    input_artifact_dir=artifact_dir,
+                    experiment_id=derived_experiment_id,
+                    experiment_label=derived_experiment_label,
+                    duration_seconds=duration_seconds,
+                    run_timestamp=run_timestamp,
+                    notes=derived_notes,
+                )
+                append_registry_row(registry_path=resolved_registry_path, row=registry_row)
+
+                run_index_rows.append(
+                    {
+                        "RunId": run_idx,
+                        "ExperimentId": derived_experiment_id,
+                        "ArtifactDir": str(artifact_dir),
+                        "RunDir": str(completed_run_dir),
+                        "RulesetId": registry_row["RulesetId"],
+                        "ValidationSummaryStatus": registry_row["ValidationSummaryStatus"],
+                        "PromotionSummaryStatus": registry_row["PromotionSummaryStatus"],
+                        "TradeCount": registry_row["TradeCount"],
+                        "ResolvedTradeCount": registry_row["ResolvedTradeCount"],
+                        "DurationSeconds": registry_row["DurationSeconds"],
+                        "GitCommit": registry_row["GitCommit"],
+                        "CompletionState": "COMPLETED",
+                        "Error": "",
+                    }
+                )
         except Exception as exc:
             run_index_rows.append(
                 {
