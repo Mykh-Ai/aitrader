@@ -24,6 +24,7 @@ It is **not** a live execution bot yet. Executor concerns (exchange order lifecy
 | Analyzer | ✅ Implemented | Facts engine + setup research pipeline; deterministic CSV artifacts |
 | Backtester | ✅ Implemented (baseline) | Ruleset formalization, placement baseline, replay, ledger, metrics, validation, robustness, promotion, orchestration |
 | Campaign / Registry (Phase 5 baseline) | ✅ Implemented (baseline) | Multi-run campaign artifacts + append-only experiment registry |
+| Research Operations | ✅ Implemented | Automated routine cycle (`research_cycle.py`), weekly agent/architect workflow, verdict persistence |
 | Executor | 🔜 Planned | Live exchange runtime is not implemented in this repository |
 
 ## 3) System architecture (participants/layers)
@@ -43,6 +44,10 @@ Backtester
         │
         ├─ per-run artifacts (manifests, trades, metrics, validation, promotion)
         └─ campaign + experiment_registry (multi-run observational tracking)
+
+Research Operations (research_cycle.py)
+  - automated probe → replay → record → slice → diagnostics
+  - agent (weekly_research.txt) → handoff/ → architect (Shi_research.txt) → verdicts/
 
 Executor (planned; separate boundary)
 ```
@@ -111,6 +116,18 @@ Target boundary for production order lifecycle, restart reconciliation with exch
 │   ├── orchestrator.py
 │   ├── campaign.py
 │   └── experiment_registry.py
+├── research_cycle.py              — automated routine pipeline (runs on server)
+├── prompts/
+│   ├── weekly_research.txt        — agent prompt (routine cycle)
+│   └── Shi_research.txt           — architect prompt (verdict)
+├── research/
+│   ├── OPS.md                     — operations guide
+│   ├── run_log.csv                — processing history
+│   ├── slice_analysis_reclaim_context.py
+│   ├── findings/                  — frozen research memos
+│   ├── results/                   — slice analysis snapshots
+│   ├── verdicts/                  — weekly architect verdicts
+│   └── handoff/                   — ephemeral agent→architect data (not in git)
 ├── scripts/run_analyzer_daily.sh
 ├── docs/
 │   ├── Spec_v1.0.md
@@ -308,8 +325,27 @@ docker logs -f shi-aggregator
 python -m analyzer.run_daily /opt/aitrader/feed/<YYYY-MM-DD>.csv --runs-root /opt/aitrader/analyzer_runs
 ```
 
-### Practical server workflow: probe Analyzer run before Backtester
+### Routine research cycle (automated)
 
+Weekly cycle is automated via `research_cycle.py`:
+
+```bash
+# Full routine: probe → replay → record → slice → diagnostics
+cd /opt/aitrader && source .venv/bin/activate
+python3 research_cycle.py
+
+# Dry run (probe + diagnostics only, no replay)
+python3 research_cycle.py --dry-run
+```
+
+The script outputs structured JSON. The agent (`prompts/weekly_research.txt`) parses it into
+`research/handoff/`, then the architect (`prompts/Shi_research.txt`) writes a verdict.
+
+See `research/README.md` for the full weekly workflow instructions.
+
+### Practical server workflow: manual probe before Backtester
+
+For ad-hoc exploration outside the routine cycle.
 Activate the virtual environment first:
 
 ```bash
