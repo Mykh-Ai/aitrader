@@ -6,3 +6,4 @@ __pycache__/
 .claude/
 analyzer_runs/
 backtest_runs/
+research/handoff/
