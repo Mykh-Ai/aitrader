@@ -17,8 +17,9 @@ All scripts are read-only against existing analyzer/backtester artifacts.
 ```
 Відкрий prompts/weekly_research.txt → вставь в чат → виконай
 ```
-Агент підключиться до сервера, знайде нові analyzer runs, прожене backtester,
-запише результати і сформує `research/handoff/` з пакетом даних для архітектора.
+Агент запустить `research_cycle.py` на сервері (один SSH call),
+отримає JSON з результатами, перевірить якість даних,
+оновить `run_log.csv` і сформує `research/handoff/`.
 
 **Крок 2 — Архітектор (verdict)**
 ```
@@ -39,15 +40,29 @@ All scripts are read-only against existing analyzer/backtester artifacts.
 ## Data flow
 
 ```
-prompts/weekly_research.txt          prompts/Shi_research.txt
-         │                                      │
-    [Крок 1: агент]                     [Крок 2: архітектор]
-         │                                      │
-         ▼                                      ▼
-  server: probe + replay              reads research/handoff/
-  research/run_log.csv (update)        reads previous verdict
-  research/results/ (snapshot)         writes research/verdicts/
-  research/handoff/ (6 files) ───────► cleans research/handoff/
+                        SERVER                             LOCAL REPO
+                          │                                    │
+  cron → analyzer         │                                    │
+       → analyzer_runs/   │                                    │
+                          │                                    │
+  research_cycle.py ──────┤   prompts/weekly_research.txt      │
+    probe + replay        │              │                     │
+    _processed.json       │         [Крок 1: агент]            │
+    slice analysis        │              │                     │
+    diagnostics           │              ▼                     │
+         │                │    parse JSON output               │
+         └── JSON ────────┼──► run_log.csv (update)            │
+              stdout      │    results/ (snapshot)             │
+                          │    handoff/ (7 files)              │
+                          │              │                     │
+                          │    prompts/Shi_research.txt        │
+                          │              │                     │
+                          │         [Крок 2: архітектор]       │
+                          │              │                     │
+                          │              ▼                     │
+                          │    reads handoff/                  │
+                          │    writes verdicts/                │
+                          │    cleans handoff/                 │
 ```
 
 ---
@@ -55,28 +70,36 @@ prompts/weekly_research.txt          prompts/Shi_research.txt
 ## Structure
 
 ```
-research/
-├── README.md                              — ця інструкція
-├── OPS.md                                 — операційний довідник агента
-├── run_log.csv                            — журнал всіх оброблених runs
-├── slice_analysis_reclaim_context.py      — reusable slice analysis script
-├── findings/                              — research memos (frozen, не міняти)
-│   └── 2026-03_reclaim_context_asymmetry.md
-├── results/                               — structured output snapshots
-│   ├── reclaim_context_asymmetry_summary.csv
-│   └── reclaim_context_asymmetry_summary_<YYYY-MM-DD>.csv
-├── verdicts/                              — weekly architect verdicts
-│   └── weekly_<YYYY-MM-DD>.md
-└── handoff/                               — тимчасовий пакет агент→архітектор
-    ├── cycle_meta.json                       (НЕ в git, очищується після verdict)
-    ├── probe_summary.csv
-    ├── promotion_details.csv
-    ├── slice_comparison.csv
-    ├── slice_raw_output.txt
-    └── previous_verdict.md
+Aitrader/
+├── research_cycle.py                      — automated pipeline script (also on server)
+│
+├── research/
+│   ├── README.md                          — ця інструкція
+│   ├── OPS.md                             — операційний довідник
+│   ├── run_log.csv                        — журнал всіх оброблених runs
+│   ├── slice_analysis_reclaim_context.py  — reusable slice analysis script
+│   ├── findings/                          — research memos (frozen, не міняти)
+│   │   └── 2026-03_reclaim_context_asymmetry.md
+│   ├── results/                           — structured output snapshots
+│   │   ├── reclaim_context_asymmetry_summary.csv
+│   │   └── reclaim_context_asymmetry_summary_<YYYY-MM-DD>.csv
+│   ├── verdicts/                          — weekly architect verdicts
+│   │   └── weekly_<YYYY-MM-DD>.md
+│   └── handoff/                           — тимчасовий пакет агент→архітектор
+│       ├── cycle_meta.json                   (НЕ в git, очищується після verdict)
+│       ├── probe_summary.csv
+│       ├── promotion_details.csv
+│       ├── slice_comparison.csv
+│       ├── slice_raw_output.txt
+│       ├── previous_verdict.md
+│       └── diagnostics.json
+│
+├── prompts/
+│   ├── weekly_research.txt                — промт для агента (крок 1)
+│   └── Shi_research.txt                   — промт для архітектора (крок 2)
 ```
 
-## Running the slice analysis
+## Running the slice analysis (standalone)
 
 ```bash
 # Default: uses analyzer_runs/ relative to repo root
@@ -89,8 +112,11 @@ python research/slice_analysis_reclaim_context.py --runs-dir /opt/aitrader/analy
 python research/slice_analysis_reclaim_context.py --runs-dir /opt/aitrader/analyzer_runs --date-from 2026-03-12 --date-to 2026-03-17
 ```
 
+Note: slice analysis is also included in `research_cycle.py` — standalone use is for ad-hoc exploration only.
+
 ## Rules
 
 - Do NOT change slicing logic between runs — methodology must be frozen per finding
 - Do NOT add new dimensions without a new dated finding memo
 - Do NOT use these scripts for live trading decisions
+- Do NOT modify `research_cycle.py` parameters — they are frozen
