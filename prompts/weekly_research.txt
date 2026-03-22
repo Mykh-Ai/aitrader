@@ -18,80 +18,61 @@
 
 1. `research/OPS.md` — операційний довідник:
    - SSH + venv, шляхи на сервері
-   - як визначити processed/unprocessed runs (_processed.json)
-   - стандартні параметри backtester (заморожені)
-   - як писати маркер після обробки
-   - таблиця outcome states
+   - outcome states таблиця
+   - run_log.csv протокол (replace UNPROCESSED, не дублювати)
 
-2. `research/run_log.csv` — журнал вже оброблених runs:
-   - що вже пройшло routine, з яким результатом
-   - рядки зі статусом UNPROCESSED — кандидати для цього циклу
+2. `research/run_log.csv` — журнал вже оброблених runs
 
 3. `research/findings/` — зафіксовані research findings (не міняй)
-
-==================================================
-ПОТОЧНИЙ СТАН ПРОЄКТУ
-==================================================
-
-- Усі backtested runs до сьогодні: REJECT
-- Жодного REVIEW або PROMOTE кандидата не було
-- Це очікуваний стан — ми в early research mode
-- Ключовий сигнал який треба помітити: перший run де promotion_outcome != REJECT
 
 ==================================================
 ЗАДАЧА ЦЬОГО ЦИКЛУ
 ==================================================
 
-## Крок 1 — Знайти unprocessed runs
+## Крок 1 — Запустити research_cycle.py на сервері
 
-На сервері (`/opt/aitrader/analyzer_runs/`):
-- runs БЕЗ `_processed.json` = нові, треба обробити
-- runs З `_processed.json` = вже оброблені, пропустити
+Один виклик замість ручного probe/replay/record:
 
-Також звір з `research/run_log.csv` — рядки UNPROCESSED підтверджують список.
+```bash
+ssh server "cd /opt/aitrader && source .venv/bin/activate && python3 research_cycle.py"
+```
 
-## Крок 2 — Для кожного нового run: probe → decide → replay → record
+Скрипт автоматично:
+- знаходить unprocessed runs (_processed.json відсутній)
+- probe кожного (setups, shortlist, FormalizationEligible)
+- replay через backtester якщо FE > 0 (заморожені параметри)
+- читає promotion decisions
+- пише _processed.json маркери
+- запускає slice analysis
+- виводить JSON на stdout
 
-### Probe
-Перевір наявність:
-- `analyzer_setups.csv`, `analyzer_setup_shortlist.csv`, `analyzer_research_summary.csv`
-Порахуй: setups / shortlist rows / FormalizationEligible rows
+Для тестового запуску без replay:
+```bash
+ssh server "cd /opt/aitrader && source .venv/bin/activate && python3 research_cycle.py --dry-run"
+```
 
-### Decide
-- FormalizationEligible == 0 → статус NO_REPLAYABLE_RULESETS, replay не запускати
-- FormalizationEligible > 0 → запускати backtester (параметри в OPS.md секція 4)
+Збережи повний JSON output — він потрібен для всіх наступних кроків.
 
-### Replay (якщо eligible)
-Параметри і команди — точно за `research/OPS.md`, секція 4.
-Output dir: `/opt/aitrader/backtest_runs/<run_id>_routine_<YYYYMMDD>`
+## Крок 2 — Валідація якості даних
 
-### Читати результат
-Читати `backtest_promotion_decisions.csv`.
-Для fan-out runs — кожен `derived_run_*` окремо.
-Визначити один outcome state (список в OPS.md секція 5).
+Перевір секцію `diagnostics` в JSON output:
 
-### Record — БЛОКУЮЧИЙ КРОК
-Виконати ДО переходу до наступного run. Перевірити обидва пункти:
+- `feed_coverage.missing_days` — чи є пропуски у feed?
+- `analyzer_coverage` — скільки runs total/processed/unprocessed?
+- `unprocessed_anomalies` — чи є runs з missing/empty артефактами?
+- `data_quality_flags` — патерни (consecutive FE=0 тощо)
 
-[ ] написаний `_processed.json` в `analyzer_runs/<run_id>/` (формат в OPS.md секція 2)
-[ ] рядок доданий в `research/run_log.csv`
-
-Якщо хоч один пункт не виконаний — не переходити до наступного run.
+Якщо є anomalies — зафіксуй в handoff, не ігноруй.
 
 ## Крок 3 — Перевірити ключовий project signal
 
-Окремо відповісти:
-- Чи є хоч один run з promotion_outcome = REVIEW?
-- Чи є хоч один run з promotion_outcome = PROMOTE?
-- Якщо ні — чесно зафіксувати: all-REJECT, research mode continues
+З JSON output перевір `results[].promotion_outcome`:
+- Чи є хоч один != REJECT?
+- Якщо ні — all-REJECT, research mode continues
 
-## Крок 4 — Оновити slice analysis (якщо є нові runs)
+## Крок 4 — Порівняти slice analysis з попереднім snapshot
 
-Запустити:
-    python research/slice_analysis_reclaim_context.py \
-      --runs-dir /opt/aitrader/analyzer_runs
-
-Методологію не змінювати.
+Slice output є в JSON (`slice_output`).
 Порівняти з попереднім snapshot:
 - dir: `research/results/`
 - naming: `reclaim_context_asymmetry_summary_<YYYY-MM-DD>.csv`
@@ -102,30 +83,42 @@ Output dir: `/opt/aitrader/backtest_runs/<run_id>_routine_<YYYYMMDD>`
 зафіксувати в новому файлі:
 `research/results/reclaim_context_asymmetry_summary_<YYYY-MM-DD>.csv`
 
-## Крок 5 — Сформувати handoff для архітектора
+## Крок 5 — Оновити run_log.csv
 
-Очисти `research/handoff/` (якщо є залишки від минулого циклу) і запиши:
+З JSON output `results[]` оновити `research/run_log.csv`:
+- Якщо рядок з `routine_status=UNPROCESSED` вже є → **replace**
+- Якщо рядка немає → **append**
+- Ніколи не дублювати рядки для одного `analyzer_run_id`
+
+Формат рядка:
+```
+YYYY-MM-DD,<run_id>,<backtest_output_dir>,<FE>,<promotion_outcome>,<routine_status>,<notes>
+```
+
+## Крок 6 — Сформувати handoff для архітектора
+
+Очисти `research/handoff/` (якщо є залишки) і запиши:
 
 ### cycle_meta.json
 ```json
 {
   "cycle_date": "YYYY-MM-DD",
-  "runs_processed": 7,
-  "runs_backtested": 3,
-  "runs_no_replay": 4,
-  "scope": "03-15 → 03-21",
-  "agent_commit": "<git commit hash від кроку 6>"
+  "runs_processed": N,
+  "runs_backtested": N,
+  "runs_no_replay": N,
+  "scope": "MM-DD → MM-DD",
+  "agent_commit": "<git commit hash від кроку 7>"
 }
 ```
 
 ### probe_summary.csv
-Per-run probe results:
+З JSON `results[].probe`:
 ```
 run_id,setups,shortlist_rows,formalization_eligible,replay_status,promotion_outcome
 ```
 
 ### promotion_details.csv
-Per derived_run з backtested runs (пропустити NO_REPLAYABLE_RULESETS):
+З JSON `results[].promotion_details` (тільки backtested runs):
 ```
 run_id,derived_run,scope,promotion_decision,validation_status,robustness_status
 ```
@@ -137,19 +130,21 @@ snapshot_date,direction,slice,n,pos_rate_pct,mean_ret_pct,median_ret_pct,mean_mf
 ```
 
 ### slice_raw_output.txt
-Повний stdout від `slice_analysis_reclaim_context.py`.
+З JSON `slice_output`.
 
 ### previous_verdict.md
 Копія останнього файлу з `research/verdicts/` (файл з найсвіжішою датою).
 Якщо verdicts/ порожній — пропустити, написати в cycle_meta.json: `"previous_verdict": "none"`.
 
-**Handoff НЕ комітиться в git** — він тимчасовий, для передачі між ролями.
+### diagnostics.json
+З JSON `diagnostics` — повна секція діагностики як є.
 
-## Крок 6 — Git commit
+**Handoff НЕ комітиться в git** — він тимчасовий.
+
+## Крок 7 — Git commit
 
 Закомітити зміни:
 - оновлений `research/run_log.csv`
-- оновлений `research/OPS.md` (якщо змінювався)
 - новий results snapshot (якщо є)
 
 Записати commit hash в `research/handoff/cycle_meta.json` (поле `agent_commit`).
@@ -161,6 +156,7 @@ snapshot_date,direction,slice,n,pos_rate_pct,mean_ret_pct,median_ret_pct,mean_mf
 - Не міняти threshold / slice logic
 - Не міняти параметри backtester
 - Не міняти analyzer / backtester код
+- Не міняти research_cycle.py
 - Не пропонувати production changes поки немає REVIEW/PROMOTE
 - Не змішувати `backtest_runs/` smoke-копії з основними runs
 
@@ -170,12 +166,12 @@ snapshot_date,direction,slice,n,pos_rate_pct,mean_ret_pct,median_ret_pct,mean_mf
 
 A. Preflight
 - repo root, branch
-- список unprocessed runs знайдено
+- research_cycle.py вивід: runs found, scope
 
 B. Per-run результати
-Для кожного обробленого run:
+Для кожного run з JSON:
 - run_id
-- setups / shortlist / formalizable rows
+- setups / shortlist / FE
 - replay status
 - promotion outcome
 
@@ -183,12 +179,18 @@ C. Ключовий project signal
 - перший REVIEW/PROMOTE? Або all-REJECT?
 
 D. Slice analysis update
-- чи запускалась, що змінилось (або "без змін")
+- що змінилось (або "без змін")
 
-E. Що записано
-- _processed.json маркери (список)
-- рядки додані в run_log.csv
+E. Діагностика якості
+- feed coverage gaps
+- anomalies
+- data quality flags
+
+F. Що записано
+- _processed.json маркери (записані скриптом)
+- рядки в run_log.csv
+- handoff/ файли
 - git commit hash
 
-F. Наступний крок
+G. Наступний крок
 - один вузький крок
