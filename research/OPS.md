@@ -153,12 +153,12 @@ Methodology is frozen — do NOT change slice logic between runs.
 
 ---
 
-## 8. Current project state (as of 2026-03-18)
+## 8. Current project state (as of 2026-03-22)
 
 - All backtested runs to date: **REJECT**
 - No REVIEW or PROMOTE candidate has appeared yet
 - This is expected — we are in early research mode
-- `_processed.json` markers exist for: 03-12 run_003, 03-13 run_002, 03-14 run_001/002/003/004
-- Unprocessed (no marker): **03-15 run_001, 03-16 run_001, 03-17 run_001**
+- `_processed.json` markers exist for: 03-12 run_003, 03-13 run_002, 03-14 run_001/002/003/004, 03-15 run_001, 03-16 run_001, 03-17 run_001, 03-18 run_001, 03-19 run_001, 03-20 run_001, 03-21 run_001
+- Unprocessed (no marker): **none as of 2026-03-22**
 
 The key signal to watch for: first run where `promotion_outcome != REJECT`.
