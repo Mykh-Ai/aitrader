@@ -92,14 +92,21 @@ Output dir: `/opt/aitrader/backtest_runs/<run_id>_routine_<YYYYMMDD>`
       --runs-dir /opt/aitrader/analyzer_runs
 
 Методологію не змінювати.
-Порівняти з попереднім snapshot у `research/results/`.
-Якщо результати суттєво змінились — зафіксувати в новому файлі:
+Порівняти з попереднім snapshot:
+- dir: `research/results/`
+- naming: `reclaim_context_asymmetry_summary_<YYYY-MM-DD>.csv`
+- baseline (без дати): `reclaim_context_asymmetry_summary.csv`
+- знайти файл з найсвіжішою датою або baseline, якщо dated файлів ще немає
+
+Якщо результати суттєво змінились (n, pos_rate, mean_ret дельта > noise) —
+зафіксувати в новому файлі:
 `research/results/reclaim_context_asymmetry_summary_<YYYY-MM-DD>.csv`
 
 ## Крок 5 — Git commit
 
 Закомітити зміни:
 - оновлений `research/run_log.csv`
+- оновлений `research/OPS.md` (якщо змінювався)
 - новий results snapshot (якщо є)
 
 ==================================================

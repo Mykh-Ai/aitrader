@@ -60,10 +60,15 @@ pathlib.Path("/opt/aitrader/analyzer_runs/<run_id>/_processed.json").write_text(
 )
 ```
 
-### Also append to `research/run_log.csv` (in repo, git-tracked)
+### Also update `research/run_log.csv` (in repo, git-tracked)
 
-After writing `_processed.json`, append one row to `research/run_log.csv`:
+After writing `_processed.json`, update `research/run_log.csv`:
 
+- If the run already has a row with `routine_status=UNPROCESSED` → **replace** that row with final values.
+- If the run has no row yet → **append** a new row.
+- Never create duplicate rows for the same `analyzer_run_id`.
+
+Row format:
 ```
 YYYY-MM-DD,<analyzer_run_id>,<backtest_output_dir>,<formalizable_rows>,<promotion_outcome>,<routine_status>,<notes>
 ```
@@ -153,12 +158,13 @@ Methodology is frozen — do NOT change slice logic between runs.
 
 ---
 
-## 8. Current project state (as of 2026-03-22)
+## 8. Current project state
 
-- All backtested runs to date: **REJECT**
-- No REVIEW or PROMOTE candidate has appeared yet
-- This is expected — we are in early research mode
-- `_processed.json` markers exist for: 03-12 run_003, 03-13 run_002, 03-14 run_001/002/003/004, 03-15 run_001, 03-16 run_001, 03-17 run_001, 03-18 run_001, 03-19 run_001, 03-20 run_001, 03-21 run_001
-- Unprocessed (no marker): **none as of 2026-03-22**
+**Do not maintain a manual list of processed runs here — it goes stale.**
+
+Authoritative sources:
+- **Server**: `ls /opt/aitrader/analyzer_runs/*/_processed.json` — which runs have markers
+- **Repo**: `research/run_log.csv` — full processing history with outcomes
+- **Verdicts**: `research/verdicts/weekly_<YYYY-MM-DD>.md` — architect interpretation per cycle
 
 The key signal to watch for: first run where `promotion_outcome != REJECT`.
