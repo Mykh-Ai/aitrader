@@ -102,12 +102,57 @@ Output dir: `/opt/aitrader/backtest_runs/<run_id>_routine_<YYYYMMDD>`
 зафіксувати в новому файлі:
 `research/results/reclaim_context_asymmetry_summary_<YYYY-MM-DD>.csv`
 
-## Крок 5 — Git commit
+## Крок 5 — Сформувати handoff для архітектора
+
+Очисти `research/handoff/` (якщо є залишки від минулого циклу) і запиши:
+
+### cycle_meta.json
+```json
+{
+  "cycle_date": "YYYY-MM-DD",
+  "runs_processed": 7,
+  "runs_backtested": 3,
+  "runs_no_replay": 4,
+  "scope": "03-15 → 03-21",
+  "agent_commit": "<git commit hash від кроку 6>"
+}
+```
+
+### probe_summary.csv
+Per-run probe results:
+```
+run_id,setups,shortlist_rows,formalization_eligible,replay_status,promotion_outcome
+```
+
+### promotion_details.csv
+Per derived_run з backtested runs (пропустити NO_REPLAYABLE_RULESETS):
+```
+run_id,derived_run,scope,promotion_decision,validation_status,robustness_status
+```
+
+### slice_comparison.csv
+Рядки з попереднього snapshot + рядки з нового, з колонкою `snapshot_date`:
+```
+snapshot_date,direction,slice,n,pos_rate_pct,mean_ret_pct,median_ret_pct,mean_mfe_pct,mean_mae_pct
+```
+
+### slice_raw_output.txt
+Повний stdout від `slice_analysis_reclaim_context.py`.
+
+### previous_verdict.md
+Копія останнього файлу з `research/verdicts/` (файл з найсвіжішою датою).
+Якщо verdicts/ порожній — пропустити, написати в cycle_meta.json: `"previous_verdict": "none"`.
+
+**Handoff НЕ комітиться в git** — він тимчасовий, для передачі між ролями.
+
+## Крок 6 — Git commit
 
 Закомітити зміни:
 - оновлений `research/run_log.csv`
 - оновлений `research/OPS.md` (якщо змінювався)
 - новий results snapshot (якщо є)
+
+Записати commit hash в `research/handoff/cycle_meta.json` (поле `agent_commit`).
 
 ==================================================
 ЧОГО НЕ МОЖНА РОБИТИ
