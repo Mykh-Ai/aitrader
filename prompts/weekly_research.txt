@@ -114,8 +114,10 @@ YYYY-MM-DD,<run_id>,<backtest_output_dir>,<FE>,<promotion_outcome>,<routine_stat
 ### probe_summary.csv
 З JSON `results[].probe`:
 ```
-run_id,setups,shortlist_rows,formalization_eligible,replay_status,promotion_outcome
+run_id,setups,shortlist_rows,formalization_eligible,replay_status,promotion_outcome,EventDensityClass,RangeExpansionClass,FlowStressClass,PhaseHeuristicLabel
 ```
+Останні 4 колонки — per-run regime labels з `analyzer_day_regime_report.csv`.
+Якщо артефакт відсутній для конкретного run — значення `NA`.
 
 ### promotion_details.csv
 З JSON `results[].promotion_details` (тільки backtested runs):
