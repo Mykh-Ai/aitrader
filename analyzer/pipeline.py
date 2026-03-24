@@ -7,6 +7,7 @@ from pathlib import Path
 from .absorption import detect_absorption
 from .base_metrics import add_base_metrics
 from .context_reports import build_setup_context_report
+from .day_regime_report import build_day_regime_report
 from .events import build_events
 from .failed_breaks import detect_failed_breaks
 from .io import ensure_output_dir, save_dataframe
@@ -44,6 +45,7 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
     shortlist = build_setup_shortlist(rankings, selections)
     shortlist_explanations = build_setup_shortlist_explanations(shortlist)
     research_summary = build_research_summary(shortlist, shortlist_explanations, setups)
+    day_regime_report = build_day_regime_report(features, events, setups, shortlist, research_summary)
 
     out_dir = ensure_output_dir(output_dir)
     features_path = save_dataframe(features, out_dir / "analyzer_features.csv")
@@ -60,6 +62,7 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
         out_dir / "analyzer_setup_shortlist_explanations.csv",
     )
     research_summary_path = save_dataframe(research_summary, out_dir / "analyzer_research_summary.csv")
+    day_regime_report_path = save_dataframe(day_regime_report, out_dir / "analyzer_day_regime_report.csv")
 
     return {
         "features": features,
@@ -73,6 +76,7 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
         "shortlist": shortlist,
         "shortlist_explanations": shortlist_explanations,
         "research_summary": research_summary,
+        "day_regime_report": day_regime_report,
         "features_path": features_path,
         "events_path": events_path,
         "setups_path": setups_path,
@@ -84,4 +88,5 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
         "shortlist_path": shortlist_path,
         "shortlist_explanations_path": shortlist_explanations_path,
         "research_summary_path": research_summary_path,
+        "day_regime_report_path": day_regime_report_path,
     }
