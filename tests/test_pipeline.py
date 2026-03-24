@@ -10,6 +10,7 @@ from analyzer.selections import SELECTION_COLUMNS
 from analyzer.shortlist_explanations import SHORTLIST_EXPLANATION_COLUMNS
 from analyzer.shortlists import SHORTLIST_COLUMNS
 from analyzer.research_summary import RESEARCH_SUMMARY_COLUMNS
+from analyzer.day_regime_report import DAY_REGIME_REPORT_COLUMNS
 
 
 RANKING_INPUT_COLUMNS = [
@@ -47,6 +48,9 @@ def test_pipeline_succeeds_with_valid_empty_day_outputs(tmp_path):
 
     assert list(result["research_summary"].columns) == RESEARCH_SUMMARY_COLUMNS
     assert result["research_summary"].empty
+
+    assert list(result["day_regime_report"].columns) == DAY_REGIME_REPORT_COLUMNS
+    assert not result["day_regime_report"].empty
 
 
 def test_pipeline_smoke_writes_outputs_with_valid_report_baseline(tmp_path, monkeypatch):
@@ -106,6 +110,7 @@ def test_pipeline_smoke_writes_outputs_with_valid_report_baseline(tmp_path, monk
     assert result["shortlist_path"].exists()
     assert result["shortlist_explanations_path"].exists()
     assert result["research_summary_path"].exists()
+    assert result["day_regime_report_path"].exists()
     assert result["setups_path"].name == "analyzer_setups.csv"
     assert result["outcomes_path"].name == "analyzer_setup_outcomes.csv"
     assert result["report_path"].name == "analyzer_setup_report.csv"
@@ -115,6 +120,7 @@ def test_pipeline_smoke_writes_outputs_with_valid_report_baseline(tmp_path, monk
     assert result["shortlist_path"].name == "analyzer_setup_shortlist.csv"
     assert result["shortlist_explanations_path"].name == "analyzer_setup_shortlist_explanations.csv"
     assert result["research_summary_path"].name == "analyzer_research_summary.csv"
+    assert result["day_regime_report_path"].name == "analyzer_day_regime_report.csv"
 
 
 def test_pipeline_output_contains_implemented_feature_columns(tmp_path, monkeypatch):
@@ -408,3 +414,28 @@ def test_pipeline_succeeds_on_small_sample_when_numeric_context_buckets_are_not_
     assert not result["context_report"].empty
     assert "RelVolume_20" not in result["context_report"]["GroupType"].values
     assert not result["rankings"].empty
+
+
+def test_pipeline_legacy_output_paths_preserved_with_additive_regime_output(tmp_path):
+    fixture = Path(__file__).parent / "fixtures" / "sample_raw_minimal.csv"
+
+    result = run(fixture, tmp_path)
+
+    legacy_paths = {
+        "features_path": "analyzer_features.csv",
+        "events_path": "analyzer_events.csv",
+        "setups_path": "analyzer_setups.csv",
+        "outcomes_path": "analyzer_setup_outcomes.csv",
+        "report_path": "analyzer_setup_report.csv",
+        "context_report_path": "analyzer_setup_context_report.csv",
+        "rankings_path": "analyzer_setup_rankings.csv",
+        "selections_path": "analyzer_setup_selections.csv",
+        "shortlist_path": "analyzer_setup_shortlist.csv",
+        "shortlist_explanations_path": "analyzer_setup_shortlist_explanations.csv",
+        "research_summary_path": "analyzer_research_summary.csv",
+    }
+
+    for key, filename in legacy_paths.items():
+        assert result[key].name == filename
+
+    assert result["day_regime_report_path"].name == "analyzer_day_regime_report.csv"

@@ -132,6 +132,7 @@ Based on current Analyzer runs, the artifact surface is currently CSV-based and 
 - `analyzer_setup_shortlist.csv`
 - `analyzer_setup_shortlist_explanations.csv`
 - `analyzer_research_summary.csv`
+- `analyzer_day_regime_report.csv` *(research-only regime/phase slicing surface; additive, non-execution)*
 
 Current format for research summary is **CSV**, not JSON.
 
@@ -155,6 +156,7 @@ Canonical artifacts are **Analyzer outputs plus manifest**.
 - `analyzer_setup_shortlist.csv`
 - `analyzer_setup_shortlist_explanations.csv`
 - `analyzer_research_summary.csv`
+- `analyzer_day_regime_report.csv` *(research-only regime/phase slicing surface; additive, non-execution)*
 
 Optional compatibility artifact:
 
