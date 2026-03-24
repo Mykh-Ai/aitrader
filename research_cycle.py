@@ -108,6 +108,31 @@ def probe_run(run_dir: Path) -> dict:
     else:
         result["missing_artifacts"].append("analyzer_research_summary.csv")
 
+    # Day regime report — 4 regime labels
+    _REGIME_FIELDS = [
+        "EventDensityClass",
+        "RangeExpansionClass",
+        "FlowStressClass",
+        "PhaseHeuristicLabel",
+    ]
+    regime_path = run_dir / "analyzer_day_regime_report.csv"
+    if regime_path.exists():
+        try:
+            df = pd.read_csv(regime_path)
+            if len(df) > 0:
+                for field in _REGIME_FIELDS:
+                    result[field] = str(df.iloc[0][field]) if field in df.columns else "NA"
+            else:
+                for field in _REGIME_FIELDS:
+                    result[field] = "NA"
+        except Exception as e:
+            for field in _REGIME_FIELDS:
+                result[field] = "NA"
+            result["missing_artifacts"].append(f"analyzer_day_regime_report.csv: read error ({e})")
+    else:
+        for field in _REGIME_FIELDS:
+            result[field] = "NA"
+
     return result
 
 

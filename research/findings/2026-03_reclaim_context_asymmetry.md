@@ -134,3 +134,12 @@ Rules for the repeat:
 - If finding reverses or disappears → discard hypothesis
 
 Do NOT convert to a ruleset filter until the larger-window repeat is complete.
+
+---
+
+## Follow-up
+
+Extended by phase-conditioned analysis:
+[`2026-03_reclaim_context_asymmetry_phase_conditioned.md`](2026-03_reclaim_context_asymmetry_phase_conditioned.md)
+
+Result: asymmetry survives within MIXED phase bucket. Not a phase-mixing artifact.
