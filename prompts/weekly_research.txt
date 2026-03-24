@@ -150,6 +150,35 @@ snapshot_date,direction,slice,n,pos_rate_pct,mean_ret_pct,median_ret_pct,mean_mf
 Записати commit hash в `research/handoff/cycle_meta.json` (поле `agent_commit`).
 
 ==================================================
+SSH CLEANUP — ОБОВ'ЯЗКОВО ПІСЛЯ ЗАВЕРШЕННЯ
+==================================================
+
+Sandboxed AI agents (Codex, Claude Code тощо) можуть додавати
+службових користувачів (напр. CodexSandboxUsers) до ACL директорії
+~/.ssh під час SSH операцій. Це ламає permissions для нативного
+SSH після завершення сесії.
+
+**Після всіх SSH операцій (останній крок перед фінальним звітом):**
+
+```powershell
+icacls C:\Users\User\.ssh /remove *S-1-5-21-3584294112-1179844679-616002924-1003
+icacls C:\Users\User\.ssh\config /inheritance:r /grant:r "User:(R)" "SYSTEM:(R)" "Administrators:(R)"
+```
+
+Перевір що працює:
+```powershell
+ssh root@95.216.139.172 "echo ssh-ok"
+```
+
+Якщо ssh-ok — cleanup пройшов. Якщо ні — НЕ завершуй роботу,
+а спробуй також:
+```powershell
+icacls C:\Users\User\.ssh\id_* /inheritance:r /grant:r "User:(R)"
+```
+
+**Це обов'язковий крок. Не пропускай.**
+
+==================================================
 ЧОГО НЕ МОЖНА РОБИТИ
 ==================================================
 

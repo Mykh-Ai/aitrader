@@ -1,0 +1,7 @@
+{
+  "processed_at": "2026-03-22",
+  "routine_status": "BACKTESTED",
+  "backtest_output": "/opt/aitrader/backtest_runs/2026-03-17_to_2026-03-17_run_001_routine_20260322",
+  "promotion_outcome": "REJECT",
+  "notes": "routine cycle 2026-03-22; fan-out; all derived REJECT; FE=2"
+}

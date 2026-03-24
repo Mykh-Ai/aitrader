@@ -1,0 +1,2 @@
+SetupId,SetupBarTs,Direction,ReferenceLevel,OutcomeHorizonBars,OutcomeBarsObserved,OutcomeStatus,MFE_Pct,MAE_Pct,CloseReturn_Pct,BestHigh,BestLow,FinalClose,OutcomeEndTs
+d75341bdb2cfab4399c093c9,2026-03-20 17:38:00+00:00,LONG,69450.0,12,12,FULL_HORIZON,0.2869690424766061,0.012095032397399827,0.23254139668826496,69649.3,69458.4,69611.5,2026-03-20 17:50:00+00:00

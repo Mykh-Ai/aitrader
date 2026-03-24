@@ -1,0 +1,50 @@
+{
+  "run_id": "2026-03-18_to_2026-03-18_run_001",
+  "run_date": "2026-03-18",
+  "date_range": {
+    "from": "2026-03-18",
+    "to": "2026-03-18"
+  },
+  "generated_at_utc": "2026-03-19T00:05:03Z",
+  "input_feed_paths": [
+    "/opt/aitrader/feed/2026-03-18.csv"
+  ],
+  "input_feed_checksums": {
+    "/opt/aitrader/feed/2026-03-18.csv": "0ad632836b1a072aff50c6f28f1058b40e9150cc947f3a924ca4c1cc5f705192"
+  },
+  "input_date_range": {
+    "from": "2026-03-18",
+    "to": "2026-03-18"
+  },
+  "input_bar_count": 1440,
+  "input_includes_partial_day": false,
+  "output_dir": "/opt/aitrader/analyzer_runs/2026-03-18_to_2026-03-18_run_001",
+  "artifact_list": [
+    "analyzer_features.csv",
+    "analyzer_events.csv",
+    "analyzer_setups.csv",
+    "analyzer_setup_outcomes.csv",
+    "analyzer_setup_report.csv",
+    "analyzer_setup_context_report.csv",
+    "analyzer_setup_rankings.csv",
+    "analyzer_setup_selections.csv",
+    "analyzer_setup_shortlist.csv",
+    "analyzer_setup_shortlist_explanations.csv",
+    "analyzer_research_summary.csv"
+  ],
+  "artifact_count": 11,
+  "artifact_paths": {},
+  "artifact_row_counts": {},
+  "row_counts": {},
+  "artifact_hashes": {},
+  "pipeline_stage_count": 16,
+  "analyzer_schema_version": "phase2.v1",
+  "artifact_contract_version": "phase2.analyzer-run.v1",
+  "analyzer_version": "eea76d4",
+  "git_commit": "eea76d4",
+  "git_branch": "main",
+  "hostname": "VPS-n8n",
+  "python_version": "3.12.3",
+  "status": "NON_CANONICAL",
+  "notes": "Schema mismatch analyzer_features.csv: expected=['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume', 'AggTrades', 'BuyQty', 'SellQty', 'VWAP', 'OpenInterest', 'FundingRate', 'LiqBuyQty', 'LiqSellQty', 'IsSynthetic', 'Delta', 'CVD', 'DeltaPct', 'BarRange', 'BodySize', 'UpperWick', 'LowerWick', 'CloseLocation', 'BodyToRange', 'UpperWickToRange', 'LowerWickToRange', 'OI_Change', 'LiqTotal', 'SwingHigh_H1_Price', 'SwingHigh_H1_ConfirmedAt', 'SwingLow_H1_Price', 'SwingLow_H1_ConfirmedAt', 'SwingHigh_H4_Price', 'SwingHigh_H4_ConfirmedAt', 'SwingLow_H4_Price', 'SwingLow_H4_ConfirmedAt', 'Sweep_H1_Up', 'Sweep_H1_Down', 'Sweep_H1_Direction', 'Sweep_H1_ReferenceLevel', 'Sweep_H1_ReferenceTs', 'Sweep_H1_PenetrationAbs', 'Sweep_H1_PenetrationRel', 'Sweep_H1_PenetrationBand', 'Sweep_H1_PenetrationModelVersion', 'Sweep_H4_Up', 'Sweep_H4_Down', 'Sweep_H4_Direction', 'Sweep_H4_ReferenceLevel', 'Sweep_H4_ReferenceTs', 'Sweep_H4_PenetrationAbs', 'Sweep_H4_PenetrationRel', 'Sweep_H4_PenetrationBand', 'Sweep_H4_PenetrationModelVersion', 'FailedBreak_H1_Up', 'FailedBreak_H1_Down', 'FailedBreak_H1_Direction', 'FailedBreak_H1_ReferenceLevel', 'FailedBreak_H1_ReferenceSweepTs', 'FailedBreak_H1_ConfirmedTs', 'FailedBreak_H4_Up', 'FailedBreak_H4_Down', 'FailedBreak_H4_Direction', 'FailedBreak_H4_ReferenceLevel', 'FailedBreak_H4_ReferenceSweepTs', 'FailedBreak_H4_ConfirmedTs', 'RelVolume_20', 'DeltaAbsRatio_20', 'OIChangeAbsRatio_20', 'LiqTotalRatio_20', 'CtxRelVolumeSpike_v1', 'CtxDeltaSpike_v1', 'CtxOISpike_v1', 'CtxLiqSpike_v1', 'CtxWickReclaim_v1', 'AbsorptionScore_v1', 'session', 'minutes_from_eu_open', 'minutes_from_us_open', 'ContextModelVersion'], actual=['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume', 'AggTrades', 'BuyQty', 'SellQty', 'VWAP', 'OpenInterest', 'FundingRate', 'LiqBuyQty', 'LiqSellQty', 'IsSynthetic', 'Delta', 'CVD', 'DeltaPct', 'BarRange', 'BodySize', 'UpperWick', 'LowerWick', 'CloseLocation', 'BodyToRange', 'UpperWickToRange', 'LowerWickToRange', 'OI_Change', 'LiqTotal', 'session', 'minutes_from_eu_open', 'minutes_from_us_open', 'ContextModelVersion', 'SwingHigh_H1_Price', 'SwingHigh_H1_ConfirmedAt', 'SwingLow_H1_Price', 'SwingLow_H1_ConfirmedAt', 'SwingHigh_H4_Price', 'SwingHigh_H4_ConfirmedAt', 'SwingLow_H4_Price', 'SwingLow_H4_ConfirmedAt', 'Sweep_H1_Up', 'Sweep_H1_Down', 'Sweep_H1_Direction', 'Sweep_H1_ReferenceLevel', 'Sweep_H1_ReferenceTs', 'Sweep_H1_PenetrationAbs', 'Sweep_H1_PenetrationRel', 'Sweep_H1_PenetrationBand', 'Sweep_H1_PenetrationModelVersion', 'Sweep_H4_Up', 'Sweep_H4_Down', 'Sweep_H4_Direction', 'Sweep_H4_ReferenceLevel', 'Sweep_H4_ReferenceTs', 'Sweep_H4_PenetrationAbs', 'Sweep_H4_PenetrationRel', 'Sweep_H4_PenetrationBand', 'Sweep_H4_PenetrationModelVersion', 'FailedBreak_H1_Up', 'FailedBreak_H1_Down', 'FailedBreak_H1_Direction', 'FailedBreak_H1_ReferenceLevel', 'FailedBreak_H1_ReferenceSweepTs', 'FailedBreak_H1_ConfirmedTs', 'FailedBreak_H4_Up', 'FailedBreak_H4_Down', 'FailedBreak_H4_Direction', 'FailedBreak_H4_ReferenceLevel', 'FailedBreak_H4_ReferenceSweepTs', 'FailedBreak_H4_ConfirmedTs', 'RelVolume_20', 'DeltaAbsRatio_20', 'OIChangeAbsRatio_20', 'LiqTotalRatio_20', 'CtxRelVolumeSpike_v1', 'CtxDeltaSpike_v1', 'CtxOISpike_v1', 'CtxLiqSpike_v1', 'CtxWickReclaim_v1', 'AbsorptionScore_v1']"
+}

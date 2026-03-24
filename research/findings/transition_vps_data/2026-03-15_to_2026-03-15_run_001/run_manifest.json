@@ -1,0 +1,98 @@
+{
+  "run_id": "2026-03-15_to_2026-03-15_run_001",
+  "run_date": "2026-03-15",
+  "date_range": {
+    "from": "2026-03-15",
+    "to": "2026-03-15"
+  },
+  "generated_at_utc": "2026-03-16T00:05:04Z",
+  "input_feed_paths": [
+    "/opt/aitrader/feed/2026-03-15.csv"
+  ],
+  "input_feed_checksums": {
+    "/opt/aitrader/feed/2026-03-15.csv": "821ef47a9e053f573bb1790ca8b2277fecb663ff1d782bbbce289add6e829c82"
+  },
+  "input_date_range": {
+    "from": "2026-03-15",
+    "to": "2026-03-15"
+  },
+  "input_bar_count": 1439,
+  "input_includes_partial_day": false,
+  "output_dir": "/opt/aitrader/analyzer_runs/2026-03-15_to_2026-03-15_run_001",
+  "artifact_list": [
+    "analyzer_features.csv",
+    "analyzer_events.csv",
+    "analyzer_setups.csv",
+    "analyzer_setup_outcomes.csv",
+    "analyzer_setup_report.csv",
+    "analyzer_setup_context_report.csv",
+    "analyzer_setup_rankings.csv",
+    "analyzer_setup_selections.csv",
+    "analyzer_setup_shortlist.csv",
+    "analyzer_setup_shortlist_explanations.csv",
+    "analyzer_research_summary.csv"
+  ],
+  "artifact_count": 11,
+  "artifact_paths": {
+    "analyzer_features.csv": "/opt/aitrader/analyzer_runs/2026-03-15_to_2026-03-15_run_001/analyzer_features.csv",
+    "analyzer_events.csv": "/opt/aitrader/analyzer_runs/2026-03-15_to_2026-03-15_run_001/analyzer_events.csv",
+    "analyzer_setups.csv": "/opt/aitrader/analyzer_runs/2026-03-15_to_2026-03-15_run_001/analyzer_setups.csv",
+    "analyzer_setup_outcomes.csv": "/opt/aitrader/analyzer_runs/2026-03-15_to_2026-03-15_run_001/analyzer_setup_outcomes.csv",
+    "analyzer_setup_report.csv": "/opt/aitrader/analyzer_runs/2026-03-15_to_2026-03-15_run_001/analyzer_setup_report.csv",
+    "analyzer_setup_context_report.csv": "/opt/aitrader/analyzer_runs/2026-03-15_to_2026-03-15_run_001/analyzer_setup_context_report.csv",
+    "analyzer_setup_rankings.csv": "/opt/aitrader/analyzer_runs/2026-03-15_to_2026-03-15_run_001/analyzer_setup_rankings.csv",
+    "analyzer_setup_selections.csv": "/opt/aitrader/analyzer_runs/2026-03-15_to_2026-03-15_run_001/analyzer_setup_selections.csv",
+    "analyzer_setup_shortlist.csv": "/opt/aitrader/analyzer_runs/2026-03-15_to_2026-03-15_run_001/analyzer_setup_shortlist.csv",
+    "analyzer_setup_shortlist_explanations.csv": "/opt/aitrader/analyzer_runs/2026-03-15_to_2026-03-15_run_001/analyzer_setup_shortlist_explanations.csv",
+    "analyzer_research_summary.csv": "/opt/aitrader/analyzer_runs/2026-03-15_to_2026-03-15_run_001/analyzer_research_summary.csv"
+  },
+  "artifact_row_counts": {
+    "analyzer_features.csv": 1439,
+    "analyzer_events.csv": 468,
+    "analyzer_setups.csv": 48,
+    "analyzer_setup_outcomes.csv": 48,
+    "analyzer_setup_report.csv": 8,
+    "analyzer_setup_context_report.csv": 25,
+    "analyzer_setup_rankings.csv": 32,
+    "analyzer_setup_selections.csv": 32,
+    "analyzer_setup_shortlist.csv": 27,
+    "analyzer_setup_shortlist_explanations.csv": 27,
+    "analyzer_research_summary.csv": 27
+  },
+  "row_counts": {
+    "analyzer_features.csv": 1439,
+    "analyzer_events.csv": 468,
+    "analyzer_setups.csv": 48,
+    "analyzer_setup_outcomes.csv": 48,
+    "analyzer_setup_report.csv": 8,
+    "analyzer_setup_context_report.csv": 25,
+    "analyzer_setup_rankings.csv": 32,
+    "analyzer_setup_selections.csv": 32,
+    "analyzer_setup_shortlist.csv": 27,
+    "analyzer_setup_shortlist_explanations.csv": 27,
+    "analyzer_research_summary.csv": 27
+  },
+  "artifact_hashes": {
+    "analyzer_features.csv": "5761dbe2192a5fc49c1d79fc5a2b7ff2571412f65c9d5d1b055b2e72960e1ebb",
+    "analyzer_events.csv": "0554175f7bcc8aa98144853aa58b9b56843d522381136a0a17b32e1e47befd03",
+    "analyzer_setups.csv": "3fb4396a7db29db6f1fa8e560c83b1936e2eb0cd4e199ec6f64f0de6f588d63f",
+    "analyzer_setup_outcomes.csv": "645815561023aa376704e4a9e7c897c47dcbb4f907deaed9424a05fce7825dc5",
+    "analyzer_setup_report.csv": "8447e3083b28471b79356e647b7ce8637a292c62c6d780550aa3cff7a1115aa9",
+    "analyzer_setup_context_report.csv": "4390184cb4e55302c6379b073f4ced577126aed0f2fb41c171594428c8bcc12b",
+    "analyzer_setup_rankings.csv": "6e58c444d37461d3196d84cec8bd2f30d97ba94f6997c1351dcf0534c0e35c44",
+    "analyzer_setup_selections.csv": "e204e7a223a09317887dace038a3481374e1f737d7f9206948c19707b466a29c",
+    "analyzer_setup_shortlist.csv": "51d117fb331335a08120b404293944236e5e4758944fdf89dcd330c23ba1c801",
+    "analyzer_setup_shortlist_explanations.csv": "142a5134ac031ae74cb6ee437e7a726fce39db3aee64434d83d9afd5bf05473a",
+    "analyzer_research_summary.csv": "8222db3b6a49070516e582371a4160b6693f14ee91da549f50b0af19c224477b"
+  },
+  "pipeline_stage_count": 16,
+  "analyzer_schema_version": "phase2.v1",
+  "artifact_contract_version": "phase2.analyzer-run.v1",
+  "analyzer_version": "eea76d4",
+  "git_commit": "eea76d4",
+  "git_branch": "main",
+  "hostname": "VPS-n8n",
+  "python_version": "3.12.3",
+  "status": "SUCCESS",
+  "notes": null
+}

@@ -211,6 +211,20 @@ git pull
 docker compose up -d --build
 ```
 
+## SSH cleanup (Windows / sandboxed AI agents)
+
+Sandboxed AI agents (Codex, Claude Code тощо) можуть додавати службових
+користувачів (напр. CodexSandboxUsers) до ACL `~/.ssh` при SSH операціях.
+Це ламає нативний SSH користувача після завершення сесії.
+
+**Кожна сесія з SSH МУСИТЬ завершуватись:**
+```powershell
+icacls C:\Users\User\.ssh /remove *S-1-5-21-3584294112-1179844679-616002924-1003
+icacls C:\Users\User\.ssh\config /inheritance:r /grant:r "User:(R)" "SYSTEM:(R)" "Administrators:(R)"
+```
+Перевірка: `ssh root@95.216.139.172 "echo ssh-ok"` → `ssh-ok`.
+Детальніше: `research/OPS.md` секція 1.
+
 ## Що НЕ робити
 
 - Не додавати альткоіни

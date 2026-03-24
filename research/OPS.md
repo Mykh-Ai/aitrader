@@ -1,4 +1,4 @@
-# Research Operations Guide
+﻿# Research Operations Guide
 
 Operational reference for the routine research cycle.
 Read this before executing any research cycle prompt.
@@ -16,6 +16,39 @@ source .venv/bin/activate
 
 All analyzer runs and backtest outputs live on the server.
 Local repo (`D:\Project_V\Aitrader`) has only code and research artifacts.
+
+### SSH permissions cleanup (Windows / sandboxed AI agents)
+
+Sandboxed AI agents (Codex, Claude Code тощо) можуть додавати службових
+користувачів до ACL `~/.ssh` при SSH операціях. Це ламає нативний SSH після
+завершення сесії, бо OpenSSH вимагає strict permissions.
+
+**Кожна сесія, що використовує SSH, мусить завершуватись cleanup:**
+
+```powershell
+icacls C:\Users\User\.ssh /remove *S-1-5-21-3584294112-1179844679-616002924-1003
+icacls C:\Users\User\.ssh\config /inheritance:r /grant:r "User:(R)" "SYSTEM:(R)" "Administrators:(R)"
+```
+
+Перевірка: `ssh root@95.216.139.172 "echo ssh-ok"` має повернути `ssh-ok`.
+Якщо SSH ключі теж зачеплені, одразу виконай:
+`icacls C:\Users\User\.ssh\id_* /inheritance:r /grant:r "User:(R)"`
+
+### Mandatory SSH session closeout
+
+Після будь-якої SSH-сесії агента виконуй цей exact sequence в такому порядку:
+
+```powershell
+icacls C:\Users\User\.ssh /remove *S-1-5-21-3584294112-1179844679-616002924-1003
+icacls C:\Users\User\.ssh\config /inheritance:r /grant:r "User:(R)" "SYSTEM:(R)" "Administrators:(R)"
+icacls C:\Users\User\.ssh\id_* /inheritance:r /grant:r "User:(R)"
+ssh root@95.216.139.172 "echo ok"
+```
+
+Rules:
+- Використовуй цей протокол як fixed closeout для кожної SSH-сесії агента.
+- Не замінюй його ad-hoc ACL surgery, якщо тільки fixed sequence справді не зламався.
+- Сесія не вважається завершеною, поки фінальний `ssh ... "echo ok"` не пройшов успішно.
 
 ---
 
@@ -128,3 +161,4 @@ Authoritative sources:
 - **Diagnostics**: `research_cycle.py --dry-run` — live data quality check
 
 The key signal to watch for: first run where `promotion_outcome != REJECT`.
+

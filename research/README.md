@@ -120,3 +120,13 @@ Note: slice analysis is also included in `research_cycle.py` — standalone use 
 - Do NOT add new dimensions without a new dated finding memo
 - Do NOT use these scripts for live trading decisions
 - Do NOT modify `research_cycle.py` parameters — they are frozen
+
+## SSH cleanup (Windows)
+
+Sandboxed AI agents (Codex, Claude Code тощо) можуть додавати службових
+користувачів до ACL `~/.ssh` при SSH доступі, що ламає нативний SSH після сесії.
+Детальна інструкція — в `OPS.md` секція 1.
+
+**Правило:** кожна сесія агента, що використовує SSH, мусить завершуватись
+cleanup командами з OPS.md. Це стосується і `weekly_research.txt` циклу,
+і будь-якого ad-hoc SSH доступу.
