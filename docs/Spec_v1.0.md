@@ -115,7 +115,9 @@ build_setup_shortlist_explanations() shortlist_explanations.py — derive explan
         ↓
 build_research_summary()     research_summary.py  — deterministic final summary from shortlist outputs
         ↓
-save_dataframe()        io.py                     — write 11 output CSVs
+build_day_regime_report()    day_regime_report.py — research-only deterministic regime/phase summary
+        ↓
+save_dataframe()        io.py                     — write 12 output CSVs
 ```
 
 ### Layer responsibilities
@@ -167,8 +169,13 @@ Output is sorted deterministically by `[Timestamp, SourceTF, EventType, Side]`.
 merge of shortlist and shortlist explanations. Derives `ResearchPriority` (`P1`/`P2`)
 from `SelectionDecision` and exports a compact final review surface.
 
-**pipeline.py** — `run(input_path, output_dir)` wires the full 16-step sequence and returns a metadata
-dict with 11 in-memory DataFrames and 11 output file paths.
+**day_regime_report.py** — Builds `analyzer_day_regime_report.csv`, a deterministic **research-only**
+day/run summary layer for regime/phase stratification (`EventDensityClass`, `RangeExpansionClass`,
+`FlowStressClass`, `PhaseHeuristicLabel` and supporting activity/context fields). This layer is additive
+and does not alter detection, shortlist, formalization, replay semantics, or execution behavior.
+
+**pipeline.py** — `run(input_path, output_dir)` wires the full 17-step sequence and returns a metadata
+dict with 12 in-memory DataFrames and 12 output file paths.
 
 #### Phase 2 — Setup research pipeline
 
@@ -481,7 +488,7 @@ Planned (not yet in pipeline):
 
 # 0. Output Format — LOCKED
 
-Analyzer produces 11 output datasets. Current format is CSV.
+Analyzer produces 12 output datasets. Current format is CSV.
 For the full list see section 7.1. The primary datasets are:
 
 ## Feature Table
@@ -2321,7 +2328,7 @@ Block 6 гарантує:
 
 ## 7.1 Output Files
 
-Analyzer створює 11 output datasets:
+Analyzer створює 12 output datasets:
 
     analyzer_features.csv                    — one row per 1m bar, all computed features
     analyzer_events.csv                      — one row per detected structural event
@@ -2334,6 +2341,7 @@ Analyzer створює 11 output datasets:
     analyzer_setup_shortlist.csv             — ranked shortlist of top candidates
     analyzer_setup_shortlist_explanations.csv — explanation bands + composite code per shortlist row
     analyzer_research_summary.csv            — deterministic final research summary surface
+    analyzer_day_regime_report.csv          — research-only deterministic day regime/phase summary
 
 Current format: CSV. Parquet — planned for a later phase (типізація, стиснення, швидке читання).
 
