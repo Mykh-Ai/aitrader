@@ -164,7 +164,7 @@ Target boundary for production order lifecycle, restart reconciliation with exch
 
 1. **Analyzer artifacts (single analyzer run)**
    - Input: raw feed CSV (`feed/YYYY-MM-DD.csv` or explicit path).
-   - Key outputs: `analyzer_features.csv`, `analyzer_events.csv`, `analyzer_setups.csv`, `analyzer_setup_shortlist.csv`, `analyzer_research_summary.csv` (+ full intermediate report stack).
+   - Key outputs: `analyzer_features.csv`, `analyzer_events.csv`, `analyzer_setups.csv`, `analyzer_setup_shortlist.csv`, `analyzer_research_summary.csv`, `analyzer_day_regime_report.csv` (+ full intermediate report stack).
    - Frozen-run mode writes run directory with `run_manifest.json`.
 
 2. **Backtest artifacts (single backtester run)**
@@ -270,7 +270,7 @@ result = run("feed/2024-03-15.csv", output_dir="output/")
 # analyzer_setups.csv, analyzer_setup_outcomes.csv, analyzer_setup_report.csv,
 # analyzer_setup_context_report.csv, analyzer_setup_rankings.csv,
 # analyzer_setup_selections.csv, analyzer_setup_shortlist.csv,
-# analyzer_setup_shortlist_explanations.csv, analyzer_research_summary.csv
+# analyzer_setup_shortlist_explanations.csv, analyzer_research_summary.csv, analyzer_day_regime_report.csv
 ```
 
 ### Daily-run operational mode
