@@ -111,6 +111,18 @@ This is therefore a **contract misalignment across layers**, not a single isolat
 
 ## 4. Phase 3 Extension Decision
 
+### Implementation status note
+
+The baseline described in this roadmap is now the implemented Phase 3 replay behavior.
+The roadmap remains useful as a contract/reference document, but the following points are no longer prospective only:
+
+- `0` replayable rulesets fails loudly before placement
+- `1` replayable ruleset preserves the existing single-run baseline
+- `N > 1` replayable rulesets fan out into `N` derived isolated replay runs
+- each derived run receives a one-row canonical ruleset input
+- campaign/registry appends one fact row per completed derived run
+- parent scope remains orchestration/lineage scope, not a synthetic merged replay result
+
 ### 4.1 Baseline decision for first implementation
 
 Canonical multi-ruleset replay will **not** be introduced first as:
@@ -174,7 +186,7 @@ After this extension, the target Phase 3 replay contract should be:
 `build_backtest_rulesets()` may produce **0..N canonical ruleset rows** in shortlist-based modes without forced narrowing.
 
 ### 6.2 Replay execution contract
-Each canonical replayable ruleset row must be replayable as its own **derived isolated replay run**.
+Each canonical replayable ruleset row must be replayable as its own **derived isolated replay run**. A zero-ruleset outcome blocks replay before placement with an explicit failure, a one-ruleset outcome keeps the existing single-run path, and an `N > 1` outcome yields `N` derived runs.
 
 ### 6.3 Derived run identity contract
 Each derived replay run must have deterministic lineage to:
@@ -183,6 +195,8 @@ Each derived replay run must have deterministic lineage to:
 - source `RulesetId`
 - replay semantics version
 - relevant policy/version identifiers
+
+The parent run scope is lineage/orchestration scope only. Replay-completed units are the derived runs themselves; the parent is not a synthetic merged replay output. Where campaign identity is surfaced, `RunId` continues to point at the parent artifact slot, while derived replay identity is carried by the child `ExperimentId` / `RunDir`.
 
 ### 6.4 Placement compatibility contract
 `placement.py` may preserve its current exact-one-row contract in the first implementation, provided orchestration supplies a one-row `rulesets_df` for each derived run.
@@ -194,6 +208,8 @@ Registry must record **one fact row per completed derived run**, without:
 - best-of selection
 - promotion inference
 - hidden run collapsing
+
+Campaign/registry semantics remain append-only and observational: no aggregation, no best-of, and no auto-promotion across siblings derived from the same parent analyzer artifact.
 
 ---
 
