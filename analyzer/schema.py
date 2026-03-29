@@ -108,6 +108,19 @@ FEATURE_COLUMNS_IMPLEMENTED = [
     "minutes_from_eu_open",
     "minutes_from_us_open",
     "ContextModelVersion",
+    "ImpulseDetected_v1",
+    "ImpulseDirection_v1",
+    "ImpulseRangeRatio_20_v1",
+    "ImpulseVolumeRatio_v1",
+    "ImpulseDeltaRatio_v1",
+    "ImpulseOIRatio_v1",
+    "ImpulseLiqConfirmed_v1",
+    "PreCompression_6v20_v1",
+    "PreCompressionTag_v1",
+    "ImpulseAnchorHigh_v1",
+    "ImpulseAnchorLow_v1",
+    "ImpulseAnchorMid_v1",
+    "ImpulseAnchorVWAP_v1",
 ]
 
 # Planned placeholders for future phases; not materialized yet.
