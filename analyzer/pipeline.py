@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pandas as pd
+
 from .absorption import detect_absorption
 from .base_metrics import add_base_metrics
 from .context_reports import build_setup_context_report
@@ -11,6 +13,7 @@ from .day_regime_report import build_day_regime_report
 from .events import build_events
 from .failed_breaks import detect_failed_breaks
 from .impulses import detect_impulses
+from .impulse_setups import extract_impulse_setups
 from .io import ensure_output_dir, save_dataframe
 from .loader import load_raw_csv
 from .rankings import build_setup_rankings
@@ -23,6 +26,28 @@ from .shortlist_explanations import build_setup_shortlist_explanations
 from .shortlists import build_setup_shortlist
 from .sweeps import detect_sweeps
 from .swings import annotate_swings
+
+
+def _concat_and_validate_setups(h1_setups: pd.DataFrame, h2_setups: pd.DataFrame) -> pd.DataFrame:
+    if h1_setups.empty and h2_setups.empty:
+        return h1_setups.copy()
+    if h1_setups.empty:
+        setups = h2_setups.copy()
+    elif h2_setups.empty:
+        setups = h1_setups.copy()
+    else:
+        setups = pd.concat([h1_setups, h2_setups], ignore_index=True, sort=False)
+
+    setups = setups.sort_values(
+        by=["DetectedAt", "ReferenceEventType", "Direction", "SetupId"], kind="mergesort"
+    ).reset_index(drop=True)
+
+    duplicate_setup_ids = setups["SetupId"].duplicated(keep=False)
+    if duplicate_setup_ids.any():
+        dup_ids = sorted(set(setups.loc[duplicate_setup_ids, "SetupId"].astype(str)))
+        raise ValueError(f"Expected unique SetupId values after H1+H2 setup concat; duplicates={dup_ids}")
+
+    return setups
 
 
 def run(input_path: str | Path, output_dir: str | Path) -> dict:
@@ -38,7 +63,9 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
     features = detect_absorption(features)
     features = detect_impulses(features)
     events = build_events(features)
-    setups = extract_setup_candidates(features, events)
+    h1_setups = extract_setup_candidates(features, events)
+    h2_setups = extract_impulse_setups(features)
+    setups = _concat_and_validate_setups(h1_setups, h2_setups)
     outcomes = build_setup_outcomes(features, setups)
     report = build_setup_report(setups, outcomes)
     context_report = build_setup_context_report(setups, outcomes)

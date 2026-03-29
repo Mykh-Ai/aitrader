@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pandas as pd
 
 from .context import CONTEXT_MODEL_VERSION
@@ -86,25 +88,18 @@ def _eligible_events_for_direction(direction: str) -> str:
     raise ValueError(f"Unsupported direction for research summary replay semantics: {direction}")
 
 
+def _setup_type_family(setup_type: str) -> str:
+    return re.sub(r"_(LONG|SHORT)(?:_V\d+)?$", "", setup_type, flags=re.IGNORECASE)
+
+
 def _derive_setup_family(setup_types: pd.Series) -> str:
-    families = set()
-    for setup_type in setup_types.dropna().astype(str):
-        upper = setup_type.upper()
-        if upper.endswith("_LONG"):
-            families.add(setup_type[: -len("_LONG")])
-        elif upper.endswith("_SHORT"):
-            families.add(setup_type[: -len("_SHORT")])
-        else:
-            families.add(setup_type)
+    families = {_setup_type_family(setup_type) for setup_type in setup_types.dropna().astype(str)}
 
     if not families:
         raise ValueError("Cannot derive replay setup family from empty setups_df")
-    if len(families) != 1:
-        raise ValueError(
-            "Cannot derive unique replay setup family for research summary semantics from setups_df: "
-            f"{sorted(families)}"
-        )
-    return next(iter(families))
+    if len(families) == 1:
+        return next(iter(families))
+    return "MIXED_FAMILY"
 
 
 def _enrich_replay_semantics(merged_df: pd.DataFrame, setups_df: pd.DataFrame) -> pd.DataFrame:
@@ -116,6 +111,8 @@ def _enrich_replay_semantics(merged_df: pd.DataFrame, setups_df: pd.DataFrame) -
         )
 
     setup_family = _derive_setup_family(setups_df["SetupType"])
+    mixed_family = setup_family == "MIXED_FAMILY"
+    direction_family_formalizable = setup_family == "FAILED_BREAK_RECLAIM"
     formalization_eligible_values: list[bool] = []
     direction_values: list[str] = []
     setup_type_values: list[str] = []
@@ -132,7 +129,7 @@ def _enrich_replay_semantics(merged_df: pd.DataFrame, setups_df: pd.DataFrame) -
                     "Unsupported Direction GroupValue for research summary replay semantics enrichment: "
                     f"{group_value}"
                 )
-            formalization_eligible_values.append(True)
+            formalization_eligible_values.append((not mixed_family) and direction_family_formalizable)
             direction = upper_group_value
             setup_type = setup_family
         elif group_type == "SetupType":
