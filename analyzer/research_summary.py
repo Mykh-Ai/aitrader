@@ -135,13 +135,13 @@ def _enrich_replay_semantics(merged_df: pd.DataFrame, setups_df: pd.DataFrame) -
         elif group_type == "SetupType":
             formalization_eligible_values.append(True)
             setup_type = group_value
-            if upper_group_value.endswith("_LONG"):
+            if "_LONG" in upper_group_value:
                 direction = "LONG"
-            elif upper_group_value.endswith("_SHORT"):
+            elif "_SHORT" in upper_group_value:
                 direction = "SHORT"
             else:
                 raise ValueError(
-                    "Cannot derive replay direction from SetupType group without explicit _LONG/_SHORT suffix: "
+                    "Cannot derive replay direction from SetupType group without _LONG/_SHORT token: "
                     f"{group_value}"
                 )
         else:
@@ -186,13 +186,13 @@ def _enrich_without_setups_fail_loud_direction_rows(merged_df: pd.DataFrame) -> 
             )
 
         if group_type == "SetupType":
-            if upper_group_value.endswith("_LONG"):
+            if "_LONG" in upper_group_value:
                 direction = "LONG"
-            elif upper_group_value.endswith("_SHORT"):
+            elif "_SHORT" in upper_group_value:
                 direction = "SHORT"
             else:
                 raise ValueError(
-                    "Cannot derive replay direction from SetupType group without explicit _LONG/_SHORT suffix: "
+                    "Cannot derive replay direction from SetupType group without _LONG/_SHORT token: "
                     f"{group_value}"
                 )
             formalization_eligible_values.append(True)

@@ -53,7 +53,20 @@ If documents conflict, prefer the most operationally current source supported by
 - Prefer explicit invariants/contracts over implicit assumptions.
 - Preserve append-only/audit-oriented artifacts where documented (manifests, ledgers, run logs, registry outputs).
 
+
 ## 6) Task execution discipline
+
+## 6.1) Approval and Command Batching
+
+For routine repository operations, minimize approval noise and batch obvious command sequences whenever the environment requires escalation.
+
+- If the user explicitly asks to run tests, merge, pull, fetch, commit, or push, do not ask separate conversational permission questions for each sub-step.
+- Prefer one grouped approval/tool request for the whole obvious sequence (`git status` + `git fetch` + `git merge` + `git push`, or `pytest` run + result capture).
+- Do not generate extra commentary about sandbox/escalation mechanics unless the command actually fails or the user asks why.
+- This rule also applies when executing repository prompts such as `prompts/weekly_research.txt`: batch the expected SSH/git/test/file-update actions as tightly as the environment allows.
+- If escalation is required by the tool, request it once in the most compact form possible and proceed.
+
+This rule is about reducing interaction noise, not about skipping safety for destructive actions.
 For every task:
 1. Read relevant sources of truth first.
 2. State assumptions and uncertainty explicitly.
