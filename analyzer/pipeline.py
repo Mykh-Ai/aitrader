@@ -10,6 +10,7 @@ from .context_reports import build_setup_context_report
 from .day_regime_report import build_day_regime_report
 from .events import build_events
 from .failed_breaks import detect_failed_breaks
+from .impulses import detect_impulses
 from .io import ensure_output_dir, save_dataframe
 from .loader import load_raw_csv
 from .rankings import build_setup_rankings
@@ -35,6 +36,7 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
     features = detect_sweeps(features)
     features = detect_failed_breaks(features)
     features = detect_absorption(features)
+    features = detect_impulses(features)
     events = build_events(features)
     setups = extract_setup_candidates(features, events)
     outcomes = build_setup_outcomes(features, setups)
