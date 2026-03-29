@@ -95,9 +95,17 @@ None
 
 - `RULESET_REPORT_DIRECTION_LONG_V1_LONG_BASE`
   → validation FAIL, robustness UNSTABLE, promotion REJECT, trade_count=0
+ 
+`RULESET_REPORT_SETUPTYPE_FAILED_BREAK_RECLAIM_LONG_V1_LONG_BASE`
+was the more informative rejection case.
 
-- `RULESET_REPORT_SETUPTYPE_FAILED_BREAK_RECLAIM_LONG_V1_LONG_BASE`
-  → validation FAIL, robustness FRAGILE, promotion REJECT, trade_count=6
+It remained a REJECT and did not demonstrate edge,
+but unlike the direction-only long ruleset (`trade_count=0`),
+it produced a non-zero replay surface (`trade_count=6`).
+For project discipline, this means it should not be interpreted as a positive candidate,
+but it also should not be collapsed into the same bucket as a dead reject.
+It is better treated as a replayed-but-inconclusive archival candidate,
+worth future re-evaluation on a larger evidence base without changing its logic.
 
 ### Closed follow-up conclusion
 

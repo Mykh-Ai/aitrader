@@ -98,3 +98,15 @@ Direct relationships:
 - `research/findings/2026-03_reclaim_context_asymmetry_phase_conditioned.md`
 
 Project-level conclusion remains unchanged: multi-day accumulation can restore replayability, but it has not established promotable edge. This rule-level note isolates one replayed ruleset inside that broader project verdict.
+
+Among the two replayed rulesets in this follow-up,  
+`RULESET_REPORT_SETUPTYPE_FAILED_BREAK_RECLAIM_LONG_V1_LONG_BASE`
+was the more informative rejection case.
+
+It remained a REJECT and did not demonstrate edge,
+but unlike the direction-only long ruleset (`trade_count=0`),
+it produced a non-zero replay surface (`trade_count=6`).
+For project discipline, this means it should not be interpreted as a positive candidate,
+but it also should not be collapsed into the same bucket as a dead reject.
+It is better treated as a replayed-but-inconclusive archival candidate,
+worth future re-evaluation on a larger evidence base without changing its logic.
