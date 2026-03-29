@@ -14,3 +14,8 @@ processed_at,analyzer_run_id,backtest_output_dir,formalizable_rows,promotion_out
 2026-03-22,2026-03-21_to_2026-03-21_run_001,N/A,0,N/A,NO_REPLAYABLE_RULESETS,FormalizationEligible=0; 2 setups 0 shortlist
 2026-03-24,2026-03-22_to_2026-03-22_run_001,N/A,0,N/A,NO_REPLAYABLE_RULESETS,routine cycle 2026-03-24; FE=0; 1 setup 0 shortlist
 2026-03-24,2026-03-23_to_2026-03-23_run_001,N/A,0,N/A,NO_REPLAYABLE_RULESETS,routine cycle 2026-03-24; FE=0; 3 setups 0 shortlist
+2026-03-29,2026-03-24_to_2026-03-24_run_001,N/A,0,N/A,NO_REPLAYABLE_RULESETS,routine cycle 2026-03-29; FE=0; 5 setups 0 shortlist
+2026-03-29,2026-03-25_to_2026-03-25_run_001,N/A,0,N/A,NO_REPLAYABLE_RULESETS,routine cycle 2026-03-29; FE=0; 2 setups 0 shortlist
+2026-03-29,2026-03-26_to_2026-03-26_run_001,N/A,0,N/A,NO_REPLAYABLE_RULESETS,routine cycle 2026-03-29; FE=0; 3 setups 0 shortlist
+2026-03-29,2026-03-27_to_2026-03-27_run_001,N/A,0,N/A,NO_REPLAYABLE_RULESETS,routine cycle 2026-03-29; FE=0; 4 setups 0 shortlist
+2026-03-29,2026-03-28_to_2026-03-28_run_001,N/A,0,N/A,NO_REPLAYABLE_RULESETS,routine cycle 2026-03-29; FE=0; 2 setups 0 shortlist
