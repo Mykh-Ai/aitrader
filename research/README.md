@@ -114,6 +114,51 @@ python research/slice_analysis_reclaim_context.py --runs-dir /opt/aitrader/analy
 
 Note: slice analysis is also included in `research_cycle.py` — standalone use is for ad-hoc exploration only.
 
+## Two operational paths
+
+У проєкті є **два різні research workflows**. Їх не треба плутати.
+
+| | Routine weekly cycle | H2 comparative review |
+|---|---|---|
+| Ціль | probe + replay + verdict | bounded H1 vs H2 comparative analysis |
+| Інструмент | `research_cycle.py` | bounded analyzer rerun (local or server) |
+| Replay | так (якщо FE > 0) | ні |
+| `_processed.json` | так | ні |
+| `run_log.csv` | так | ні |
+| Formalization | H1 candidates можуть дійти до formalization | H2 наразі non-formalizable |
+| Outputs | handoff → verdict | comparative note + summary CSV |
+| Детальна інструкція | цей README (секції вище) + OPS.md §2–6 | OPS.md §8 |
+
+---
+
+## H2 comparative review (research-only)
+
+H2 (impulse-first research track) — це **parallel additive research surface**.
+
+Поточний статус H2:
+- **observational** — labels тільки спостерігають, не формалізують
+- **non-formalizable** — `FormalizationEligible = False` для H2 Direction rows
+- **non-replay-ready** — replay pipeline не працює з H2 setup types
+
+Для H2 comparative review:
+1. Bounded rerun analyzer на актуальній кодовій базі (після H2 patch set)
+2. На вибраному historical date window (напр. weak-regime period)
+3. Порівняти H1 vs H2 density, observational labels, directional split
+
+H2 review **не використовує**:
+- `research_cycle.py` як основний flow
+- replay / backtester
+- `_processed.json` marker protocol
+- promotion states
+
+H2 review artifacts:
+- `research/findings/<dated_h2_review>.md`
+- `research/results/<dated_h2_summary>.csv`
+
+Старі analyzer artifacts (до H2 patch set) **не мають H2 колонок** і не придатні для H2 review — потрібен bounded rerun.
+
+---
+
 ## Rules
 
 - Do NOT change slicing logic between runs — methodology must be frozen per finding

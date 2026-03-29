@@ -162,3 +162,60 @@ Authoritative sources:
 
 The key signal to watch for: first run where `promotion_outcome != REJECT`.
 
+---
+
+## 8. H2 bounded comparative rerun
+
+**Окремий ad-hoc research workflow.** Не плутати з routine weekly cycle (§2–6).
+
+### Коли використовується
+
+- Після змін Analyzer research layers (новий patch set)
+- Коли потрібен bounded H1 vs H2 comparative review
+- Коли replay не є ціллю
+
+### Що робиться
+
+```bash
+# Локально: rerun analyzer на bounded date window
+python -c "
+from analyzer.pipeline import run
+from pathlib import Path
+for d in ['2026-03-18', '2026-03-19', ...]:
+    Path(f'local_runs/h2_bounded/{d}').mkdir(parents=True, exist_ok=True)
+    run(f'feed/{d}.csv', f'local_runs/h2_bounded/{d}')
+"
+
+# Якщо feed файлів локально нема — стягнути з сервера:
+scp root@95.216.139.172:/opt/aitrader/feed/2026-03-{18..29}.csv feed/
+```
+
+### Що дивитися
+
+- `analyzer_setups.csv` — H1 vs H2 setup density per day, L/S split
+- `analyzer_setup_outcomes.csv` — H2 observational labels (`H2_Post3Label_v1`, `H2_Post6Label_v1`, `H2_Post12Label_v1`)
+- `analyzer_research_summary.csv` — formalization eligibility, mixed family detection
+- `analyzer_day_regime_report.csv` — regime context per day
+
+### Що НЕ використовується
+
+- `research_cycle.py` (probe/replay loop)
+- `_processed.json` marker protocol
+- `run_log.csv` protocol
+- promotion / replay states
+- backtester
+
+### Очікувані artifacts
+
+- Comparative markdown note: `research/findings/<dated_h2_review>.md`
+- Summary CSV: `research/results/<dated_h2_summary>.csv`
+- Optional support CSVs only if needed
+
+### Boundaries
+
+- No code changes during review
+- No replay
+- No execution interpretation
+- No formalization promotion
+- H2 setups є non-formalizable — `FormalizationEligible = False` для Direction rows
+
