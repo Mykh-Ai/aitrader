@@ -343,16 +343,21 @@ def test_context_rows_without_setups_stay_non_formalizable():
     assert pd.isna(research_summary_df.loc[0, "EligibleEventTypes"])
 
 
-def test_replay_semantics_enrichment_fails_loudly_on_ambiguous_setup_families():
+def test_replay_semantics_enrichment_survives_mixed_setup_families_with_explicit_mixed_family_tag():
     setups_df = pd.DataFrame(
         [
             {"SetupType": "FAILED_BREAK_RECLAIM_LONG", "Direction": "LONG"},
-            {"SetupType": "ANOTHER_SETUP_SHORT", "Direction": "SHORT"},
+            {"SetupType": "IMPULSE_FADE_RECLAIM_SHORT_V1", "Direction": "SHORT"},
         ]
     )
 
-    with pytest.raises(ValueError, match="Cannot derive unique replay setup family"):
-        build_research_summary(_shortlist_df(), _shortlist_explanations_df(), setups_df)
+    research_summary_df = build_research_summary(_shortlist_df(), _shortlist_explanations_df(), setups_df)
+
+    direction_row = research_summary_df.loc[research_summary_df["GroupType"] == "Direction"].iloc[0]
+    assert direction_row["SetupType"] == "MIXED_FAMILY"
+    assert direction_row["Direction"] == "LONG"
+    assert pd.isna(direction_row["EligibleEventTypes"])
+    assert bool(direction_row["FormalizationEligible"]) is False
 
 
 def test_formalizable_setup_type_row_gets_full_semantics_and_eligible_true():
@@ -400,6 +405,58 @@ def test_formalizable_setup_type_row_gets_full_semantics_and_eligible_true():
     assert research_summary_df.loc[0, "SetupType"] == "FAILED_BREAK_RECLAIM_LONG"
     assert research_summary_df.loc[0, "EligibleEventTypes"] == "FAILED_BREAK_DOWN"
 
+
+
+
+def test_h2_only_setups_survive_replay_semantics_enrichment():
+    setups_df = pd.DataFrame(
+        [
+            {"SetupType": "IMPULSE_FADE_RECLAIM_LONG_V1", "Direction": "LONG"},
+            {"SetupType": "IMPULSE_FADE_RECLAIM_SHORT_V1", "Direction": "SHORT"},
+        ]
+    )
+
+    research_summary_df = build_research_summary(_shortlist_df(), _shortlist_explanations_df(), setups_df)
+
+    direction_row = research_summary_df.loc[research_summary_df["GroupType"] == "Direction"].iloc[0]
+    assert direction_row["SetupType"] == "IMPULSE_FADE_RECLAIM"
+    assert bool(direction_row["FormalizationEligible"]) is False
+    assert pd.isna(direction_row["EligibleEventTypes"])
+
+
+def test_h1_only_direction_rows_keep_single_family_and_not_mixed_family():
+    research_summary_df = build_research_summary(_shortlist_df(), _shortlist_explanations_df(), _setups_df())
+
+    direction_row = research_summary_df.loc[research_summary_df["GroupType"] == "Direction"].iloc[0]
+    assert direction_row["SetupType"] == "FAILED_BREAK_RECLAIM"
+
+
+def test_mixed_family_output_is_deterministic_for_identical_inputs():
+    setups_df = pd.DataFrame(
+        [
+            {"SetupType": "FAILED_BREAK_RECLAIM_LONG", "Direction": "LONG"},
+            {"SetupType": "IMPULSE_FADE_RECLAIM_SHORT_V1", "Direction": "SHORT"},
+        ]
+    )
+
+    first = build_research_summary(_shortlist_df(), _shortlist_explanations_df(), setups_df)
+    second = build_research_summary(_shortlist_df(), _shortlist_explanations_df(), setups_df)
+
+    pd.testing.assert_frame_equal(first, second)
+
+
+def test_h2_only_output_is_deterministic_for_identical_inputs():
+    setups_df = pd.DataFrame(
+        [
+            {"SetupType": "IMPULSE_FADE_RECLAIM_LONG_V1", "Direction": "LONG"},
+            {"SetupType": "IMPULSE_FADE_RECLAIM_SHORT_V1", "Direction": "SHORT"},
+        ]
+    )
+
+    first = build_research_summary(_shortlist_df(), _shortlist_explanations_df(), setups_df)
+    second = build_research_summary(_shortlist_df(), _shortlist_explanations_df(), setups_df)
+
+    pd.testing.assert_frame_equal(first, second)
 
 def test_formalizable_rows_without_setups_fail_loudly():
     with pytest.raises(ValueError, match="Cannot enrich Direction research summary rows without non-empty setups_df"):
