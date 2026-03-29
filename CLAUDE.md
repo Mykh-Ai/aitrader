@@ -45,8 +45,10 @@ D:\Project_V\Aitrader\            # dev (Windows)
 │   ├── sweeps.py                 # Sweep detection
 │   ├── failed_breaks.py          # Failed-break confirmation
 │   ├── absorption.py             # Rolling-ratio context features
+│   ├── impulses.py              # H2 impulse expansion detector (planned)
 │   ├── events.py                 # Normalized event table
-│   ├── setups.py                 # Setup candidate extraction
+│   ├── setups.py                 # H1 setup candidate extraction
+│   ├── impulse_setups.py        # H2 impulse-reclaim setups (planned)
 │   ├── outcomes.py               # Forward-looking outcome metrics
 │   ├── reports.py                # Grouped setup statistics
 │   ├── context_reports.py        # Context-bucketed statistics
@@ -77,8 +79,9 @@ Analyzer — це **facts engine + research pipeline**. Він НЕ торгує
 
 ```
 load_raw_csv → add_base_metrics → annotate_swings → detect_sweeps
-→ detect_failed_breaks → detect_absorption → build_events
-→ extract_setup_candidates → build_setup_outcomes
+→ detect_failed_breaks → detect_absorption → detect_impulses (H2)
+→ build_events → extract_setup_candidates (H1)
+→ extract_impulse_setups (H2) → build_setup_outcomes
 → build_setup_report → build_setup_context_report
 → build_setup_rankings → build_setup_selections
 → build_setup_shortlist → build_setup_shortlist_explanations
@@ -90,7 +93,7 @@ load_raw_csv → add_base_metrics → annotate_swings → detect_sweeps
 ```
 raw CSV → features (one row per 1m bar)
 features → events (structural events)
-features + events → setups (currently from failed breaks; additional types planned)
+features + events → H1 setups (failed breaks) + H2 setups (impulse reclaim, planned)
 features + setups → outcomes (forward metrics: MFE, MAE, CloseReturn)
 setups + outcomes → report (grouped stats)
 setups + outcomes → context_report (bucketed stats)

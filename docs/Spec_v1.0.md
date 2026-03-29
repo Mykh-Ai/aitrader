@@ -58,6 +58,31 @@ stabilization/completion addendum for this spec. It clarifies implemented reprod
 artifact-contract, and Phase 2→3 handoff surfaces, but does not replace the Analyzer
 boundary defined in this document.
 
+### Phase 2 Research Extension - H2 Impulse-First Track
+
+A second Phase 2 research track is approved as a **parallel setup-formation hypothesis**.
+
+- H1 (`FAILED_BREAK_RECLAIM_*`) remains frozen as the baseline control hypothesis.
+- H2 is added as an **independent research surface**.
+- H2 does **not** replace H1.
+- H2 does **not** weaken H1 thresholds.
+- H2 does **not** introduce execution logic.
+- H2 is evaluated through the same downstream Phase 2 setup pipeline and the same Phase 3 replay discipline.
+
+Reason for this extension:
+recent research cycles confirmed a recurring weak-regime outcome where replayability disappears because setup density collapses before shortlist / formalization, rather than because of a pipeline failure. H2 is introduced to test a different event object (impulse expansion + reclaim) without changing the H1 control baseline.
+
+**H2 v1 canonical decisions:**
+
+- **Baseline window:** 20-bar (reuses existing Phase 1/2 context ratios: `RelVolume_20`, `DeltaAbsRatio_20`, `OIChangeAbsRatio_20`, `LiqTotalRatio_20`). 60-bar family not used in v1.
+- **PreCompression window:** 6/20 (`PreCompression_6v20_v1`). 15/60 deferred to future calibration experiment.
+- **Anchor columns:** included in detector patch (snapshot fields, no future dependency): `ImpulseAnchorHigh/Low/Mid/VWAP_v1`.
+- **ImpulseStrengthScore_v1:** not in v1. Composite scoring deferred until first H2 runs show live surface.
+- **ImpulseCooldownBlocked_v1:** not in v1 output contract. Cooldown exists in detector logic but is not materialized as a column.
+- **Cooldown rule:** 3 bars same-direction suppression; opposite-direction impulse allowed during cooldown.
+- **Expansion confirmation:** minimum 2-of-4 conditions (volume, delta, OI, liquidation) on top of mandatory range + direction core.
+- **Anti-lookahead:** same discipline as H1 — closed bars only, right-aligned rolling baselines, no centered windows, no future labeling at detection time.
+
 ### Phase 3 Replay Cardinality Extension
 
 In shortlist-based formalization, canonical replay inputs may contain more than one
@@ -95,11 +120,15 @@ detect_failed_breaks()  failed_breaks.py          — forward-in-time failed-bre
         ↓
 detect_absorption()     absorption.py             — rolling-ratio context features
         ↓
-build_events()          events.py                 — normalize to event table
+detect_impulses()       impulses.py               — impulse expansion feature layer (H2, planned)
         ↓
-extract_setup_candidates()  setups.py             — setup candidates from failed-break events
+build_events()          events.py                 — normalize current structural event table
         ↓
-build_setup_outcomes()      outcomes.py           — forward-looking outcome metrics per setup
+extract_setup_candidates()  setups.py             — H1 failed-break setup candidates
+        ↓
+extract_impulse_setups()    impulse_setups.py     — H2 impulse-reclaim setup candidates (planned)
+        ↓
+build_setup_outcomes()      outcomes.py           — shared forward-looking outcome metrics
         ↓
 build_setup_report()        reports.py            — grouped setup statistics
         ↓
@@ -119,6 +148,12 @@ build_day_regime_report()    day_regime_report.py — research-only deterministi
         ↓
 save_dataframe()        io.py                     — write 12 output CSVs
 ```
+
+> **H2 integration note:** H2 uses the same downstream Phase 2 setup pipeline
+> (`outcomes.py`, `reports.py`, `context_reports.py`, `rankings.py`,
+> `selections.py`, `shortlists.py`, `shortlist_explanations.py`,
+> `research_summary.py`).
+> H2 is added as new `SetupType` rows, not as a separate ranking/selection stack.
 
 ### Layer responsibilities
 
@@ -2425,6 +2460,22 @@ Absorption (Block 4) — **implemented (context features v1):**
     Planned but not yet implemented:
     is_sell_absorption, is_buy_absorption (full detector)
 
+Impulse context (H2 research track) — planned:
+
+    ImpulseDetected_v1
+    ImpulseDirection_v1
+    ImpulseRangeRatio_20_v1
+    ImpulseVolumeRatio_v1
+    ImpulseDeltaRatio_v1
+    ImpulseOIRatio_v1
+    ImpulseLiqConfirmed_v1
+    PreCompression_6v20_v1
+    PreCompressionTag_v1
+    ImpulseAnchorHigh_v1
+    ImpulseAnchorLow_v1
+    ImpulseAnchorMid_v1
+    ImpulseAnchorVWAP_v1
+
 Session context (Block 1) — **implemented:**
 
     session, minutes_from_eu_open, minutes_from_us_open, ContextModelVersion
@@ -2590,3 +2641,4 @@ Block 7 забезпечує:
     - parent-child зв'язки між подіями
     - deterministic replay для валідації
     - snapshot fields для standalone event analysis
+
