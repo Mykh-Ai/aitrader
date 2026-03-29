@@ -21,9 +21,15 @@ OUTCOME_COLUMNS = [
     "BestLow",
     "FinalClose",
     "OutcomeEndTs",
+    "H2_Post3Label_v1",
+    "H2_Post6Label_v1",
+    "H2_Post12Label_v1",
 ]
 
 OUTCOME_HORIZON_BARS = 12
+
+_H2_SETUP_TYPES = {"IMPULSE_FADE_RECLAIM_LONG_V1", "IMPULSE_FADE_RECLAIM_SHORT_V1"}
+_H2_MIN_CONTINUATION_MOVE_PCT = 0.05
 
 
 def _validated_reference_level(reference_level: object) -> float:
@@ -61,6 +67,61 @@ def _validate_required_columns(df: pd.DataFrame, setups_df: pd.DataFrame) -> Non
             f"{sorted(missing_setups)}"
         )
 
+
+
+
+def _h2_post3_label(direction: str, setup_close: float, early_forward: pd.DataFrame) -> str:
+    if early_forward.empty:
+        return "NO_EARLY_CONTINUATION"
+
+    if direction == "LONG":
+        early_best = float(early_forward["High"].max())
+        early_mfe_pct = ((early_best - setup_close) / setup_close) * 100
+        continued = early_best > setup_close and early_mfe_pct >= _H2_MIN_CONTINUATION_MOVE_PCT
+    else:
+        early_best = float(early_forward["Low"].min())
+        early_mfe_pct = ((setup_close - early_best) / setup_close) * 100
+        continued = early_best < setup_close and early_mfe_pct >= _H2_MIN_CONTINUATION_MOVE_PCT
+
+    return "EARLY_CONTINUATION" if continued else "NO_EARLY_CONTINUATION"
+
+
+def _h2_post6_label(direction: str, reference_level: float, forward6: pd.DataFrame) -> str:
+    if forward6.empty:
+        return pd.NA
+
+    if direction == "LONG":
+        failed = bool((forward6["Close"] < reference_level).any())
+    else:
+        failed = bool((forward6["Close"] > reference_level).any())
+
+    return "RECLAIM_FAILED" if failed else "RECLAIM_HELD"
+
+
+def _h2_post12_label(mfe_pct: float, mae_pct: float, close_return_pct: float) -> str:
+    if close_return_pct >= _H2_MIN_CONTINUATION_MOVE_PCT and mae_pct > -_H2_MIN_CONTINUATION_MOVE_PCT:
+        return "FULL_FADE"
+    if mfe_pct >= _H2_MIN_CONTINUATION_MOVE_PCT:
+        return "PARTIAL_FADE"
+    return "NO_FADE"
+
+
+def _build_h2_labels(setup: object, setup_close: float, reference_level: float, forward: pd.DataFrame, mfe_pct: float, mae_pct: float, close_return_pct: float) -> tuple[object, object, object]:
+    setup_type = getattr(setup, "SetupType", None)
+    if setup_type not in _H2_SETUP_TYPES:
+        return (pd.NA, pd.NA, pd.NA)
+
+    if setup.Direction not in {"LONG", "SHORT"}:
+        raise ValueError(f"Unsupported setup direction for H2 observational labels: {setup.Direction}")
+
+    early_forward = forward.iloc[:3]
+    forward6 = forward.iloc[:6]
+
+    return (
+        _h2_post3_label(setup.Direction, setup_close=setup_close, early_forward=early_forward),
+        _h2_post6_label(setup.Direction, reference_level=reference_level, forward6=forward6),
+        _h2_post12_label(mfe_pct=mfe_pct, mae_pct=mae_pct, close_return_pct=close_return_pct),
+    )
 
 def build_setup_outcomes(df: pd.DataFrame, setups_df: pd.DataFrame) -> pd.DataFrame:
     """Build deterministic per-setup outcome rows over a fixed forward horizon."""
@@ -125,6 +186,9 @@ def build_setup_outcomes(df: pd.DataFrame, setups_df: pd.DataFrame) -> pd.DataFr
                     "BestLow": pd.NA,
                     "FinalClose": pd.NA,
                     "OutcomeEndTs": pd.NaT,
+                    "H2_Post3Label_v1": pd.NA,
+                    "H2_Post6Label_v1": pd.NA,
+                    "H2_Post12Label_v1": pd.NA,
                 }
             )
             outcome_rows.append(row)
@@ -140,6 +204,7 @@ def build_setup_outcomes(df: pd.DataFrame, setups_df: pd.DataFrame) -> pd.DataFr
         final_close = forward["Close"].iloc[-1]
         outcome_end_ts = forward["Timestamp"].iloc[-1]
         reference_level = _validated_reference_level(setup.ReferenceLevel)
+        setup_close = float(features.iloc[setup_idx]["Close"])
 
         if setup.Direction == "LONG":
             mfe_pct = ((best_high - reference_level) / reference_level) * 100
@@ -152,6 +217,16 @@ def build_setup_outcomes(df: pd.DataFrame, setups_df: pd.DataFrame) -> pd.DataFr
         else:
             raise ValueError(f"Unsupported setup direction for outcome evaluation: {setup.Direction}")
 
+        h2_post3_label, h2_post6_label, h2_post12_label = _build_h2_labels(
+            setup=setup,
+            setup_close=setup_close,
+            reference_level=reference_level,
+            forward=forward,
+            mfe_pct=mfe_pct,
+            mae_pct=mae_pct,
+            close_return_pct=close_return_pct,
+        )
+
         row.update(
             {
                 "OutcomeStatus": status,
@@ -162,6 +237,9 @@ def build_setup_outcomes(df: pd.DataFrame, setups_df: pd.DataFrame) -> pd.DataFr
                 "BestLow": best_low,
                 "FinalClose": final_close,
                 "OutcomeEndTs": outcome_end_ts,
+                "H2_Post3Label_v1": h2_post3_label,
+                "H2_Post6Label_v1": h2_post6_label,
+                "H2_Post12Label_v1": h2_post12_label,
             }
         )
         outcome_rows.append(row)
