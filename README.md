@@ -310,6 +310,14 @@ Backtester consumes pre-generated analyzer artifacts and runs deterministic repl
 - `PHASE3_MAPPING_ONLY` mode includes strict pre-replay validation gate with explicit summary/details artifacts.
 - SL/TP placement is currently deterministic **v1 baseline** (`placement.py`) and should not be treated as full execution-grade order lifecycle handling.
 
+### Phase 3 replay cardinality baseline
+
+- Shortlist-based formalization may yield `0..N` canonical replayable rulesets for one analyzer artifact.
+- `0` replayable rulesets is a fail-loud pre-placement stop, not a silent collapse into a no-op replay.
+- `1` replayable ruleset preserves the existing single-run baseline.
+- `N > 1` replayable rulesets fan out into `N` derived isolated replay runs; each derived run receives a one-row canonical `backtest_rulesets.csv`, so the placement exact-one-ruleset contract remains unchanged per run.
+- The parent run scope records orchestration/lineage only; replay-completed units are the derived child runs. Campaign/registry outputs append one fact row per completed derived run, with no aggregation, best-of selection, or auto-promotion.
+
 ## 10) Operational usage
 
 ### Collector
