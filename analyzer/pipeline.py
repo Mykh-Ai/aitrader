@@ -21,6 +21,7 @@ from .outcomes import build_setup_outcomes
 from .selections import build_setup_selections
 from .reports import build_setup_report
 from .research_summary import build_research_summary
+from .schema import FEATURE_COLUMNS_IMPLEMENTED, REQUIRED_RAW_COLUMNS
 from .setups import extract_setup_candidates
 from .shortlist_explanations import build_setup_shortlist_explanations
 from .shortlists import build_setup_shortlist
@@ -37,10 +38,14 @@ def _concat_and_validate_setups(h1_setups: pd.DataFrame, h2_setups: pd.DataFrame
         setups = h1_setups.copy()
     else:
         setups = pd.concat([h1_setups, h2_setups], ignore_index=True, sort=False)
-
-    setups = setups.sort_values(
-        by=["DetectedAt", "ReferenceEventType", "Direction", "SetupId"], kind="mergesort"
-    ).reset_index(drop=True)
+    sort_columns = [
+        col for col in ["DetectedAt", "ReferenceEventType", "Direction", "SetupId"]
+        if col in setups.columns
+    ]
+    if sort_columns:
+        setups = setups.sort_values(by=sort_columns, kind="mergesort").reset_index(drop=True)
+    else:
+        setups = setups.reset_index(drop=True)
 
     duplicate_setup_ids = setups["SetupId"].duplicated(keep=False)
     if duplicate_setup_ids.any():
@@ -48,6 +53,15 @@ def _concat_and_validate_setups(h1_setups: pd.DataFrame, h2_setups: pd.DataFrame
         raise ValueError(f"Expected unique SetupId values after H1+H2 setup concat; duplicates={dup_ids}")
 
     return setups
+
+
+def _canonicalize_feature_columns(features: pd.DataFrame) -> pd.DataFrame:
+    """Persist analyzer_features.csv in the canonical schema order expected by run_daily."""
+    expected_columns = [*REQUIRED_RAW_COLUMNS, *FEATURE_COLUMNS_IMPLEMENTED]
+    missing = [col for col in expected_columns if col not in features.columns]
+    if missing:
+        raise ValueError(f'Missing expected feature columns before save: {missing}')
+    return features.loc[:, expected_columns].copy()
 
 
 def run(input_path: str | Path, output_dir: str | Path) -> dict:
@@ -75,6 +89,7 @@ def run(input_path: str | Path, output_dir: str | Path) -> dict:
     shortlist_explanations = build_setup_shortlist_explanations(shortlist)
     research_summary = build_research_summary(shortlist, shortlist_explanations, setups)
     day_regime_report = build_day_regime_report(features, events, setups, shortlist, research_summary)
+    features = _canonicalize_feature_columns(features)
 
     out_dir = ensure_output_dir(output_dir)
     features_path = save_dataframe(features, out_dir / "analyzer_features.csv")
