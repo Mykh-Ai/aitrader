@@ -1,0 +1,33 @@
+snapshot_date,source_file,side,slice_name,n,pos_rate,mean_ret,median_ret,mfe,mae
+2026-03-18,reclaim_context_asymmetry_summary.csv,LONG,baseline,81,67.9,+0.125,+0.108,0.263,-0.132
+2026-03-18,reclaim_context_asymmetry_summary.csv,LONG,low-stress (all 3 <= median),28,85.7,+0.230,+0.228,0.339,-0.077
+2026-03-18,reclaim_context_asymmetry_summary.csv,LONG,high-stress (any 1 > median),53,58.5,+0.069,+0.062,0.222,-0.162
+2026-03-18,reclaim_context_asymmetry_summary.csv,LONG,zero ctx spikes,30,80.0,+0.159,+0.144,0.291,-0.117
+2026-03-18,reclaim_context_asymmetry_summary.csv,SHORT,baseline,168,53.0,+0.004,+0.008,1.374,-0.119
+2026-03-18,reclaim_context_asymmetry_summary.csv,SHORT,high-stress (all 3 >= median),50,58.0,+0.023,+0.033,2.187,-0.090
+2026-03-18,reclaim_context_asymmetry_summary.csv,SHORT,low-stress (any 1 < median),118,50.8,-0.004,+0.001,1.030,-0.131
+2026-03-18,reclaim_context_asymmetry_summary.csv,SHORT,>=2 ctx spikes active,43,55.8,+0.033,+0.031,2.515,-0.077
+2026-03-22,reclaim_context_asymmetry_summary_2026-03-22.csv,LONG,baseline,84,67.9,+0.124,+0.110,0.260,-0.130
+2026-03-22,reclaim_context_asymmetry_summary_2026-03-22.csv,LONG,low-stress (all 3 <= median),28,85.7,+0.230,+0.228,0.339,-0.077
+2026-03-22,reclaim_context_asymmetry_summary_2026-03-22.csv,LONG,high-stress (any 1 > median),56,58.9,+0.071,+0.064,0.220,-0.157
+2026-03-22,reclaim_context_asymmetry_summary_2026-03-22.csv,LONG,zero ctx spikes,31,80.6,+0.161,+0.152,0.289,-0.114
+2026-03-22,reclaim_context_asymmetry_summary_2026-03-22.csv,SHORT,baseline,170,52.9,+0.002,+0.008,1.360,-0.123
+2026-03-22,reclaim_context_asymmetry_summary_2026-03-22.csv,SHORT,high-stress (all 3 >= median),52,57.7,+0.015,+0.033,2.109,-0.103
+2026-03-22,reclaim_context_asymmetry_summary_2026-03-22.csv,SHORT,low-stress (any 1 < median),118,50.8,-0.004,+0.001,1.030,-0.131
+2026-03-22,reclaim_context_asymmetry_summary_2026-03-22.csv,SHORT,>=2 ctx spikes active,44,56.8,+0.036,+0.031,2.463,-0.076
+2026-03-29,reclaim_context_asymmetry_summary_2026-03-29.csv,LONG,baseline,95,65.3,+0.110,+0.097,0.254,-0.136
+2026-03-29,reclaim_context_asymmetry_summary_2026-03-29.csv,LONG,low-stress (all 3 <= median),31,83.9,+0.214,+0.219,0.318,-0.077
+2026-03-29,reclaim_context_asymmetry_summary_2026-03-29.csv,LONG,high-stress (any 1 > median),64,56.2,+0.059,+0.054,0.223,-0.165
+2026-03-29,reclaim_context_asymmetry_summary_2026-03-29.csv,LONG,zero ctx spikes,34,76.5,+0.138,+0.144,0.278,-0.132
+2026-03-29,reclaim_context_asymmetry_summary_2026-03-29.csv,SHORT,baseline,179,52.5,+0.003,+0.008,1.301,-0.124
+2026-03-29,reclaim_context_asymmetry_summary_2026-03-29.csv,SHORT,high-stress (all 3 >= median),55,54.5,+0.009,+0.031,2.006,-0.111
+2026-03-29,reclaim_context_asymmetry_summary_2026-03-29.csv,SHORT,low-stress (any 1 < median),124,51.6,-0.000,+0.001,0.989,-0.130
+2026-03-29,reclaim_context_asymmetry_summary_2026-03-29.csv,SHORT,>=2 ctx spikes active,48,54.2,+0.027,+0.017,2.269,-0.084
+2026-04-09,reclaim_context_asymmetry_summary_2026-04-09.csv,LONG,baseline,251,60.2,+0.067,+0.034,0.208,-0.111
+2026-04-09,reclaim_context_asymmetry_summary_2026-04-09.csv,LONG,low-stress (all 3 <= median),90,66.7,+0.090,+0.061,0.203,-0.098
+2026-04-09,reclaim_context_asymmetry_summary_2026-04-09.csv,LONG,high-stress (any 1 > median),161,56.5,+0.054,+0.021,0.211,-0.117
+2026-04-09,reclaim_context_asymmetry_summary_2026-04-09.csv,LONG,zero ctx spikes,89,66.3,+0.066,+0.064,0.190,-0.112
+2026-04-09,reclaim_context_asymmetry_summary_2026-04-09.csv,SHORT,baseline,363,55.4,+0.021,+0.016,0.730,-0.112
+2026-04-09,reclaim_context_asymmetry_summary_2026-04-09.csv,SHORT,high-stress (all 3 >= median),116,60.3,+0.063,+0.042,1.077,-0.069
+2026-04-09,reclaim_context_asymmetry_summary_2026-04-09.csv,SHORT,low-stress (any 1 < median),247,53.0,+0.002,+0.008,0.567,-0.132
+2026-04-09,reclaim_context_asymmetry_summary_2026-04-09.csv,SHORT,>=2 ctx spikes active,116,62.1,+0.066,+0.049,1.075,-0.067

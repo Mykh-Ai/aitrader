@@ -1,9 +1,0 @@
-run_date,direction,slice,n,pos_rate_pct,mean_ret_pct,median_ret_pct,mean_mfe_pct,mean_mae_pct
-2026-03-18,LONG,baseline,81,67.9,+0.125,+0.108,0.263,-0.132
-2026-03-18,LONG,low-stress (all 3 <= median),28,85.7,+0.230,+0.228,0.339,-0.077
-2026-03-18,LONG,high-stress (any 1 > median),53,58.5,+0.069,+0.062,0.222,-0.162
-2026-03-18,LONG,zero ctx spikes,30,80.0,+0.159,+0.144,0.291,-0.117
-2026-03-18,SHORT,baseline,168,53.0,+0.004,+0.008,1.374,-0.119
-2026-03-18,SHORT,high-stress (all 3 >= median),50,58.0,+0.023,+0.033,2.187,-0.090
-2026-03-18,SHORT,low-stress (any 1 < median),118,50.8,-0.004,+0.001,1.030,-0.131
-2026-03-18,SHORT,2plus-ctx-spikes,43,55.8,+0.033,+0.031,2.515,-0.077
