@@ -79,16 +79,21 @@ ssh server "cd /opt/aitrader && source .venv/bin/activate && python3 research_cy
 
 ## Крок 4 — Порівняти slice analysis з попереднім snapshot
 
-Slice output є в JSON (`slice_output`).
-Порівняти з попереднім snapshot:
-- dir: `research/results/`
-- naming: `reclaim_context_asymmetry_summary_<YYYY-MM-DD>.csv`
-- baseline (без дати): `reclaim_context_asymmetry_summary.csv`
-- знайти файл з найсвіжішою датою або baseline, якщо dated файлів ще немає
+Slice output Ñ Ð² JSON (`slice_output`).
+ÐÐ¾ÑÑÐ²Ð½ÑÑÐ¸ Ð· canonical continuity artifact:
+- file: `research/results/reclaim_context_asymmetry_history.csv`
+- history file Ð¼ÑÑÑÐ¸ÑÑ ÑÑÑ reclaim-context snapshots Ñ Ð½Ð¾ÑÐ¼Ð°Ð»ÑÐ·Ð¾Ð²Ð°Ð½Ð¾Ð¼Ñ long format
+- Ð¾Ð´Ð¸Ð½ ÑÑÐ´Ð¾Ðº = Ð¾Ð´Ð¸Ð½ slice Ð² Ð¾Ð´Ð½Ð¾Ð¼Ñ snapshot
+- canonical ÐºÐ¾Ð»Ð¾Ð½ÐºÐ¸: `snapshot_date,source_file,side,slice_name,n,pos_rate,mean_ret,median_ret,mfe,mae`
 
-Якщо результати суттєво змінились (n, pos_rate, mean_ret дельта > noise) —
-зафіксувати в новому файлі:
-`research/results/reclaim_context_asymmetry_summary_<YYYY-MM-DD>.csv`
+Ð¯ÐºÑÐ¾ cycle Ð´Ð°Ñ Ð½Ð¾Ð²Ð¸Ð¹ reclaim-context asymmetry snapshot:
+- Ð½Ðµ ÑÑÐ²Ð¾ÑÑÐ²Ð°ÑÐ¸ `reclaim_context_asymmetry_summary_<YYYY-MM-DD>.csv`
+- Ð½Ðµ ÑÑÐ²Ð¾ÑÑÐ²Ð°ÑÐ¸ `reclaim_context_asymmetry_summary.csv`
+- append / merge Ð½Ð¾Ð²Ñ rows Ñ `research/results/reclaim_context_asymmetry_history.csv`
+- Ð·Ð±ÐµÑÐµÐ³ÑÐ¸ `snapshot_date` ÑÐ° `source_file` metadata Ð´Ð»Ñ Ð´Ð¾Ð´Ð°Ð½Ð¾Ð³Ð¾ snapshot
+- Ð¿ÑÐ´ÑÑÐ¸Ð¼ÑÐ²Ð°ÑÐ¸ canonical slice naming Ð´Ð»Ñ semantically same slices, ÑÐ¾Ð± Ð½Ðµ Ð»Ð°Ð¼Ð°ÑÐ¸ continuity time-series
+
+History file Ñ ÑÐ´Ð¸Ð½Ð¸Ð¼ canonical continuity artifact Ð´Ð»Ñ ÑÑÐ¾Ð³Ð¾ research stream.
 
 ## Крок 5 — Оновити run_log.csv
 
