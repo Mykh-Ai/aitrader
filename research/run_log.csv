@@ -19,3 +19,4 @@ processed_at,analyzer_run_id,backtest_output_dir,formalizable_rows,promotion_out
 2026-03-29,2026-03-26_to_2026-03-26_run_001,N/A,0,N/A,NO_REPLAYABLE_RULESETS,routine cycle 2026-03-29; FE=0; 3 setups 0 shortlist
 2026-03-29,2026-03-27_to_2026-03-27_run_001,N/A,0,N/A,NO_REPLAYABLE_RULESETS,routine cycle 2026-03-29; FE=0; 4 setups 0 shortlist
 2026-03-29,2026-03-28_to_2026-03-28_run_001,N/A,0,N/A,NO_REPLAYABLE_RULESETS,routine cycle 2026-03-29; FE=0; 2 setups 0 shortlist
+2026-04-10,h2_bounded_review,N/A,0,N/A,NO_REPLAYABLE_RULESETS,routine cycle 2026-04-10; FE=0; missing analyzer artifacts
