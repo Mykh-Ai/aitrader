@@ -134,9 +134,8 @@ Samples для позитивних кандидатів ще недостатн
 
 ## Weekly development log
 
-> Формат запису:
-> `- [weekly_YYYY-MM-DD.md](../verdicts/weekly_YYYY-MM-DD.md) — 2–5 речень: що нового, що це означає, яке рішення, який next step.`
-
+- [weekly_2026-04-10.md](../verdicts/weekly_2026-04-10.md) —
+  H1 вийшов із FE=0 starvation: у більшості runs зявилась replay surface, але broad replay families системно завершилися REJECT/FAIL. H2 active filter candidate нового material evidence не отримав. Водночас reclaim-context history на більшій вибірці підсвітив окрему short-side observational surface: high-stress / multi-spike reclaim виглядає сильніше за broad short baseline. Рішення: `INVESTIGATE SPECIFIC SIGNAL`. Наступний крок: targeted validation note по short-side reclaim context.
 - [weekly_2026-03-29.md](../verdicts/weekly_2026-03-29.md) —
   FE=0 streak у H1 підтверджено на більшій вибірці; weak/compressed regime не дає current H1 path достатньої setup density для shortlist / formalization. Це не виглядає як pipeline bug. На цьому фоні затверджено розвиток H2 як parallel observational research track. Наступний крок: bounded H2 comparative review без replay.
 
