@@ -10,7 +10,7 @@ Read-only analysis over existing analyzer artifacts.
 
 Запуск:
     python research/scripts/slice_by_regime.py
-    python research/scripts/slice_by_regime.py --runs-dir /opt/aitrader/analyzer_runs
+    python research/scripts/slice_by_regime.py --runs-dir analyzer_runs
 """
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ CONTEXT_BOOLEAN = [
 # Де шукати runs (кілька можливих locations)
 _SEARCH_PATHS = [
     REPO_ROOT / "analyzer_runs",
-    REPO_ROOT / "research" / "findings" / "transition_vps_data",
+    REPO_ROOT / "research" / "findings" / "transition_local_data",
 ]
 
 

@@ -1,0 +1,6 @@
+Public-safe example placeholder for the local weekly research prompt.
+
+The real operational prompt stays local-only because it may reference:
+- local server context
+- private runbook area
+- non-public workflow instructions

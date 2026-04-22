@@ -47,7 +47,7 @@ Backtester
 
 Research Operations (research_cycle.py)
   - automated probe → replay → record → slice → diagnostics
-  - agent (weekly_research.txt) → handoff/ → architect (Shi_research.txt) → verdicts/
+  - optional local-only ops workflow can consume cycle output and write local research notes
 
 Executor (planned; separate boundary)
 ```
@@ -118,17 +118,17 @@ Target boundary for production order lifecycle, restart reconciliation with exch
 │   └── experiment_registry.py
 ├── research_cycle.py              — automated routine pipeline (runs on server)
 ├── prompts/
-│   ├── weekly_research.txt        — agent prompt (routine cycle)
-│   └── Shi_research.txt           — architect prompt (verdict)
+│   ├── weekly_research.example.txt — public-safe local prompt placeholder
+│   └── Shi_research.example.txt    — public-safe local prompt placeholder
 ├── research/
-│   ├── OPS.md                     — operations guide
+│   ├── OPS.example.md             — public-safe local ops template
 │   ├── run_log.csv                — processing history
 │   ├── slice_analysis_reclaim_context.py
 │   ├── findings/                  — frozen research memos
 │   ├── results/                   — slice analysis snapshots
-│   ├── verdicts/                  — weekly architect verdicts
-│   └── handoff/                   — ephemeral agent→architect data (not in git)
-├── scripts/run_analyzer_daily.sh
+│   ├── verdicts/                  — local-only research verdict area
+│   └── handoff/                   — private runbook area (not in git)
+├── scripts/run_analyzer_daily.example.sh
 ├── docs/
 │   ├── Spec_v1.0.md
 │   ├── Phase2_Implementation_Plan_AiTrader_v2_2_updated.md
@@ -219,9 +219,7 @@ Target boundary for production order lifecycle, restart reconciliation with exch
 ### Storage pattern
 
 - Raw feed files: `feed/YYYY-MM-DD.csv` (UTC-day partitioning).
-- Typical runtime dirs (deployment-style):
-  - feed: `/opt/aitrader/feed/`
-  - logs: `/opt/aitrader/logs/`
+- Runtime directories are deployment-specific and should be kept in local server context rather than hard-coded in the public repo.
 
 ### Sources
 
@@ -237,7 +235,6 @@ Target boundary for production order lifecycle, restart reconciliation with exch
 
 ```bash
 docker compose up -d --build
-docker logs -f shi-aggregator
 ```
 
 Local dev:
@@ -280,10 +277,10 @@ Recommended current baseline: run Analyzer once per day after UTC rollover on th
 Example:
 
 ```bash
-python -m analyzer.run_daily /opt/aitrader/feed/2026-03-13.csv --runs-root /opt/aitrader/analyzer_runs
+python -m analyzer.run_daily feed/2026-03-13.csv --runs-root analyzer_runs
 ```
 
-Cron wrapper: `scripts/run_analyzer_daily.sh`.
+For deployment scheduling, keep any host-specific wrapper in local-only ops materials. The public repo ships only a safe example wrapper.
 
 ### Structural safety notes (kept practical)
 
@@ -324,13 +321,12 @@ Backtester consumes pre-generated analyzer artifacts and runs deterministic repl
 
 ```bash
 docker compose up -d --build
-docker logs -f shi-aggregator
 ```
 
 ### Analyzer
 
 ```bash
-python -m analyzer.run_daily /opt/aitrader/feed/<YYYY-MM-DD>.csv --runs-root /opt/aitrader/analyzer_runs
+python -m analyzer.run_daily feed/<YYYY-MM-DD>.csv --runs-root analyzer_runs
 ```
 
 ### Routine research cycle (automated)
@@ -339,40 +335,32 @@ Weekly cycle is automated via `research_cycle.py`:
 
 ```bash
 # Full routine: probe → replay → record → slice → diagnostics
-cd /opt/aitrader && source .venv/bin/activate
 python3 research_cycle.py
 
 # Dry run (probe + diagnostics only, no replay)
 python3 research_cycle.py --dry-run
 ```
 
-The script outputs structured JSON. The agent (`prompts/weekly_research.txt`) parses it into
-`research/handoff/`, then the architect (`prompts/Shi_research.txt`) writes a verdict.
+The script outputs structured JSON. Local teams may optionally feed that output into local-only ops materials for note-taking or review workflow.
 
-See `research/README.md` for the full weekly workflow instructions.
+See `research/README.md` for the public research workflow boundary. Private runbooks should stay in the local-only ops area.
 
-### Practical server workflow: manual probe before Backtester
+### Practical manual probe before Backtester
 
-For ad-hoc exploration outside the routine cycle.
-Activate the virtual environment first:
-
-```bash
-cd /opt/aitrader
-source .venv/bin/activate
-```
+For ad-hoc exploration outside the routine cycle, use your local environment or local server context.
 
 Choose the exact Analyzer run directory. Keep dates in `YYYY-MM-DD` format and the run directory in `YYYY-MM-DD_to_YYYY-MM-DD_run_001` format.
 
 **Template**
 
 ```text
-/opt/aitrader/analyzer_runs/YYYY-MM-DD_to_YYYY-MM-DD_run_001
+analyzer_runs/YYYY-MM-DD_to_YYYY-MM-DD_run_001
 ```
 
 **Example**
 
 ```text
-/opt/aitrader/analyzer_runs/2026-03-14_to_2026-03-14_run_001
+analyzer_runs/2026-03-14_to_2026-03-14_run_001
 ```
 
 Inspect the shortlist artifact first.
@@ -382,7 +370,7 @@ Inspect the shortlist artifact first.
 ```bash
 python - <<'PY'
 import pandas as pd
-run_dir = "/opt/aitrader/analyzer_runs/YYYY-MM-DD_to_YYYY-MM-DD_run_001"
+run_dir = "analyzer_runs/YYYY-MM-DD_to_YYYY-MM-DD_run_001"
 df = pd.read_csv(f"{run_dir}/analyzer_setup_shortlist.csv")
 print(df.head(20).to_string(index=False))
 PY
@@ -393,7 +381,7 @@ PY
 ```bash
 python - <<'PY'
 import pandas as pd
-run_dir = "/opt/aitrader/analyzer_runs/2026-03-14_to_2026-03-14_run_001"
+run_dir = "analyzer_runs/2026-03-14_to_2026-03-14_run_001"
 df = pd.read_csv(f"{run_dir}/analyzer_setup_shortlist.csv")
 print(df.head(20).to_string(index=False))
 PY
@@ -406,7 +394,7 @@ Inspect the research summary artifact next.
 ```bash
 python - <<'PY'
 import pandas as pd
-run_dir = "/opt/aitrader/analyzer_runs/YYYY-MM-DD_to_YYYY-MM-DD_run_001"
+run_dir = "analyzer_runs/YYYY-MM-DD_to_YYYY-MM-DD_run_001"
 df = pd.read_csv(f"{run_dir}/analyzer_research_summary.csv")
 print(df.head(30).to_string(index=False))
 PY
@@ -419,7 +407,7 @@ Inspect only formalizable rows before starting Backtester.
 ```bash
 python - <<'PY'
 import pandas as pd
-run_dir = "/opt/aitrader/analyzer_runs/YYYY-MM-DD_to_YYYY-MM-DD_run_001"
+run_dir = "analyzer_runs/YYYY-MM-DD_to_YYYY-MM-DD_run_001"
 df = pd.read_csv(f"{run_dir}/analyzer_research_summary.csv")
 formalizable = df[df["FormalizationEligible"] == True]
 print(formalizable.to_string(index=False))
@@ -441,8 +429,8 @@ python - <<'PY'
 from backtester.orchestrator import run_backtester
 
 run_backtester(
-    artifact_dir="/opt/aitrader/analyzer_runs/YYYY-MM-DD_to_YYYY-MM-DD_run_001",
-    output_dir="/opt/aitrader/backtests/smoke_YYYYMMDD_manual",
+    artifact_dir="analyzer_runs/YYYY-MM-DD_to_YYYY-MM-DD_run_001",
+    output_dir="backtests/smoke_YYYYMMDD_manual",
     ruleset_source_formalization_mode="SHORTLIST_FIRST",
     variant_names=("BASE",),
     cost_model_id="COST_MODEL_ZERO_SKELETON_ONLY",
@@ -459,8 +447,8 @@ python - <<'PY'
 from backtester.orchestrator import run_backtester
 
 run_backtester(
-    artifact_dir="/opt/aitrader/analyzer_runs/2026-03-14_to_2026-03-14_run_001",
-    output_dir="/opt/aitrader/backtests/smoke_20260314_manual",
+    artifact_dir="analyzer_runs/2026-03-14_to_2026-03-14_run_001",
+    output_dir="backtests/smoke_20260314_manual",
     ruleset_source_formalization_mode="SHORTLIST_FIRST",
     variant_names=("BASE",),
     cost_model_id="COST_MODEL_ZERO_SKELETON_ONLY",
@@ -479,7 +467,7 @@ python - <<'PY'
 from pathlib import Path
 import pandas as pd
 
-out_dir = Path("/opt/aitrader/backtests/smoke_YYYYMMDD_manual")
+out_dir = Path("backtests/smoke_YYYYMMDD_manual")
 for child in sorted(out_dir.glob("derived_run_*")):
     print(f"\n== {child.name} ==")
     print(pd.read_csv(child / "backtest_rulesets.csv").to_string(index=False))
@@ -498,8 +486,8 @@ Very short interpretation:
 from backtester.orchestrator import run_backtester
 
 run_backtester(
-    artifact_dir="/opt/aitrader/analyzer_runs/<run_id>",
-    output_dir="/opt/aitrader/backtests/<bt_run_id>",
+    artifact_dir="analyzer_runs/<run_id>",
+    output_dir="backtests/<bt_run_id>",
     ruleset_source_formalization_mode="PHASE3_MAPPING_ONLY",
     variant_names=("BASE",),
     cost_model_id="DEFAULT_COST_V1",
@@ -514,8 +502,8 @@ run_backtester(
 from backtester.campaign import run_backtest_campaign
 
 run_backtest_campaign(
-    artifact_dirs=["/opt/aitrader/analyzer_runs/<run_id_1>", "/opt/aitrader/analyzer_runs/<run_id_2>"],
-    output_dir="/opt/aitrader/backtests/campaigns/<campaign_id>",
+    artifact_dirs=["analyzer_runs/<run_id_1>", "analyzer_runs/<run_id_2>"],
+    output_dir="backtests/campaigns/<campaign_id>",
     campaign_label="baseline",
     ruleset_source_formalization_mode="PHASE3_MAPPING_ONLY",
     variant_names=("BASE",),
@@ -551,10 +539,8 @@ When wording differs, prefer current runtime/code behavior and these aligned doc
 
 ## Infrastructure / health quick reference (operational note)
 
-- Typical deployment location: `/opt/aitrader`
-- Typical collector container name: `shi-aggregator`
-- Typical data path: `/opt/aitrader/feed/`
-- Typical log path: `/opt/aitrader/logs/aggregator.log`
+- Deployment layout and runtime naming are environment-specific.
+- Keep hostnames, container names, absolute paths, and operator procedures in local-only ops materials.
 
 Example health log format:
 

@@ -3,7 +3,7 @@
 **Window:** `2026-03-18` → `2026-03-29` (12 днів)
 **Regime:** MIXED / MEDIUM density / LOW_STRESS (однорідний, без переключень)
 **Code version:** `32c842e` (H2 Patches 1–3 applied)
-**Server run:** `/opt/aitrader/analyzer_runs/h2_bounded_review/`
+**Run source:** local analyzer run directory for the bounded H2 review window.
 **Summary CSV:** `research/results/h2_comparative_summary_2026-03-29.csv`
 
 ---

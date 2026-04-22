@@ -331,7 +331,7 @@ identical pipeline logic. The difference is in the input data.
 ## H. Data sources
 
 All data verified from actual VPS analyzer CSVs downloaded to
-`research/findings/transition_vps_data/`. No inferred values remain.
+the local-only transition data archive. No inferred values remain.
 
 | artifact | runs verified |
 |----------|--------------|

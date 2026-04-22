@@ -14,10 +14,10 @@ Offline slice analysis: FAILED_BREAK_RECLAIM context hypothesis
     python research/slice_analysis_reclaim_context.py
 
     # вказати директорію явно (напр. на сервері)
-    python research/slice_analysis_reclaim_context.py --runs-dir /opt/aitrader/analyzer_runs
+    python research/slice_analysis_reclaim_context.py --runs-dir analyzer_runs
 
     # з фільтром по даті (включно з обома кінцями)
-    python research/slice_analysis_reclaim_context.py --runs-dir /opt/aitrader/analyzer_runs \\
+    python research/slice_analysis_reclaim_context.py --runs-dir analyzer_runs \\
         --date-from 2026-03-12 --date-to 2026-03-17
 
 METHODOLOGY FREEZE — не змінювати slice logic між runs.

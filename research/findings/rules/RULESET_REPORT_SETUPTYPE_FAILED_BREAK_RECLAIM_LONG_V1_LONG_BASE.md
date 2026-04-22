@@ -93,7 +93,7 @@ Revisit only if all of the following remain true:
 This note is subordinate to project-level findings and does not replace them.
 
 Direct relationships:
-- `research/verdicts/2026-03_first_project_verdict.md`
+- local-only verdict archive entry for the first project verdict
 - `research/findings/2026-03_transition_replay_reject_to_fe0.md`
 - `research/findings/2026-03_reclaim_context_asymmetry_phase_conditioned.md`
 

@@ -1,0 +1,6 @@
+Public-safe example placeholder for the local architect verdict prompt.
+
+The real operational prompt stays local-only because it may reference:
+- private handoff materials
+- local verdict workflow
+- internal-only operating procedures

@@ -9,10 +9,10 @@
 
 ## 1. Top-level directory structure
 
-Server-side layout under `/opt/aitrader`:
+Example runtime layout under `<project-root>`:
 
 ```
-/opt/aitrader/
+<project-root>/
 ├── feed/                    # Raw 1m bar CSVs (aggregator output)
 │                            # One file per day: YYYY-MM-DD.csv
 │                            # OWNED BY: aggregator. Read-only for all other subsystems.
@@ -128,7 +128,7 @@ Each run directory contains `run_manifest.json` at the root.
 {
   "run_id": "2026-03-13_to_2026-03-13_run_001",
   "generated_at_utc": "2026-03-13T07:26:14Z",
-  "input_feed_dir": "/opt/aitrader/feed",
+  "input_feed_dir": "<project-root>/feed",
   "input_feed_files": [
     "2026-03-13.csv"
   ],
@@ -136,7 +136,7 @@ Each run directory contains `run_manifest.json` at the root.
   "input_date_to": "2026-03-13",
   "input_bar_count": 1440,
   "input_includes_partial_day": false,
-  "output_dir": "/opt/aitrader/analyzer_runs/2026-03-13_to_2026-03-13_run_001",
+  "output_dir": "<project-root>/analyzer_runs/2026-03-13_to_2026-03-13_run_001",
   "artifact_list": [
     "analyzer_features.csv",
     "analyzer_events.csv",
@@ -166,13 +166,13 @@ Each run directory contains `run_manifest.json` at the root.
 |---|---|---|---|
 | `run_id` | string | yes | Matches directory name exactly |
 | `generated_at_utc` | ISO 8601 | yes | UTC timestamp of run completion |
-| `input_feed_dir` | string | yes | Absolute path to feed directory used |
+| `input_feed_dir` | string | yes | Path to feed directory used |
 | `input_feed_files` | string[] | yes | Ordered list of feed CSV files consumed |
 | `input_date_from` | YYYY-MM-DD | yes | First date in input range (UTC) |
 | `input_date_to` | YYYY-MM-DD | yes | Last date in input range (UTC) |
 | `input_bar_count` | int | yes | Total 1m bars loaded across all input files |
 | `input_includes_partial_day` | bool | yes | True if `date_to` file was incomplete at run time |
-| `output_dir` | string | yes | Absolute path to this run directory |
+| `output_dir` | string | yes | Path to this run directory |
 | `artifact_list` | string[] | yes | Fixed list of artifact filenames |
 | `artifact_count` | int | yes | Length of `artifact_list` (11 in v0.1) |
 | `pipeline_stage_count` | int | yes | Number of pipeline stages executed (16 in v0.1) |
@@ -294,7 +294,7 @@ The Backtester's `artifact_dir` parameter (from `Backtesting_Architecture_v0.1.m
 
 ```
 backtester.run(
-    artifact_dir="/opt/aitrader/analyzer_runs/2026-03-11_to_2026-03-13_run_001",
+    artifact_dir="analyzer_runs/2026-03-11_to_2026-03-13_run_001",
     ...
 )
 ```
@@ -326,7 +326,7 @@ At 1 run/day: ~250 MB/year. At 5 runs/day: ~1.5 GB/year. No urgency for cleanup 
 ### Example 1: single complete day
 
 ```
-/opt/aitrader/analyzer_runs/2026-03-13_to_2026-03-13_run_001/
+analyzer_runs/2026-03-13_to_2026-03-13_run_001/
 ├── run_manifest.json
 ├── analyzer_features.csv
 ├── analyzer_events.csv
@@ -355,7 +355,7 @@ Manifest excerpt:
 ### Example 2: re-run of the same day (new sequence)
 
 ```
-/opt/aitrader/analyzer_runs/2026-03-13_to_2026-03-13_run_002/
+analyzer_runs/2026-03-13_to_2026-03-13_run_002/
 └── ... (same 12 files)
 ```
 
@@ -364,7 +364,7 @@ Manifest: `run_id` = `2026-03-13_to_2026-03-13_run_002`, possibly different `inp
 ### Example 3: multi-day range for backtesting
 
 ```
-/opt/aitrader/analyzer_runs/2026-03-01_to_2026-03-13_run_001/
+analyzer_runs/2026-03-01_to_2026-03-13_run_001/
 └── ... (same 12 files)
 ```
 
@@ -403,7 +403,7 @@ Manifest excerpt:
 | 2 | **Analyzer version source** | Where does `analyzer_version` come from? A `__version__` in `analyzer/__init__.py`? A config file? Must be defined before manifest generation. |
 | 3 | **Partial-day detection** | Exact heuristic for determining whether a feed file is still in-progress. Simple date check vs aggregator lock file vs file mtime. |
 | 4 | **Manifest schema versioning** | Should `run_manifest.json` include a `schema_version` field from v0.1? Likely yes, but deferred to implementation. |
-| 5 | **Dev vs production paths** | Dev environment uses `D:\Project_V\Aitrader\`, production uses `/opt/aitrader/`. The runner must resolve paths correctly per environment. Manifest should store absolute paths as-generated. |
+| 5 | **Environment-specific paths** | Different environments may use different roots. The runner must resolve paths correctly per environment. Public docs should avoid host-specific examples. |
 | 6 | **Concurrent run safety** | If two runs start simultaneously with the same date range, sequence counter increment must be atomic (or use a lock). Unlikely in v0.1 but worth noting. |
 
 ---
