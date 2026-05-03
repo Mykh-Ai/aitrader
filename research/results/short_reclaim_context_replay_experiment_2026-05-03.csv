@@ -1,0 +1,5 @@
+slice,status,runs_attempted,runs_completed,runs_skipped_no_setups,runs_failed,trade_count,resolved_trade_count,unresolved_trade_count,win_rate,mean_return,median_return,positive_run_rate,largest_run_trade_share,promotion_decisions,validation_statuses,robustness_statuses,notes
+baseline_short_reclaim,COMPLETED,47,44,2,1,751,751,0,,-0.000010,-0.000035,43.18,6.26,REJECT:44,FAIL:44,FRAGILE:12;UNSTABLE:32,SHORT setups whose SetupType contains RECLAIM
+ctx_spike_count_ge2,COMPLETED,47,39,7,1,236,236,0,,0.000019,0.000073,61.54,5.51,REJECT:39,FAIL:39,FRAGILE:10;UNSTABLE:29,baseline + >=2 boolean context spike flags active
+high_stress_all3_ge_median,COMPLETED,47,39,7,1,244,244,0,,-0.000026,-0.000009,43.59,6.15,REJECT:39,FAIL:39,FRAGILE:6;UNSTABLE:33,baseline + AbsorptionScore/RelVolume/DeltaAbsRatio >= global medians
+absorption_low_le1,COMPLETED,47,40,6,1,515,515,0,,-0.000029,-0.000036,37.50,6.60,REJECT:40,FAIL:40,FRAGILE:14;UNSTABLE:26,baseline + AbsorptionScore_v1 <= 1 avoid/downweight check

@@ -1,0 +1,2 @@
+slice,joined_trades,outcome_pos_rate,replay_pos_rate,both_positive,outcome_positive_replay_negative,outcome_negative_replay_positive,both_negative,mean_close_return_pct,median_close_return_pct,mean_trade_return_pct,median_trade_return_pct,mean_replay_minus_outcome,median_replay_minus_outcome,exit_reason_categories
+ctx_spike_count_ge2,191,62.83,48.69,73,47,20,51,0.00075743,0.00049420,0.00002978,-0.00001265,-0.00072765,-0.00057352,EXPIRY:14;STOP:93;TARGET:84

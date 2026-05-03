@@ -1,0 +1,7 @@
+slice,n,days,pos_rate,mean_ret,median_ret,mean_mfe,mean_mae,positive_day_rate,largest_day_share,notes
+baseline_short_reclaim,606,40,55.45,0.023367,0.017452,0.510008,-0.114947,62.50,7.76,all SHORT reclaim setups
+high_stress_all3_ge_median,197,35,59.39,0.051113,0.039601,0.727736,-0.092979,68.57,7.61,AbsorptionScore_v1>=1.000000; RelVolume_20>=0.994380; DeltaAbsRatio_20>=0.780828
+ctx_spike_count_ge2,197,35,61.93,0.071894,0.041615,0.731256,-0.073884,71.43,6.60,>=2 boolean context spike flags active
+absorption_high_ge3,93,34,54.84,0.058470,0.030612,0.235617,-0.082191,55.88,7.53,AbsorptionScore_v1 >= 3
+absorption_low_le1,409,36,52.32,-0.000007,0.007779,0.403442,-0.134726,55.56,8.31,AbsorptionScore_v1 <= 1
+liq_spike_true,71,33,56.34,0.065241,0.035229,0.254937,-0.077528,57.58,8.45,CtxLiqSpike_v1 == True

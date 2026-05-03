@@ -1,0 +1,2 @@
+scope,trade_count,activation_first_event_counts,setup_first_event_counts,activation_target_hit_share,activation_stop_hit_share,setup_target_hit_share,setup_stop_hit_share,setup_target_before_stop_share,setup_stop_before_target_share,setup_same_bar_share,target_after_replay_exit_share,median_setup_target_offset,median_setup_stop_offset,median_activation_target_offset,median_activation_stop_offset
+outcome_positive_replay_negative,47,NONE:7;SAME_BAR:2;STOP_FIRST:38,NONE:7;SAME_BAR:2;STOP_FIRST:38,48.94,85.11,48.94,85.11,0.00,80.85,4.26,44.68,4.00,0.00,4.00,0.00

@@ -1,0 +1,5 @@
+scope,pair_count,delay_better_count,baseline_better_count,tie_count,delay_better_share,mean_delta,median_delta,sum_delta,baseline_mean,delay_mean,baseline_pos_rate,delay_pos_rate
+all,191,122,66,3,63.87,0.00014437,0.00017472,0.02757544,0.00002978,0.00017416,48.69,61.26
+early_half,96,64,31,1,66.67,0.00013144,0.00017552,0.01261825,-0.00001459,0.00011685,50.00,62.50
+late_half_pseudo_holdout,95,58,35,2,61.05,0.00015744,0.00017170,0.01495719,0.00007462,0.00023207,47.37,60.00
+final_third_pseudo_holdout,70,46,23,1,65.71,0.00024355,0.00024547,0.01704855,0.00007724,0.00032079,44.29,61.43
