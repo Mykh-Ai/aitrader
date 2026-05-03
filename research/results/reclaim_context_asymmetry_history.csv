@@ -31,3 +31,11 @@ snapshot_date,source_file,side,slice_name,n,pos_rate,mean_ret,median_ret,mfe,mae
 2026-04-09,reclaim_context_asymmetry_summary_2026-04-09.csv,SHORT,high-stress (all 3 >= median),116,60.3,+0.063,+0.042,1.077,-0.069
 2026-04-09,reclaim_context_asymmetry_summary_2026-04-09.csv,SHORT,low-stress (any 1 < median),247,53.0,+0.002,+0.008,0.567,-0.132
 2026-04-09,reclaim_context_asymmetry_summary_2026-04-09.csv,SHORT,>=2 ctx spikes active,116,62.1,+0.066,+0.049,1.075,-0.067
+2026-05-03,reclaim_context_asymmetry_summary_2026-05-03.csv,LONG,baseline,460,62.4,+0.064,+0.040,0.197,-0.102
+2026-05-03,reclaim_context_asymmetry_summary_2026-05-03.csv,LONG,low-stress (all 3 <= median),161,62.1,+0.057,+0.039,0.171,-0.097
+2026-05-03,reclaim_context_asymmetry_summary_2026-05-03.csv,LONG,high-stress (any 1 > median),299,62.5,+0.069,+0.044,0.211,-0.105
+2026-05-03,reclaim_context_asymmetry_summary_2026-05-03.csv,LONG,zero ctx spikes,172,61.0,+0.047,+0.035,0.170,-0.107
+2026-05-03,reclaim_context_asymmetry_summary_2026-05-03.csv,SHORT,baseline,606,55.4,+0.023,+0.017,0.510,-0.115
+2026-05-03,reclaim_context_asymmetry_summary_2026-05-03.csv,SHORT,high-stress (all 3 >= median),197,59.4,+0.051,+0.040,0.728,-0.093
+2026-05-03,reclaim_context_asymmetry_summary_2026-05-03.csv,SHORT,low-stress (any 1 < median),409,53.5,+0.010,+0.010,0.405,-0.126
+2026-05-03,reclaim_context_asymmetry_summary_2026-05-03.csv,SHORT,>=2 ctx spikes active,197,61.9,+0.072,+0.042,0.731,-0.074
