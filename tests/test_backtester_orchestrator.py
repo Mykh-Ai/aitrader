@@ -90,7 +90,7 @@ def _write_analyzer_artifacts(
     research_summary.to_csv(artifact_dir / "analyzer_research_summary.csv", index=False)
 
 
-def _run(artifact_dir: Path, output_dir: Path):
+def _run(artifact_dir: Path, output_dir: Path, *, expiry_model: str = "BARS_AFTER_ACTIVATION:12"):
     return run_backtester(
         artifact_dir=artifact_dir,
         output_dir=output_dir,
@@ -99,6 +99,7 @@ def _run(artifact_dir: Path, output_dir: Path):
         cost_model_id="COST_MODEL_ZERO_SKELETON_ONLY",
         same_bar_policy_id="SAME_BAR_CONSERVATIVE_V0_1",
         replay_semantics_version="REPLAY_V0_1",
+        expiry_model=expiry_model,
         generation_timestamp="2024-01-01T00:00:00+00:00",
         cost_models={"COST_MODEL_ZERO_SKELETON_ONLY": ZeroCostSkeletonModel()},
     )
@@ -137,6 +138,23 @@ def test_end_to_end_smoke_produces_full_phase3_artifact_set(tmp_path: Path):
     trades = pd.read_csv(output_dir / "backtest_trades.csv")
     assert trades.iloc[0]["initial_stop_price"] == pytest.approx(99.0)
     assert trades.iloc[0]["initial_target_price"] == pytest.approx(104.0)
+
+
+def test_run_backtester_threads_explicit_expiry_model_to_rulesets_and_manifests(tmp_path: Path):
+    artifact_dir = tmp_path / "analyzer_run"
+    output_dir = tmp_path / "backtest_run"
+    _write_analyzer_artifacts(artifact_dir)
+
+    _run(artifact_dir, output_dir, expiry_model="BARS_AFTER_ACTIVATION:60")
+
+    rulesets = pd.read_csv(output_dir / "backtest_rulesets.csv")
+    assert rulesets["expiry_model"].tolist() == ["BARS_AFTER_ACTIVATION:60"]
+
+    engine_manifest = json.loads((output_dir / "backtest_run_manifest.json").read_text(encoding="utf-8"))
+    assert engine_manifest["expiry_models"] == ["BARS_AFTER_ACTIVATION:60"]
+
+    orchestration_manifest = json.loads((output_dir / ORCHESTRATION_MANIFEST_NAME).read_text(encoding="utf-8"))
+    assert orchestration_manifest["expiry_model"] == "BARS_AFTER_ACTIVATION:60"
 
 
 def test_deterministic_runs_same_input_same_artifacts_with_fixed_timestamp(tmp_path: Path):
@@ -245,6 +263,46 @@ def test_boundary_preservation_orchestrator_does_not_call_analyzer_pipeline(tmp_
     monkeypatch.setattr(analyzer_pipeline, "run", _boom)
 
     _run(artifact_dir, tmp_path / "out")
+
+
+def test_backtester_ignores_research_variant_sidecar_by_default(tmp_path: Path):
+    artifact_dir = tmp_path / "analyzer_run"
+    output_dir = tmp_path / "out"
+    _write_analyzer_artifacts(artifact_dir)
+
+    sidecar_dir = artifact_dir / "research_variants" / "FAILED_BREAK_RECLAIM_EXTENDED_V1"
+    sidecar_dir.mkdir(parents=True)
+    pd.DataFrame(
+        [
+            {
+                "VariantId": "FAILED_BREAK_RECLAIM_EXTENDED_V1",
+                "SetupId": "SIDE",
+                "SetupType": "FAILED_BREAK_RECLAIM_LONG",
+                "Direction": "LONG",
+                "SetupBarTs": "2024-01-01T00:00:00Z",
+                "ReferenceLevel": 100.0,
+                "OutcomeHorizonBars": 10080,
+                "OutcomeBarsObserved": 10080,
+                "OutcomeStatus": "FULL_HORIZON",
+                "OutcomeEndTs": "2024-01-08T00:00:00Z",
+                "MFE_Pct": 999.0,
+                "MAE_Pct": 0.0,
+                "CloseReturn_Pct": 999.0,
+                "TimeToMFE_Bars": 1,
+                "TimeToMFE_Ts": "2024-01-01T00:01:00Z",
+                "TimeToMAE_Bars": 1,
+                "TimeToMAE_Ts": "2024-01-01T00:01:00Z",
+            }
+        ]
+    ).to_csv(sidecar_dir / "analyzer_setup_outcomes_by_horizon.csv", index=False)
+
+    result = _run(artifact_dir, output_dir)
+
+    assert result.engine_events_path.exists()
+    manifest = json.loads((output_dir / "backtest_run_manifest.json").read_text(encoding="utf-8"))
+    artifact_paths = manifest["artifact_paths"]
+    assert "research_variants" not in json.dumps(artifact_paths)
+    assert set(artifact_paths) <= {"raw", "features", "setups"}
 
 
 def test_manifest_honesty_contains_phase_boundary_and_non_live_disclaimers(tmp_path: Path):

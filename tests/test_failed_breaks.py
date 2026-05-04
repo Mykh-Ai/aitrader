@@ -209,6 +209,35 @@ def test_failed_break_can_still_confirm_on_last_in_window_bar():
     assert not out.loc[5, "FailedBreak_H1_Up"]
 
 
+def test_failed_break_extended_confirmation_can_confirm_on_sixtieth_bar():
+    df = _empty_sweeps_df(62)
+    df.loc[1, "Sweep_H1_Up"] = True
+    df.loc[1, "Sweep_H1_Direction"] = "up"
+    df.loc[1, "Sweep_H1_ReferenceLevel"] = 100.0
+    df.loc[1, "Sweep_H1_ReferenceTs"] = df.loc[1, "Timestamp"]
+    df["Close"] = 101.0
+    df.loc[61, "Close"] = 99.0
+
+    out = detect_failed_breaks(df, confirmation_bars=60)
+
+    assert out.loc[61, "FailedBreak_H1_Up"]
+    assert out["FailedBreak_H1_Up"].sum() == 1
+
+
+def test_failed_break_extended_confirmation_expires_after_sixtieth_bar():
+    df = _empty_sweeps_df(63)
+    df.loc[1, "Sweep_H1_Up"] = True
+    df.loc[1, "Sweep_H1_Direction"] = "up"
+    df.loc[1, "Sweep_H1_ReferenceLevel"] = 100.0
+    df.loc[1, "Sweep_H1_ReferenceTs"] = df.loc[1, "Timestamp"]
+    df["Close"] = 101.0
+    df.loc[62, "Close"] = 99.0
+
+    out = detect_failed_breaks(df, confirmation_bars=60)
+
+    assert not out["FailedBreak_H1_Up"].any()
+
+
 def test_new_sweep_after_timeout_can_create_fresh_failed_break_opportunity():
     df = _empty_sweeps_df(8)
     df.loc[1, "Sweep_H1_Up"] = True

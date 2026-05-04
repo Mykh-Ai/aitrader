@@ -1,0 +1,25 @@
+{
+  "research_only": true,
+  "requested_window": "2026-03-10_to_2026-05-03",
+  "chosen_window": "2026-03-30_to_2026-05-02",
+  "chosen_reason": "largest continuous full 1m calendar-day block in requested range",
+  "variant_id": "FAILED_BREAK_RECLAIM_EXTENDED_V1",
+  "confirmation_bars": 60,
+  "setup_ttl_bars": 12,
+  "outcome_horizons": [
+    60,
+    240,
+    1440,
+    4320,
+    10080
+  ],
+  "combined_feed_path": "research\\results\\failed_break_reclaim_extended_large_window_prep_2026-03-10_to_2026-05-03\\feed_window_2026-03-30_to_2026-05-02.csv",
+  "setups_path": "research\\results\\failed_break_reclaim_extended_large_window_prep_2026-03-10_to_2026-05-03\\extended_v1_setups.csv",
+  "coverage_path": "research\\results\\failed_break_reclaim_extended_large_window_prep_2026-03-10_to_2026-05-03\\extended_v1_forward_coverage.csv",
+  "eligible_set_path": "research\\results\\failed_break_reclaim_extended_large_window_prep_2026-03-10_to_2026-05-03\\extended_v1_main_test_eligible_set.csv",
+  "warmup_or_continuity_issues": [
+    "2026-03-10: partial/non-full day rows=526 start=2026-03-10 15:14:00+00:00 end=2026-03-10 23:59:00+00:00 max_gap=1.0333333333333334",
+    "2026-03-11: partial/non-full day rows=615 start=2026-03-11 13:45:00+00:00 end=2026-03-11 23:59:00+00:00 max_gap=1.0"
+  ],
+  "no_matrix_run": true
+}

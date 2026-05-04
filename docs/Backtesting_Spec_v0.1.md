@@ -259,6 +259,24 @@ Each ruleset must define:
 - `same_bar_policy_id`
 - `notes`
 
+Implemented stop model ids are explicit research/backtest semantics:
+
+- `REFERENCE_LEVEL_HARD_STOP` — existing baseline; stop price is the setup `ReferenceLevel`.
+- `SWEEP_EXTREME_HARD_STOP` — failed-break/reclaim alternative; LONG stop price is the sweep candle low, SHORT stop price is the sweep candle high. The current implementation resolves the sweep candle from explicit `SweepBar*` setup fields when present, otherwise from failed-break setup `ReferenceEventAnchorTs` plus raw OHLC. Missing sweep extremes fail explicitly and must not fall back to `ReferenceLevel`.
+
+These stop models are deterministic replay placement models, not live-ready execution order lifecycle logic.
+
+Implemented expiry model ids are explicit research/backtest holding horizons:
+
+- `BARS_AFTER_ACTIVATION:12` - existing MICRO baseline; force-close after 12 one-minute bars when neither TP nor SL resolves first.
+- `BARS_AFTER_ACTIVATION:60` - 1h structural research variant.
+- `BARS_AFTER_ACTIVATION:240` - 4h structural research variant.
+- `BARS_AFTER_ACTIVATION:1440` - 1d structural research variant.
+- `BARS_AFTER_ACTIVATION:4320` - 3d structural research variant.
+- `BARS_AFTER_ACTIVATION:10080` - 7d structural research variant.
+
+The Backtester default remains `BARS_AFTER_ACTIVATION:12`. Longer expiry models are opt-in failed-break/reclaim research variants only; they are not live-ready execution rules.
+
 ### 4.2.1 Entry trigger semantics
 
 `entry_trigger` is not an arbitrary recomputation layer.

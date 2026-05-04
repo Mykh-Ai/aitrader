@@ -59,7 +59,10 @@ def _empty_setups() -> pd.DataFrame:
     return pd.DataFrame(columns=SETUP_COLUMNS)
 
 
-def _annotate_lifecycle(setups: pd.DataFrame, df: pd.DataFrame) -> pd.DataFrame:
+def _annotate_lifecycle(setups: pd.DataFrame, df: pd.DataFrame, *, setup_ttl_bars: int = SETUP_TTL_BARS) -> pd.DataFrame:
+    if setup_ttl_bars < 1:
+        raise ValueError("setup_ttl_bars must be >= 1")
+
     features = df.loc[:, ["Timestamp", "Close"]].copy()
     features["Timestamp"] = pd.to_datetime(features["Timestamp"], utc=True)
     features = features.sort_values(by=["Timestamp"], kind="mergesort").reset_index(drop=True)
@@ -73,7 +76,7 @@ def _annotate_lifecycle(setups: pd.DataFrame, df: pd.DataFrame) -> pd.DataFrame:
 
     for setup in setups.itertuples(index=False):
         setup_idx = int(ts_to_index[setup.SetupBarTs])
-        forward = features.iloc[setup_idx + 1 : setup_idx + 1 + SETUP_TTL_BARS]
+        forward = features.iloc[setup_idx + 1 : setup_idx + 1 + setup_ttl_bars]
         bars_forward = int(len(forward))
 
         if bars_forward == 0:
@@ -122,7 +125,12 @@ def _setup_id(
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:24]
 
 
-def extract_setup_candidates(df: pd.DataFrame, events_df: pd.DataFrame) -> pd.DataFrame:
+def extract_setup_candidates(
+    df: pd.DataFrame,
+    events_df: pd.DataFrame,
+    *,
+    setup_ttl_bars: int = SETUP_TTL_BARS,
+) -> pd.DataFrame:
     """Extract baseline setup candidates from FAILED_BREAK_* events only.
 
     Step 2 enriches each setup with baseline feature snapshot columns from ``df``.
@@ -233,7 +241,7 @@ def extract_setup_candidates(df: pd.DataFrame, events_df: pd.DataFrame) -> pd.Da
         validate="many_to_one",
     ).drop(columns=["Timestamp"])
 
-    setups = _annotate_lifecycle(setups, df)
+    setups = _annotate_lifecycle(setups, df, setup_ttl_bars=setup_ttl_bars)
 
     setups = setups.sort_values(
         by=["DetectedAt", "ReferenceEventType", "Direction", "SetupId"], kind="mergesort"

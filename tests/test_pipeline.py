@@ -5,12 +5,14 @@ import pytest
 
 from analyzer.pipeline import run
 from analyzer.rankings import RANKING_COLUMNS
+from analyzer.research_variants import FAILED_BREAK_RECLAIM_EXTENDED_V1, run_research_variants
 from analyzer.schema import FEATURE_COLUMNS_IMPLEMENTED
 from analyzer.selections import SELECTION_COLUMNS
 from analyzer.shortlist_explanations import SHORTLIST_EXPLANATION_COLUMNS
 from analyzer.shortlists import SHORTLIST_COLUMNS
 from analyzer.research_summary import RESEARCH_SUMMARY_COLUMNS
 from analyzer.day_regime_report import DAY_REGIME_REPORT_COLUMNS
+from analyzer.outcomes import build_setup_outcomes_by_horizon
 
 
 RANKING_INPUT_COLUMNS = [
@@ -439,3 +441,64 @@ def test_pipeline_legacy_output_paths_preserved_with_additive_regime_output(tmp_
         assert result[key].name == filename
 
     assert result["day_regime_report_path"].name == "analyzer_day_regime_report.csv"
+
+
+def test_default_pipeline_does_not_write_research_variant_sidecar(tmp_path):
+    fixture = Path(__file__).parent / "fixtures" / "sample_raw_minimal.csv"
+
+    run(fixture, tmp_path)
+
+    assert not (tmp_path / "research_variants").exists()
+
+
+def test_explicit_extended_research_variant_writes_sidecar_only(tmp_path, monkeypatch):
+    fixture = Path(__file__).parent / "fixtures" / "sample_raw_minimal.csv"
+    setup_ts = pd.Timestamp("2025-01-01T00:00:00Z")
+    setups = pd.DataFrame(
+        [
+            {
+                "SetupId": "S1",
+                "SetupType": "FAILED_BREAK_RECLAIM_LONG",
+                "SetupBarTs": setup_ts,
+                "Direction": "LONG",
+                "ReferenceLevel": 100.0,
+            }
+        ]
+    )
+    features = pd.DataFrame(
+        {
+            "Timestamp": pd.date_range(setup_ts, periods=65, freq="1min", tz="UTC"),
+            "High": [100.0 + i for i in range(65)],
+            "Low": [99.0 + i for i in range(65)],
+            "Close": [99.5 + i for i in range(65)],
+        }
+    )
+
+    monkeypatch.setattr(
+        "analyzer.research_variants._build_failed_break_reclaim_variant",
+        lambda input_path, *, config: (
+            setups,
+            build_setup_outcomes_by_horizon(
+                features,
+                setups,
+                variant_id=config.variant_id,
+                outcome_horizons=config.outcome_horizons,
+            ),
+        ),
+    )
+
+    result = run_research_variants(fixture, tmp_path, variants=(FAILED_BREAK_RECLAIM_EXTENDED_V1,))
+
+    sidecar_path = (
+        tmp_path
+        / "research_variants"
+        / "FAILED_BREAK_RECLAIM_EXTENDED_V1"
+        / "analyzer_setup_outcomes_by_horizon.csv"
+    )
+    assert sidecar_path.exists()
+    assert result["FAILED_BREAK_RECLAIM_EXTENDED_V1"]["outcomes_by_horizon_path"] == sidecar_path
+
+    sidecar = pd.read_csv(sidecar_path)
+    assert sidecar["OutcomeHorizonBars"].tolist() == [60, 240, 1440, 4320, 10080]
+    assert set(sidecar["VariantId"]) == {"FAILED_BREAK_RECLAIM_EXTENDED_V1"}
+    assert not (tmp_path / "analyzer_setup_outcomes.csv").exists()

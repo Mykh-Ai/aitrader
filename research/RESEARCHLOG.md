@@ -193,3 +193,31 @@ Keep `entry_delay_1` as the only current executable candidate for
 `SHORT reclaim + ctx_spike_count_ge2`. Do not tune additional parameters yet.
 The next valid evidence step is true future holdout on new analyzer days with
 the candidate frozen.
+
+## 2026-05-03 - Failed-break/reclaim EXTENDED_V1 H4 structural research
+
+Context:
+Completed research-only failed-break/reclaim EXTENDED_V1 large-window structural
+matrix on the continuous full-day `2026-03-30_to_2026-05-02` window. All `153`
+main-test setups had full `5760`-bar forward coverage. The research source was
+`FAILED_BREAK_RECLAIM_EXTENDED_V1` with `confirmation_bars=60`.
+
+Result:
+H4-only concentration was materially stronger than H1. At representative expiry
+`BARS_AFTER_ACTIVATION:4320`:
+- H4 `REFERENCE_LEVEL_HARD_STOP`: `37` trades, TP/SL `23/14`, NetR `20.5`,
+  MeanR `0.554054`;
+- H4 `SWEEP_EXTREME_HARD_STOP`: `37` trades, TP/SL `22/15`, NetR `18.0`,
+  MeanR `0.486486`;
+- H1 `REFERENCE_LEVEL_HARD_STOP`: `116` trades, NetR `4.0`, MeanR `0.034483`;
+- H1 `SWEEP_EXTREME_HARD_STOP`: `116` trades, NetR `-8.5`, MeanR `-0.073276`.
+
+MFE_R diagnostics showed H4 favorable excursion beyond the current fixed `1.5R`
+target, including `SWEEP_EXTREME_HARD_STOP` median MFE_R `12.411209`. This is
+diagnostic only: SL-before-MFE ordering and same-bar ambiguity remain material.
+
+Decision:
+Promote H4-only failed-break/reclaim EXTENDED_V1 to a dedicated research
+candidate. H1 is deferred / weak for this slice. No execution claim. Next work:
+H4 entry timing, stop model, and exit-shape research with the candidate frozen
+and then validated on true future holdout data.

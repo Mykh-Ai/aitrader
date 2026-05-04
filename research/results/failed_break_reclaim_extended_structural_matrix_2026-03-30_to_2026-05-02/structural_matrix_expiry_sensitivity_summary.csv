@@ -1,0 +1,5 @@
+Metric,Count
+trades where 1d differs from longer expiry,2
+1d expiry converts to TP under longer holding,0
+1d expiry converts to SL under longer holding,2
+trades unchanged across expiries,304

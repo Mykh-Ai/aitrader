@@ -270,6 +270,25 @@ result = run("feed/2024-03-15.csv", output_dir="output/")
 # analyzer_setup_shortlist_explanations.csv, analyzer_research_summary.csv, analyzer_day_regime_report.csv
 ```
 
+### Failed-break reclaim research variants
+
+The default Analyzer pipeline remains `FAILED_BREAK_RECLAIM_MICRO_V1`:
+`confirmation_bars=5`, `setup_ttl_bars=12`, `outcome_horizon_bars=12`, with the
+existing artifact filenames and schemas.
+
+An explicit research-only sidecar is available as `FAILED_BREAK_RECLAIM_EXTENDED_V1`:
+`confirmation_bars=60`, `setup_ttl_bars=12`, and
+`outcome_horizons=(60, 240, 1440, 4320, 10080)`. It writes only namespaced sidecar
+artifacts and is not consumed by baseline rankings, selections, shortlist,
+research summary, or Backtester.
+
+```python
+from analyzer.research_variants import run_research_variants
+
+run_research_variants("feed/2024-03-15.csv", output_dir="output/")
+# writes output/research_variants/FAILED_BREAK_RECLAIM_EXTENDED_V1/analyzer_setup_outcomes_by_horizon.csv
+```
+
 ### Daily-run operational mode
 
 Recommended current baseline: run Analyzer once per day after UTC rollover on the previous UTC-day feed file.
@@ -306,6 +325,10 @@ Backtester consumes pre-generated analyzer artifacts and runs deterministic repl
 
 - `PHASE3_MAPPING_ONLY` mode includes strict pre-replay validation gate with explicit summary/details artifacts.
 - SL/TP placement is currently deterministic **v1 baseline** (`placement.py`) and should not be treated as full execution-grade order lifecycle handling.
+- Stop placement models are explicit research/backtest controls:
+  - `REFERENCE_LEVEL_HARD_STOP` is the existing baseline and uses setup `ReferenceLevel`.
+  - `SWEEP_EXTREME_HARD_STOP` is a failed-break/reclaim alternative: LONG uses the sweep candle low, SHORT uses the sweep candle high. Missing sweep extremes fail explicitly instead of falling back to `ReferenceLevel`.
+  Both are replay models, not live-ready execution order logic.
 
 ### Phase 3 replay cardinality baseline
 
@@ -436,6 +459,7 @@ run_backtester(
     cost_model_id="COST_MODEL_ZERO_SKELETON_ONLY",
     same_bar_policy_id="SAME_BAR_CONSERVATIVE_V0_1",
     replay_semantics_version="REPLAY_V0_1",
+    expiry_model="BARS_AFTER_ACTIVATION:12",
 )
 PY
 ```
@@ -454,6 +478,7 @@ run_backtester(
     cost_model_id="COST_MODEL_ZERO_SKELETON_ONLY",
     same_bar_policy_id="SAME_BAR_CONSERVATIVE_V0_1",
     replay_semantics_version="REPLAY_V0_1",
+    expiry_model="BARS_AFTER_ACTIVATION:12",
 )
 PY
 ```
@@ -493,8 +518,11 @@ run_backtester(
     cost_model_id="DEFAULT_COST_V1",
     same_bar_policy_id="DEFAULT_SAME_BAR_V1",
     replay_semantics_version="REPLAY_V0_1",
+    expiry_model="BARS_AFTER_ACTIVATION:12",
 )
 ```
+
+Replay expiry is explicit and research-only. `BARS_AFTER_ACTIVATION:12` is the current MICRO baseline and remains the default. Structural failed-break/reclaim research can opt into `BARS_AFTER_ACTIVATION:60`, `:240`, `:1440`, `:4320`, or `:10080` without changing entry logic, TP logic, stop-model defaults, or Analyzer artifacts. These are deterministic backtest holding horizons, not live-ready execution rules.
 
 ### Campaign baseline
 

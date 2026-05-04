@@ -18,20 +18,30 @@ def _raw_df() -> pd.DataFrame:
     )
 
 
-def _setups_df(*, direction: str = "LONG", reference_level: float = 99.0) -> pd.DataFrame:
-    return pd.DataFrame(
-        [
-            {
-                "SetupId": "S1",
-                "SetupType": "FAILED_BREAK_RECLAIM_LONG",
-                "Direction": direction,
-                "DetectedAt": "2024-01-01T00:00:00Z",
-                "SetupBarTs": "2024-01-01T00:00:00Z",
-                "ReferenceEventType": "FAILED_BREAK_DOWN",
-                "ReferenceLevel": reference_level,
-            }
-        ]
-    )
+def _setups_df(
+    *,
+    direction: str = "LONG",
+    reference_level: float = 99.0,
+    reference_event_anchor_ts: str | None = None,
+    sweep_bar_low: float | None = None,
+    sweep_bar_high: float | None = None,
+) -> pd.DataFrame:
+    row = {
+        "SetupId": "S1",
+        "SetupType": "FAILED_BREAK_RECLAIM_LONG",
+        "Direction": direction,
+        "DetectedAt": "2024-01-01T00:00:00Z",
+        "SetupBarTs": "2024-01-01T00:00:00Z",
+        "ReferenceEventType": "FAILED_BREAK_DOWN",
+        "ReferenceLevel": reference_level,
+    }
+    if reference_event_anchor_ts is not None:
+        row["ReferenceEventAnchorTs"] = reference_event_anchor_ts
+    if sweep_bar_low is not None:
+        row["SweepBarLow"] = sweep_bar_low
+    if sweep_bar_high is not None:
+        row["SweepBarHigh"] = sweep_bar_high
+    return pd.DataFrame([row])
 
 
 def _rulesets_df(*, stop_model: str = "REFERENCE_LEVEL_HARD_STOP", take_profit_model: str = "FIXED_R_MULTIPLE:1.5") -> pd.DataFrame:
@@ -44,6 +54,7 @@ def _rulesets_df(*, stop_model: str = "REFERENCE_LEVEL_HARD_STOP", take_profit_m
                 "entry_timing": "SIGNAL_BAR_CLOSE__ENTRY_NEXT_BAR_OPEN",
                 "entry_price_convention": "NEXT_BAR_OPEN",
                 "same_bar_policy_id": "SAME_BAR_CONSERVATIVE_V0_1",
+                "expiry_model": "BARS_AFTER_ACTIVATION:12",
                 "expiry_start_semantics": "AFTER_ACTIVATION",
                 "stop_model": stop_model,
                 "take_profit_model": take_profit_model,
@@ -138,3 +149,94 @@ def test_no_lookahead_target_uses_activation_open_not_later_bar_extremes():
     # If later extremes were used, target would drift. It must stay at 104 from activation open=101 and risk=2.
     assert row["initial_target_price"] == pytest.approx(104.0)
     assert row["placement_basis_ts"] == pd.Timestamp("2024-01-01T00:01:00Z")
+
+
+def test_sweep_extreme_stop_model_long_uses_sweep_bar_low_and_recomputes_r_target():
+    raw = _raw_df()
+    raw.loc[0, "Low"] = 97.0
+
+    out = materialize_stop_target_levels(
+        rulesets_df=_rulesets_df(stop_model="SWEEP_EXTREME_HARD_STOP"),
+        setups_df=_setups_df(
+            direction="LONG",
+            reference_level=100.0,
+            reference_event_anchor_ts="2024-01-01T00:00:00Z",
+        ),
+        raw_df=raw,
+    )
+
+    row = out.iloc[0]
+    assert row["placement_status"] == "PLACED"
+    assert row["initial_stop_price"] == 97.0
+    assert row["risk_distance"] == pytest.approx(4.0)
+    assert row["initial_target_price"] == pytest.approx(107.0)
+    assert "stop_basis=sweep_bar_low" in row["placement_notes"]
+
+
+def test_sweep_extreme_stop_model_short_uses_sweep_bar_high_and_recomputes_r_target():
+    raw = _raw_df()
+    raw.loc[0, "High"] = 105.0
+
+    out = materialize_stop_target_levels(
+        rulesets_df=_rulesets_df(stop_model="SWEEP_EXTREME_HARD_STOP"),
+        setups_df=_setups_df(
+            direction="SHORT",
+            reference_level=100.0,
+            reference_event_anchor_ts="2024-01-01T00:00:00Z",
+        ),
+        raw_df=raw,
+    )
+
+    row = out.iloc[0]
+    assert row["placement_status"] == "PLACED"
+    assert row["initial_stop_price"] == 105.0
+    assert row["risk_distance"] == pytest.approx(4.0)
+    assert row["initial_target_price"] == pytest.approx(95.0)
+    assert "stop_basis=sweep_bar_high" in row["placement_notes"]
+
+
+def test_sweep_extreme_stop_model_missing_sweep_extreme_fails_explicitly():
+    out = materialize_stop_target_levels(
+        rulesets_df=_rulesets_df(stop_model="SWEEP_EXTREME_HARD_STOP"),
+        setups_df=_setups_df(direction="LONG", reference_level=100.0),
+        raw_df=_raw_df(),
+    )
+
+    row = out.iloc[0]
+    assert row["placement_status"] == "MISSING_SWEEP_EXTREME"
+    assert row["placement_notes"] == "missing_sweep_bar_ts"
+    assert pd.isna(row["initial_stop_price"])
+    assert pd.isna(row["initial_target_price"])
+
+
+def test_sweep_extreme_stop_model_invalid_risk_fails_explicitly():
+    out = materialize_stop_target_levels(
+        rulesets_df=_rulesets_df(stop_model="SWEEP_EXTREME_HARD_STOP"),
+        setups_df=_setups_df(direction="LONG", reference_level=100.0, sweep_bar_low=102.0),
+        raw_df=_raw_df(),
+    )
+
+    row = out.iloc[0]
+    assert row["placement_status"] == "INVALID_RISK"
+    assert row["initial_stop_price"] == 102.0
+    assert row["risk_distance"] == pytest.approx(-1.0)
+    assert pd.isna(row["initial_target_price"])
+
+
+def test_reference_level_hard_stop_baseline_unchanged_when_sweep_extreme_fields_exist():
+    out = materialize_stop_target_levels(
+        rulesets_df=_rulesets_df(stop_model="REFERENCE_LEVEL_HARD_STOP"),
+        setups_df=_setups_df(
+            direction="LONG",
+            reference_level=99.0,
+            reference_event_anchor_ts="2024-01-01T00:00:00Z",
+            sweep_bar_low=50.0,
+        ),
+        raw_df=_raw_df(),
+    )
+
+    row = out.iloc[0]
+    assert row["placement_status"] == "PLACED"
+    assert row["initial_stop_price"] == 99.0
+    assert row["risk_distance"] == pytest.approx(2.0)
+    assert row["initial_target_price"] == pytest.approx(104.0)

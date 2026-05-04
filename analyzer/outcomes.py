@@ -28,6 +28,30 @@ OUTCOME_COLUMNS = [
 
 OUTCOME_HORIZON_BARS = 12
 
+MULTI_HORIZON_OUTCOME_COLUMNS = [
+    "VariantId",
+    "SetupId",
+    "SetupType",
+    "Direction",
+    "SetupBarTs",
+    "ReferenceLevel",
+    "OutcomeHorizonBars",
+    "OutcomeBarsObserved",
+    "OutcomeStatus",
+    "OutcomeEndTs",
+    "MFE_Pct",
+    "MAE_Pct",
+    "CloseReturn_Pct",
+    "TimeToMFE_Bars",
+    "TimeToMFE_Ts",
+    "TimeToMAE_Bars",
+    "TimeToMAE_Ts",
+    "MaxGapMinutesObserved",
+    "HasLargeGap",
+]
+
+LARGE_OUTCOME_GAP_MINUTES = 1.0
+
 _H2_SETUP_TYPES = {"IMPULSE_FADE_RECLAIM_LONG_V1", "IMPULSE_FADE_RECLAIM_SHORT_V1"}
 _H2_MIN_CONTINUATION_MOVE_PCT = 0.05
 
@@ -48,6 +72,10 @@ def _validated_reference_level(reference_level: object) -> float:
 
 def _empty_outcomes() -> pd.DataFrame:
     return pd.DataFrame(columns=OUTCOME_COLUMNS)
+
+
+def _empty_multi_horizon_outcomes() -> pd.DataFrame:
+    return pd.DataFrame(columns=MULTI_HORIZON_OUTCOME_COLUMNS)
 
 
 def _validate_required_columns(df: pd.DataFrame, setups_df: pd.DataFrame) -> None:
@@ -123,8 +151,62 @@ def _build_h2_labels(setup: object, setup_close: float, reference_level: float, 
         _h2_post12_label(mfe_pct=mfe_pct, mae_pct=mae_pct, close_return_pct=close_return_pct),
     )
 
-def build_setup_outcomes(df: pd.DataFrame, setups_df: pd.DataFrame) -> pd.DataFrame:
+def _outcome_status(observed_bars: int, horizon_bars: int) -> str:
+    if observed_bars == 0:
+        return "NO_FORWARD_BARS"
+    if observed_bars == horizon_bars:
+        return "FULL_HORIZON"
+    return "PARTIAL_HORIZON"
+
+
+def _gap_metadata(setup_bar_ts: pd.Timestamp, forward: pd.DataFrame) -> tuple[float | pd.NA, bool]:
+    if forward.empty:
+        return (pd.NA, False)
+
+    timestamps = pd.concat(
+        [
+            pd.Series([setup_bar_ts]),
+            pd.to_datetime(forward["Timestamp"], utc=True).reset_index(drop=True),
+        ],
+        ignore_index=True,
+    )
+    gaps = timestamps.diff().dt.total_seconds().div(60.0).dropna()
+    if gaps.empty:
+        return (pd.NA, False)
+
+    max_gap = float(gaps.max())
+    return (max_gap, bool(max_gap > LARGE_OUTCOME_GAP_MINUTES))
+
+
+def _favorable_adverse_series(direction: str, reference_level: float, forward: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
+    if direction == "LONG":
+        favorable = ((forward["High"] - reference_level) / reference_level) * 100
+        adverse = ((forward["Low"] - reference_level) / reference_level) * 100
+        return favorable, adverse
+    if direction == "SHORT":
+        favorable = ((reference_level - forward["Low"]) / reference_level) * 100
+        adverse = ((reference_level - forward["High"]) / reference_level) * 100
+        return favorable, adverse
+    raise ValueError(f"Unsupported setup direction for outcome evaluation: {direction}")
+
+
+def _first_extreme_position(series: pd.Series, value: float, *, use_max: bool) -> int:
+    mask = series == value
+    if not mask.any():
+        return 0
+    return int(mask[mask].index[0])
+
+
+def build_setup_outcomes(
+    df: pd.DataFrame,
+    setups_df: pd.DataFrame,
+    *,
+    outcome_horizon_bars: int = OUTCOME_HORIZON_BARS,
+) -> pd.DataFrame:
     """Build deterministic per-setup outcome rows over a fixed forward horizon."""
+    if outcome_horizon_bars < 1:
+        raise ValueError("outcome_horizon_bars must be >= 1")
+
     _validate_required_columns(df, setups_df)
 
     if setups_df.empty:
@@ -163,7 +245,7 @@ def build_setup_outcomes(df: pd.DataFrame, setups_df: pd.DataFrame) -> pd.DataFr
             setup_bar_ts = setup_bar_ts.tz_convert("UTC")
 
         setup_idx = int(ts_to_index[setup_bar_ts])
-        forward = features.iloc[setup_idx + 1 : setup_idx + 1 + OUTCOME_HORIZON_BARS]
+        forward = features.iloc[setup_idx + 1 : setup_idx + 1 + outcome_horizon_bars]
         observed_bars = int(len(forward))
 
         row = {
@@ -171,7 +253,7 @@ def build_setup_outcomes(df: pd.DataFrame, setups_df: pd.DataFrame) -> pd.DataFr
             "SetupBarTs": setup.SetupBarTs,
             "Direction": setup.Direction,
             "ReferenceLevel": setup.ReferenceLevel,
-            "OutcomeHorizonBars": OUTCOME_HORIZON_BARS,
+            "OutcomeHorizonBars": outcome_horizon_bars,
             "OutcomeBarsObserved": observed_bars,
         }
 
@@ -194,10 +276,7 @@ def build_setup_outcomes(df: pd.DataFrame, setups_df: pd.DataFrame) -> pd.DataFr
             outcome_rows.append(row)
             continue
 
-        if observed_bars == OUTCOME_HORIZON_BARS:
-            status = "FULL_HORIZON"
-        else:
-            status = "PARTIAL_HORIZON"
+        status = _outcome_status(observed_bars, outcome_horizon_bars)
 
         best_high = forward["High"].max()
         best_low = forward["Low"].min()
@@ -246,3 +325,127 @@ def build_setup_outcomes(df: pd.DataFrame, setups_df: pd.DataFrame) -> pd.DataFr
 
     outcomes = pd.DataFrame(outcome_rows)
     return outcomes.loc[:, OUTCOME_COLUMNS]
+
+
+def build_setup_outcomes_by_horizon(
+    df: pd.DataFrame,
+    setups_df: pd.DataFrame,
+    *,
+    variant_id: str,
+    outcome_horizons: tuple[int, ...],
+) -> pd.DataFrame:
+    """Build research-only multi-horizon outcome rows for sidecar variants."""
+    if not variant_id or not str(variant_id).strip():
+        raise ValueError("variant_id must be a non-empty string")
+    if not outcome_horizons:
+        raise ValueError("outcome_horizons must contain at least one horizon")
+    invalid_horizons = [h for h in outcome_horizons if int(h) < 1]
+    if invalid_horizons:
+        raise ValueError(f"outcome_horizons must be >= 1; invalid={invalid_horizons}")
+
+    _validate_required_columns(df, setups_df)
+
+    if setups_df.empty:
+        return _empty_multi_horizon_outcomes()
+
+    features = df.loc[:, ["Timestamp", "High", "Low", "Close"]].copy()
+    features["Timestamp"] = pd.to_datetime(features["Timestamp"], utc=True)
+
+    setup_ts = pd.to_datetime(setups_df["SetupBarTs"], utc=True)
+    ts_counts = setup_ts.map(features["Timestamp"].value_counts()).fillna(0).astype(int)
+
+    if (ts_counts == 0).any():
+        bad = setup_ts.loc[ts_counts == 0]
+        raise ValueError(
+            "Expected exactly one feature row per setup SetupBarTs; "
+            f"invalid matches: {[f'{ts.isoformat()} (matches=0)' for ts in bad]}"
+        )
+
+    if (ts_counts > 1).any():
+        bad = setup_ts.loc[ts_counts > 1]
+        counts = ts_counts.loc[ts_counts > 1]
+        raise ValueError(
+            "Expected exactly one feature row per setup SetupBarTs; "
+            "invalid matches: "
+            f"{[f'{ts.isoformat()} (matches={count})' for ts, count in zip(bad, counts, strict=False)]}"
+        )
+
+    ts_to_index = pd.Series(features.index.to_numpy(), index=features["Timestamp"])
+
+    outcome_rows: list[dict] = []
+    for setup in setups_df.itertuples(index=False):
+        setup_bar_ts = pd.Timestamp(setup.SetupBarTs)
+        if setup_bar_ts.tzinfo is None:
+            setup_bar_ts = setup_bar_ts.tz_localize("UTC")
+        else:
+            setup_bar_ts = setup_bar_ts.tz_convert("UTC")
+
+        setup_idx = int(ts_to_index[setup_bar_ts])
+        reference_level = _validated_reference_level(setup.ReferenceLevel)
+
+        for horizon in outcome_horizons:
+            horizon_bars = int(horizon)
+            forward = features.iloc[setup_idx + 1 : setup_idx + 1 + horizon_bars].reset_index(drop=True)
+            observed_bars = int(len(forward))
+            max_gap, has_large_gap = _gap_metadata(setup_bar_ts, forward)
+
+            row = {
+                "VariantId": str(variant_id),
+                "SetupId": setup.SetupId,
+                "SetupType": getattr(setup, "SetupType", pd.NA),
+                "Direction": setup.Direction,
+                "SetupBarTs": setup.SetupBarTs,
+                "ReferenceLevel": setup.ReferenceLevel,
+                "OutcomeHorizonBars": horizon_bars,
+                "OutcomeBarsObserved": observed_bars,
+                "OutcomeStatus": _outcome_status(observed_bars, horizon_bars),
+                "MaxGapMinutesObserved": max_gap,
+                "HasLargeGap": has_large_gap,
+            }
+
+            if observed_bars == 0:
+                row.update(
+                    {
+                        "OutcomeEndTs": pd.NaT,
+                        "MFE_Pct": pd.NA,
+                        "MAE_Pct": pd.NA,
+                        "CloseReturn_Pct": pd.NA,
+                        "TimeToMFE_Bars": pd.NA,
+                        "TimeToMFE_Ts": pd.NaT,
+                        "TimeToMAE_Bars": pd.NA,
+                        "TimeToMAE_Ts": pd.NaT,
+                    }
+                )
+                outcome_rows.append(row)
+                continue
+
+            favorable, adverse = _favorable_adverse_series(setup.Direction, reference_level, forward)
+            mfe_pct = float(favorable.max())
+            mae_pct = float(adverse.min())
+            mfe_pos = _first_extreme_position(favorable, mfe_pct, use_max=True)
+            mae_pos = _first_extreme_position(adverse, mae_pct, use_max=False)
+            final_close = float(forward["Close"].iloc[-1])
+
+            if setup.Direction == "LONG":
+                close_return_pct = ((final_close - reference_level) / reference_level) * 100
+            elif setup.Direction == "SHORT":
+                close_return_pct = ((reference_level - final_close) / reference_level) * 100
+            else:
+                raise ValueError(f"Unsupported setup direction for outcome evaluation: {setup.Direction}")
+
+            row.update(
+                {
+                    "OutcomeEndTs": forward["Timestamp"].iloc[-1],
+                    "MFE_Pct": mfe_pct,
+                    "MAE_Pct": mae_pct,
+                    "CloseReturn_Pct": close_return_pct,
+                    "TimeToMFE_Bars": int(mfe_pos + 1),
+                    "TimeToMFE_Ts": forward["Timestamp"].iloc[mfe_pos],
+                    "TimeToMAE_Bars": int(mae_pos + 1),
+                    "TimeToMAE_Ts": forward["Timestamp"].iloc[mae_pos],
+                }
+            )
+            outcome_rows.append(row)
+
+    outcomes = pd.DataFrame(outcome_rows)
+    return outcomes.loc[:, MULTI_HORIZON_OUTCOME_COLUMNS]

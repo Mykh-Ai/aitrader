@@ -83,6 +83,7 @@ def _setups_df(
 def _rulesets_df(
     cost_model_id: str = "COST_MODEL_ZERO_SKELETON_ONLY",
     direction: str = "LONG",
+    expiry_model: str = "BARS_AFTER_ACTIVATION:12",
 ) -> pd.DataFrame:
     return pd.DataFrame(
         [
@@ -93,6 +94,7 @@ def _rulesets_df(
                 "entry_timing": "SIGNAL_BAR_CLOSE__ENTRY_NEXT_BAR_OPEN",
                 "entry_price_convention": "NEXT_BAR_OPEN",
                 "same_bar_policy_id": "SAME_BAR_CONSERVATIVE_V0_1",
+                "expiry_model": expiry_model,
                 "expiry_start_semantics": "AFTER_ACTIVATION",
                 "stop_model": "STOP_MODEL_PLACEHOLDER",
                 "take_profit_model": "TP_MODEL_PLACEHOLDER",
@@ -344,6 +346,18 @@ def test_ruleset_enforcement_missing_replay_critical_field_fails_loudly():
         run_replay_engine(inputs, cost_models=_cost_models())
 
 
+def test_invalid_expiry_model_fails_loudly():
+    inputs = ReplayInputs(
+        raw_df=_raw_df(),
+        features_df=_features_df(),
+        setups_df=_setups_df(),
+        rulesets_df=_rulesets_df(expiry_model="AFTER_N_BARS:60"),
+    )
+
+    with pytest.raises(ReplayContractError, match="Invalid expiry_model"):
+        run_replay_engine(inputs, cost_models=_cost_models())
+
+
 def test_cost_model_honesty_no_silent_zero_cost_fallback_for_production_like_id():
     with pytest.raises(ReplayContractError, match="No cost model hook registered"):
         run_replay_engine(
@@ -424,6 +438,7 @@ def test_manifest_contains_required_metadata_fields():
     assert "ruleset_ids" in manifest
     assert "replay_semantics_version" in manifest
     assert "cost_model_ids" in manifest
+    assert manifest["expiry_models"] == ["BARS_AFTER_ACTIVATION:12"]
     assert "generated_at_utc" in manifest
     assert "git_commit" in manifest
 

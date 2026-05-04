@@ -1,0 +1,3 @@
+StopModel,Trades,SLBeforeMFE_2R_Count,SameBarSLAndMFE_2R_Count,MFE_2R_Reached_Count,SLBeforeMFE_3R_Count,SameBarSLAndMFE_3R_Count,MFE_3R_Reached_Count,SLBeforeMFE_5R_Count,SameBarSLAndMFE_5R_Count,MFE_5R_Reached_Count
+REFERENCE_LEVEL_HARD_STOP,37,15,8,37,18,7,37,24,5,36
+SWEEP_EXTREME_HARD_STOP,37,17,0,34,20,0,34,25,0,29

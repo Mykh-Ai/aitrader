@@ -227,6 +227,22 @@ CloseReturn_Pct (return at horizon end). Tracks BestHigh, BestLow, FinalClose.
 OutcomeStatus: `NO_FORWARD_BARS` (insufficient data), `PARTIAL_HORIZON` (< 12 bars available),
 `FULL_HORIZON` (complete 12-bar window).
 
+**Failed-break reclaim variant note (P1 sidecar):** The existing baseline remains
+`FAILED_BREAK_RECLAIM_MICRO_V1` with `confirmation_bars=5`, `SETUP_TTL_BARS=12`,
+and `OUTCOME_HORIZON_BARS=12`. A non-default research-only sidecar
+`FAILED_BREAK_RECLAIM_EXTENDED_V1` may be run explicitly through
+`analyzer.research_variants.run_research_variants()`. It uses
+`confirmation_bars=60`, `setup_ttl_bars=12`, and multi-horizon outcome measurement
+for `[60, 240, 1440, 4320, 10080]` bars, writing
+`research_variants/FAILED_BREAK_RECLAIM_EXTENDED_V1/analyzer_setup_outcomes_by_horizon.csv`.
+This sidecar is not an input to baseline rankings, selections, shortlist,
+research summary, or Backtester.
+
+Current implementation note: older text in this spec says the `confirmation_bars`
+parameter is reserved/ignored. That is stale relative to code; current
+`analyzer.failed_breaks.detect_failed_breaks()` does use `confirmation_bars` as
+the pending failed-break validity window.
+
 **reports.py** — Aggregates setup/outcome statistics grouped by: overall, SetupType, Direction,
 LifecycleStatus, OutcomeStatus. Computes count, MFE/MAE/CloseReturn means, medians,
 and standard deviations per group.

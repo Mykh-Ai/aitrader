@@ -1,0 +1,83 @@
+{
+  "research_only": true,
+  "prep_dir": "research\\results\\failed_break_reclaim_extended_large_window_prep_2026-03-10_to_2026-05-03",
+  "window": "2026-03-30_to_2026-05-02",
+  "setup_source": "FAILED_BREAK_RECLAIM_EXTENDED_V1",
+  "confirmation_bars": 60,
+  "eligible_set_path": "research\\results\\failed_break_reclaim_extended_large_window_prep_2026-03-10_to_2026-05-03\\extended_v1_main_test_eligible_set.csv",
+  "eligible_setup_count": 153,
+  "bridge_dir": "research\\results\\failed_break_reclaim_extended_structural_matrix_2026-03-30_to_2026-05-02\\bridge_FAILED_BREAK_RECLAIM_EXTENDED_V1_full_coverage_only",
+  "stop_models": [
+    "REFERENCE_LEVEL_HARD_STOP",
+    "SWEEP_EXTREME_HARD_STOP"
+  ],
+  "expiry_models": [
+    "BARS_AFTER_ACTIVATION:1440",
+    "BARS_AFTER_ACTIVATION:2880",
+    "BARS_AFTER_ACTIVATION:4320",
+    "BARS_AFTER_ACTIVATION:5760"
+  ],
+  "fixed": {
+    "ruleset_source_formalization_mode": "SHORTLIST_FIRST",
+    "variant_names": [
+      "BASE"
+    ],
+    "cost_model_id": "COST_MODEL_ZERO_SKELETON_ONLY",
+    "same_bar_policy_id": "SAME_BAR_CONSERVATIVE_V0_1",
+    "replay_semantics_version": "REPLAY_V0_1",
+    "take_profit_model": "FIXED_R_MULTIPLE:1.5",
+    "entry_price_convention": "NEXT_BAR_OPEN"
+  },
+  "run_dirs": [
+    {
+      "StopModel": "REFERENCE_LEVEL_HARD_STOP",
+      "ExpiryModel": "BARS_AFTER_ACTIVATION:1440",
+      "OutputDir": "research\\results\\failed_break_reclaim_extended_structural_matrix_2026-03-30_to_2026-05-02\\backtester_reference_level_hard_stop_expiry_1440",
+      "TradeFiles": 2
+    },
+    {
+      "StopModel": "REFERENCE_LEVEL_HARD_STOP",
+      "ExpiryModel": "BARS_AFTER_ACTIVATION:2880",
+      "OutputDir": "research\\results\\failed_break_reclaim_extended_structural_matrix_2026-03-30_to_2026-05-02\\backtester_reference_level_hard_stop_expiry_2880",
+      "TradeFiles": 2
+    },
+    {
+      "StopModel": "REFERENCE_LEVEL_HARD_STOP",
+      "ExpiryModel": "BARS_AFTER_ACTIVATION:4320",
+      "OutputDir": "research\\results\\failed_break_reclaim_extended_structural_matrix_2026-03-30_to_2026-05-02\\backtester_reference_level_hard_stop_expiry_4320",
+      "TradeFiles": 2
+    },
+    {
+      "StopModel": "REFERENCE_LEVEL_HARD_STOP",
+      "ExpiryModel": "BARS_AFTER_ACTIVATION:5760",
+      "OutputDir": "research\\results\\failed_break_reclaim_extended_structural_matrix_2026-03-30_to_2026-05-02\\backtester_reference_level_hard_stop_expiry_5760",
+      "TradeFiles": 2
+    },
+    {
+      "StopModel": "SWEEP_EXTREME_HARD_STOP",
+      "ExpiryModel": "BARS_AFTER_ACTIVATION:1440",
+      "OutputDir": "research\\results\\failed_break_reclaim_extended_structural_matrix_2026-03-30_to_2026-05-02\\backtester_sweep_extreme_hard_stop_expiry_1440",
+      "TradeFiles": 2
+    },
+    {
+      "StopModel": "SWEEP_EXTREME_HARD_STOP",
+      "ExpiryModel": "BARS_AFTER_ACTIVATION:2880",
+      "OutputDir": "research\\results\\failed_break_reclaim_extended_structural_matrix_2026-03-30_to_2026-05-02\\backtester_sweep_extreme_hard_stop_expiry_2880",
+      "TradeFiles": 2
+    },
+    {
+      "StopModel": "SWEEP_EXTREME_HARD_STOP",
+      "ExpiryModel": "BARS_AFTER_ACTIVATION:4320",
+      "OutputDir": "research\\results\\failed_break_reclaim_extended_structural_matrix_2026-03-30_to_2026-05-02\\backtester_sweep_extreme_hard_stop_expiry_4320",
+      "TradeFiles": 2
+    },
+    {
+      "StopModel": "SWEEP_EXTREME_HARD_STOP",
+      "ExpiryModel": "BARS_AFTER_ACTIVATION:5760",
+      "OutputDir": "research\\results\\failed_break_reclaim_extended_structural_matrix_2026-03-30_to_2026-05-02\\backtester_sweep_extreme_hard_stop_expiry_5760",
+      "TradeFiles": 2
+    }
+  ],
+  "report_path": "research\\results\\failed_break_reclaim_extended_structural_matrix_2026-03-30_to_2026-05-02\\failed_break_reclaim_extended_structural_matrix_2026-03-30_to_2026-05-02.md",
+  "no_execution_claim": true
+}

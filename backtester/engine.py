@@ -11,6 +11,8 @@ from typing import Any, Mapping, Protocol
 
 import pandas as pd
 
+from .rulesets import parse_expiry_model_bars
+
 REQUIRED_ARTIFACT_KEYS = ("raw", "features", "setups")
 OPTIONAL_ARTIFACT_KEYS = ("events", "lineage")
 
@@ -29,6 +31,7 @@ REQUIRED_RULESET_REPLAY_FIELDS = (
     "entry_timing",
     "entry_price_convention",
     "same_bar_policy_id",
+    "expiry_model",
     "expiry_start_semantics",
     "stop_model",
     "take_profit_model",
@@ -74,26 +77,17 @@ TARGET_PRICE_KEYS = (
 )
 
 
-def _parse_expiry_bars(ruleset: pd.Series) -> int | None:
-    """Best-effort parser for baseline bar-based expiry semantics."""
-    model = str(ruleset.get("expiry_model", "")).strip()
-    if not model:
-        return None
-    prefix = "BARS_AFTER_ACTIVATION:"
-    if not model.upper().startswith(prefix):
-        return None
-    tail = model[len(prefix) :].strip()
-    if not tail:
-        return None
-    try:
-        bars = int(tail)
-    except ValueError:
-        return None
-    return bars if bars >= 0 else None
-
-
 class ReplayContractError(ValueError):
     """Raised when replay contract assumptions are violated."""
+
+
+def _parse_expiry_bars(ruleset: pd.Series) -> int:
+    """Parse replay expiry semantics after replay contract validation."""
+    try:
+        return parse_expiry_model_bars(str(ruleset.get("expiry_model", "")))
+    except ValueError as exc:
+        ruleset_id = str(ruleset.get("ruleset_id", "<unknown>"))
+        raise ReplayContractError(f"Invalid expiry_model for ruleset={ruleset_id}: {exc}") from exc
 
 
 class CostModelHook(Protocol):
@@ -189,6 +183,13 @@ def _validate_rulesets_replay_contract(rulesets_df: pd.DataFrame) -> None:
             raise ReplayContractError(
                 f"Ruleset replay-critical field '{field}' is missing/blank for rulesets: {bad_ids}"
             )
+    for _, row in rulesets_df.iterrows():
+        try:
+            parse_expiry_model_bars(str(row["expiry_model"]))
+        except ValueError as exc:
+            raise ReplayContractError(
+                f"Invalid expiry_model for ruleset={row['ruleset_id']}: {exc}"
+            ) from exc
 
 
 def validate_replay_inputs(inputs: ReplayInputs) -> None:
@@ -768,6 +769,7 @@ def run_replay_engine(
         "ruleset_ids": rulesets["ruleset_id"].astype(str).tolist(),
         "replay_semantics_version": sorted(set(rulesets["replay_semantics_version"].astype(str))),
         "cost_model_ids": sorted(set(rulesets["cost_model_id"].astype(str))),
+        "expiry_models": sorted(set(rulesets["expiry_model"].astype(str))),
         "generated_at_utc": generation_timestamp or datetime.now(timezone.utc).isoformat(),
         "git_commit": _git_commit_or_unknown(),
     }

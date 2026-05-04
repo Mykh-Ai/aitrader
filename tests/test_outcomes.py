@@ -3,8 +3,10 @@ from __future__ import annotations
 import pandas as pd
 
 from analyzer.outcomes import (
+    MULTI_HORIZON_OUTCOME_COLUMNS,
     OUTCOME_COLUMNS,
     OUTCOME_HORIZON_BARS,
+    build_setup_outcomes_by_horizon,
     build_setup_outcomes,
 )
 
@@ -374,3 +376,136 @@ def test_outcome_pipeline_surface_materializes_h2_columns_while_h1_rows_stay_unc
 
     h2_row = outcomes.loc[outcomes["SetupId"] == "h2"].iloc[0]
     assert h2_row["H2_Post3Label_v1"] in {"EARLY_CONTINUATION", "NO_EARLY_CONTINUATION"}
+
+
+def test_multi_horizon_output_has_one_row_per_setup_and_horizon():
+    features = _features_df(rows=10)
+    setups = _setups_df()
+    setups.loc[0] = ["s1", "FAILED_BREAK_RECLAIM_LONG", pd.Timestamp("2025-01-01T00:01:00Z"), "LONG", 100.0]
+    setups.loc[1] = ["s2", "FAILED_BREAK_RECLAIM_SHORT", pd.Timestamp("2025-01-01T00:02:00Z"), "SHORT", 120.0]
+
+    outcomes = build_setup_outcomes_by_horizon(
+        features,
+        setups,
+        variant_id="FAILED_BREAK_RECLAIM_EXTENDED_V1",
+        outcome_horizons=(2, 4, 6),
+    )
+
+    assert list(outcomes.columns) == MULTI_HORIZON_OUTCOME_COLUMNS
+    assert len(outcomes) == 6
+    assert outcomes.groupby("SetupId")["OutcomeHorizonBars"].apply(list).to_dict() == {
+        "s1": [2, 4, 6],
+        "s2": [2, 4, 6],
+    }
+    assert set(outcomes["VariantId"]) == {"FAILED_BREAK_RECLAIM_EXTENDED_V1"}
+
+
+def test_multi_horizon_setup_bar_is_excluded_from_outcome_window():
+    features = _features_df(rows=6)
+    features.loc[1, "High"] = 1000.0
+    features.loc[1, "Low"] = 1.0
+    setups = _setups_df()
+    setups.loc[0] = ["s-exclude", "FAILED_BREAK_RECLAIM_LONG", pd.Timestamp("2025-01-01T00:01:00Z"), "LONG", 100.0]
+
+    row = build_setup_outcomes_by_horizon(
+        features,
+        setups,
+        variant_id="V",
+        outcome_horizons=(3,),
+    ).iloc[0]
+
+    forward = features.iloc[2:5]
+    assert row["MFE_Pct"] == ((forward["High"].max() - 100.0) / 100.0) * 100
+    assert row["MAE_Pct"] == ((forward["Low"].min() - 100.0) / 100.0) * 100
+    assert row["MFE_Pct"] != ((1000.0 - 100.0) / 100.0) * 100
+
+
+def test_multi_horizon_long_short_outcomes_are_deterministic():
+    features = pd.DataFrame(
+        {
+            "Timestamp": pd.date_range("2025-01-01T00:00:00Z", periods=5, freq="1min", tz="UTC"),
+            "High": [100.0, 103.0, 105.0, 104.0, 102.0],
+            "Low": [100.0, 99.0, 98.0, 96.0, 97.0],
+            "Close": [100.0, 102.0, 104.0, 97.0, 101.0],
+        }
+    )
+    setups = _setups_df()
+    setups.loc[0] = ["long", "FAILED_BREAK_RECLAIM_LONG", features.loc[0, "Timestamp"], "LONG", 100.0]
+    setups.loc[1] = ["short", "FAILED_BREAK_RECLAIM_SHORT", features.loc[0, "Timestamp"], "SHORT", 100.0]
+
+    outcomes = build_setup_outcomes_by_horizon(
+        features,
+        setups,
+        variant_id="V",
+        outcome_horizons=(4,),
+    ).set_index("SetupId")
+
+    assert outcomes.loc["long", "MFE_Pct"] == 5.0
+    assert outcomes.loc["long", "MAE_Pct"] == -4.0
+    assert outcomes.loc["long", "CloseReturn_Pct"] == 1.0
+    assert outcomes.loc["short", "MFE_Pct"] == 4.0
+    assert outcomes.loc["short", "MAE_Pct"] == -5.0
+    assert outcomes.loc["short", "CloseReturn_Pct"] == -1.0
+
+
+def test_multi_horizon_time_to_extremes_uses_first_tie_deterministically():
+    features = pd.DataFrame(
+        {
+            "Timestamp": pd.date_range("2025-01-01T00:00:00Z", periods=5, freq="1min", tz="UTC"),
+            "High": [100.0, 101.0, 105.0, 105.0, 104.0],
+            "Low": [100.0, 95.0, 95.0, 97.0, 96.0],
+            "Close": [100.0, 101.0, 102.0, 103.0, 104.0],
+        }
+    )
+    setups = _setups_df()
+    setups.loc[0] = ["s-tie", "FAILED_BREAK_RECLAIM_LONG", features.loc[0, "Timestamp"], "LONG", 100.0]
+
+    row = build_setup_outcomes_by_horizon(
+        features,
+        setups,
+        variant_id="V",
+        outcome_horizons=(4,),
+    ).iloc[0]
+
+    assert row["TimeToMFE_Bars"] == 2
+    assert row["TimeToMFE_Ts"] == features.loc[2, "Timestamp"]
+    assert row["TimeToMAE_Bars"] == 1
+    assert row["TimeToMAE_Ts"] == features.loc[1, "Timestamp"]
+
+
+def test_multi_horizon_partial_and_no_forward_statuses_work():
+    features = _features_df(rows=3)
+    setups = _setups_df()
+    setups.loc[0] = ["partial", "FAILED_BREAK_RECLAIM_LONG", pd.Timestamp("2025-01-01T00:01:00Z"), "LONG", 100.0]
+    setups.loc[1] = ["none", "FAILED_BREAK_RECLAIM_LONG", pd.Timestamp("2025-01-01T00:02:00Z"), "LONG", 100.0]
+
+    outcomes = build_setup_outcomes_by_horizon(
+        features,
+        setups,
+        variant_id="V",
+        outcome_horizons=(2,),
+    ).set_index("SetupId")
+
+    assert outcomes.loc["partial", "OutcomeStatus"] == "PARTIAL_HORIZON"
+    assert outcomes.loc["partial", "OutcomeBarsObserved"] == 1
+    assert outcomes.loc["none", "OutcomeStatus"] == "NO_FORWARD_BARS"
+    assert outcomes.loc["none", "OutcomeBarsObserved"] == 0
+    assert pd.isna(outcomes.loc["none", "MFE_Pct"])
+
+
+def test_multi_horizon_gap_metadata_flags_missing_minutes():
+    features = _features_df(rows=4)
+    features.loc[2, "Timestamp"] = pd.Timestamp("2025-01-01T00:05:00Z")
+    features.loc[3, "Timestamp"] = pd.Timestamp("2025-01-01T00:06:00Z")
+    setups = _setups_df()
+    setups.loc[0] = ["gap", "FAILED_BREAK_RECLAIM_LONG", pd.Timestamp("2025-01-01T00:00:00Z"), "LONG", 100.0]
+
+    row = build_setup_outcomes_by_horizon(
+        features,
+        setups,
+        variant_id="V",
+        outcome_horizons=(3,),
+    ).iloc[0]
+
+    assert row["MaxGapMinutesObserved"] == 4.0
+    assert bool(row["HasLargeGap"]) is True

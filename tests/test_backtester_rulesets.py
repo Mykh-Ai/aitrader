@@ -310,6 +310,60 @@ def test_notes_are_neutral_and_include_source_mode_not_hardcoded_constants_text(
     assert "source_formalization_mode=SHORTLIST_FIRST" in rulesets.loc[0, "notes"]
 
 
+def test_ruleset_formalization_can_materialize_sweep_extreme_stop_model_explicitly():
+    rulesets, _ = build_backtest_rulesets(
+        _shortlist_df(),
+        _research_summary_df(),
+        stop_model="SWEEP_EXTREME_HARD_STOP",
+    )
+
+    assert (rulesets["stop_model"] == "SWEEP_EXTREME_HARD_STOP").all()
+
+
+def test_default_expiry_model_remains_micro_baseline():
+    rulesets, _ = build_backtest_rulesets(_shortlist_df(), _research_summary_df())
+
+    assert (rulesets["expiry_model"] == "BARS_AFTER_ACTIVATION:12").all()
+
+
+@pytest.mark.parametrize("bars", [60, 240, 1440, 4320, 10080])
+def test_explicit_expiry_model_is_materialized_for_research_horizons(bars: int):
+    expiry_model = f"BARS_AFTER_ACTIVATION:{bars}"
+
+    rulesets, _ = build_backtest_rulesets(
+        _shortlist_df(),
+        _research_summary_df(),
+        expiry_model=expiry_model,
+    )
+
+    assert (rulesets["expiry_model"] == expiry_model).all()
+
+
+def test_invalid_expiry_model_fails_explicitly():
+    with pytest.raises(ValueError, match="Unsupported expiry_model"):
+        build_backtest_rulesets(
+            _shortlist_df(),
+            _research_summary_df(),
+            expiry_model="AFTER_N_BARS:60",
+        )
+
+
+@pytest.mark.parametrize(
+    "stop_model",
+    ["REFERENCE_LEVEL_HARD_STOP", "SWEEP_EXTREME_HARD_STOP"],
+)
+def test_stop_model_and_long_expiry_model_can_be_combined(stop_model: str):
+    rulesets, _ = build_backtest_rulesets(
+        _shortlist_df(),
+        _research_summary_df(),
+        stop_model=stop_model,
+        expiry_model="BARS_AFTER_ACTIVATION:10080",
+    )
+
+    assert (rulesets["stop_model"] == stop_model).all()
+    assert (rulesets["expiry_model"] == "BARS_AFTER_ACTIVATION:10080").all()
+
+
 def test_phase3_mapping_only_materializes_single_explicit_ruleset_row():
     rulesets, warnings = build_backtest_rulesets(
         shortlist_df=_shortlist_df(),

@@ -22,4 +22,9 @@ research/findings/transition_vps_data/
 research/findings/transition_vps_data/*
 !research/findings/transition_vps_data/README.md
 research/scripts/collect_transition_data.sh
+research/results/failed_break_reclaim_extended_tp_surface_*/stop_*_tp_*_expiry_*/
+research/results/**/feed_window_*.csv
+research/results/**/bridge_*/raw.csv
+research/results/*failed_break_reclaim*/backtester_*/
+research/results/*failed_break_reclaim*/bridge_*/
 scripts/run_analyzer_daily.sh

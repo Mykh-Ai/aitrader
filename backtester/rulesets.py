@@ -63,6 +63,7 @@ _VALID_SOURCE_FORMALIZATION_MODES = {
     "INTERSECTION",
     "PHASE3_MAPPING_ONLY",
 }
+_EXPIRY_MODEL_PATTERN = re.compile(r"^BARS_AFTER_ACTIVATION:(\d+)$", re.IGNORECASE)
 _SUPPORTED_BASELINE_GROUP_TYPES = {"Direction", "SetupType"}
 
 _REQUIRED_PHASE3_MAPPING_COLUMNS = {
@@ -155,6 +156,25 @@ def _normalize_token(value: str, max_len: int = 56) -> str:
     token = re.sub(r"[^A-Za-z0-9]+", "_", str(value)).strip("_").upper()
     token = re.sub(r"_+", "_", token)
     return token[:max_len] if token else "NA"
+
+
+def parse_expiry_model_bars(expiry_model: str) -> int:
+    """Parse supported replay expiry model strings and fail on unsupported forms."""
+    model = str(expiry_model).strip()
+    match = _EXPIRY_MODEL_PATTERN.fullmatch(model)
+    if match is None:
+        raise ValueError(
+            "Unsupported expiry_model for ruleset formalization: "
+            f"{expiry_model}. Expected BARS_AFTER_ACTIVATION:<positive_integer>."
+        )
+
+    bars = int(match.group(1))
+    if bars < 1:
+        raise ValueError(
+            "Unsupported expiry_model for ruleset formalization: "
+            f"{expiry_model}. Holding bars must be >= 1."
+        )
+    return bars
 
 
 def _validate_required_columns(df: pd.DataFrame, required_columns: set[str], df_name: str) -> None:
@@ -272,6 +292,7 @@ def _build_rulesets_from_phase3_mapping(
     cost_model_id: str,
     same_bar_policy_id: str,
     replay_semantics_version: str,
+    stop_model: str,
     expiry_model: str,
     expiry_start_semantics: str,
     inherited_setup_ttl_bars: int,
@@ -340,7 +361,7 @@ def _build_rulesets_from_phase3_mapping(
         entry_price_convention="NEXT_BAR_OPEN",
         max_entry_delay_bars=1,
         invalidation_condition="SETUP_INVALIDATED_OR_EXPIRED",
-        stop_model="REFERENCE_LEVEL_HARD_STOP",
+        stop_model=stop_model,
         take_profit_model="FIXED_R_MULTIPLE:1.5",
         trailing_model="NONE",
         expiry_model=expiry_model,
@@ -376,6 +397,7 @@ def build_backtest_rulesets(
     cost_model_id: str = "COST_MODEL_V0_1_BASE",
     same_bar_policy_id: str = "SAME_BAR_CONSERVATIVE_V0_1",
     replay_semantics_version: str = "REPLAY_V0_1",
+    stop_model: str = "REFERENCE_LEVEL_HARD_STOP",
     expiry_model: str = "BARS_AFTER_ACTIVATION:12",
     expiry_start_semantics: str = "AFTER_ACTIVATION",
     inherited_setup_ttl_bars: int = 12,
@@ -395,6 +417,7 @@ def build_backtest_rulesets(
             cost_model_id=cost_model_id,
             same_bar_policy_id=same_bar_policy_id,
             replay_semantics_version=replay_semantics_version,
+            stop_model=stop_model,
             expiry_model=expiry_model,
             expiry_start_semantics=expiry_start_semantics,
             inherited_setup_ttl_bars=inherited_setup_ttl_bars,
@@ -536,7 +559,7 @@ def build_backtest_rulesets(
                 # not an intrabar fill optimization knob.
                 max_entry_delay_bars=1,
                 invalidation_condition="SETUP_INVALIDATED_OR_EXPIRED",
-                stop_model="REFERENCE_LEVEL_HARD_STOP",
+                stop_model=stop_model,
                 take_profit_model="FIXED_R_MULTIPLE:1.5",
                 trailing_model="NONE",
                 expiry_model=expiry_model,
@@ -580,6 +603,7 @@ def validate_rulesets(rulesets_df: pd.DataFrame, *, max_variants_per_candidate: 
         "entry_timing",
         "entry_price_convention",
         "same_bar_policy_id",
+        "expiry_model",
         "expiry_start_semantics",
         "stop_model",
         "take_profit_model",
@@ -624,6 +648,12 @@ def validate_rulesets(rulesets_df: pd.DataFrame, *, max_variants_per_candidate: 
             "Ruleset validation failed: invalid ruleset_variant values: "
             f"{sorted(set(invalid_variant_names))}"
         )
+
+    for model in sorted(set(rulesets_df["expiry_model"].astype(str))):
+        try:
+            parse_expiry_model_bars(model)
+        except ValueError as exc:
+            raise ValueError(f"Ruleset validation failed: {exc}") from exc
 
     expected_order = rulesets_df.sort_values(
         by=["source_candidate_group", "direction", "ruleset_variant", "ruleset_id"],

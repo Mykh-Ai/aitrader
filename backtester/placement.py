@@ -10,13 +10,18 @@ PLACEMENT_STATUS_PLACED = "PLACED"
 PLACEMENT_STATUS_UNSUPPORTED_MODEL = "UNSUPPORTED_MODEL"
 PLACEMENT_STATUS_INSUFFICIENT_DATA = "INSUFFICIENT_DATA"
 PLACEMENT_STATUS_INVALID_RISK = "INVALID_RISK"
+PLACEMENT_STATUS_MISSING_SWEEP_EXTREME = "MISSING_SWEEP_EXTREME"
 
 PLACEMENT_STATUSES = {
     PLACEMENT_STATUS_PLACED,
     PLACEMENT_STATUS_UNSUPPORTED_MODEL,
     PLACEMENT_STATUS_INSUFFICIENT_DATA,
     PLACEMENT_STATUS_INVALID_RISK,
+    PLACEMENT_STATUS_MISSING_SWEEP_EXTREME,
 }
+
+STOP_MODEL_REFERENCE_LEVEL_HARD_STOP = "REFERENCE_LEVEL_HARD_STOP"
+STOP_MODEL_SWEEP_EXTREME_HARD_STOP = "SWEEP_EXTREME_HARD_STOP"
 
 REQUIRED_RULESET_COLUMNS = (
     "ruleset_id",
@@ -35,6 +40,8 @@ REQUIRED_SETUP_COLUMNS = (
 REQUIRED_RAW_COLUMNS = (
     "Timestamp",
     "Open",
+    "High",
+    "Low",
 )
 
 PLACEMENT_COLUMNS = (
@@ -94,11 +101,68 @@ def _resolve_activation_ts(*, setup_bar_ts: pd.Timestamp, raw_timestamps: list[p
     return None
 
 
+def _coerce_optional_timestamp(value: object) -> pd.Timestamp | None:
+    if value is None or pd.isna(value):
+        return None
+    return pd.to_datetime(value, utc=True)
+
+
+def _resolve_sweep_bar_ts(setup_row: pd.Series) -> pd.Timestamp | None:
+    for column in ("SweepBarTs", "ReferenceEventAnchorTs"):
+        if column in setup_row:
+            ts = _coerce_optional_timestamp(setup_row.get(column))
+            if ts is not None:
+                return ts
+    return None
+
+
+def _resolve_sweep_extreme(
+    *,
+    setup_row: pd.Series,
+    direction: str,
+    raw_high_by_ts: dict[pd.Timestamp, float],
+    raw_low_by_ts: dict[pd.Timestamp, float],
+) -> tuple[float | None, str]:
+    if direction == "LONG":
+        explicit_value = setup_row.get("SweepBarLow")
+        if explicit_value is not None and pd.notna(explicit_value):
+            return float(explicit_value), "sweep_bar_low"
+    elif direction == "SHORT":
+        explicit_value = setup_row.get("SweepBarHigh")
+        if explicit_value is not None and pd.notna(explicit_value):
+            return float(explicit_value), "sweep_bar_high"
+    else:
+        return None, "unsupported_direction"
+
+    sweep_bar_ts = _resolve_sweep_bar_ts(setup_row)
+    if sweep_bar_ts is None:
+        return None, "missing_sweep_bar_ts"
+
+    if direction == "LONG":
+        if sweep_bar_ts not in raw_low_by_ts:
+            return None, "missing_sweep_bar_low"
+        return float(raw_low_by_ts[sweep_bar_ts]), "sweep_bar_low"
+
+    if sweep_bar_ts not in raw_high_by_ts:
+        return None, "missing_sweep_bar_high"
+    return float(raw_high_by_ts[sweep_bar_ts]), "sweep_bar_high"
+
+
+def _risk_distance(*, direction: str, entry_proxy: float, stop_price: float) -> float:
+    if direction == "LONG":
+        return entry_proxy - stop_price
+    if direction == "SHORT":
+        return stop_price - entry_proxy
+    return float("nan")
+
+
 def _materialize_one(
     *,
     setup_row: pd.Series,
     ruleset_row: pd.Series,
     raw_open_by_ts: dict[pd.Timestamp, float],
+    raw_high_by_ts: dict[pd.Timestamp, float],
+    raw_low_by_ts: dict[pd.Timestamp, float],
     raw_timestamps: list[pd.Timestamp],
 ) -> PlacementResult:
     stop_model = str(ruleset_row["stop_model"]).strip()
@@ -118,7 +182,7 @@ def _materialize_one(
             risk_distance=None,
         )
 
-    if stop_model != "REFERENCE_LEVEL_HARD_STOP":
+    if stop_model not in {STOP_MODEL_REFERENCE_LEVEL_HARD_STOP, STOP_MODEL_SWEEP_EXTREME_HARD_STOP}:
         return PlacementResult(
             initial_stop_price=None,
             initial_target_price=None,
@@ -203,7 +267,33 @@ def _materialize_one(
         )
 
     entry_proxy = float(raw_open_by_ts[activation_ts])
-    risk_distance = abs(entry_proxy - stop_price)
+
+    if stop_model == STOP_MODEL_SWEEP_EXTREME_HARD_STOP:
+        sweep_stop_price, sweep_note = _resolve_sweep_extreme(
+            setup_row=setup_row,
+            direction=direction,
+            raw_high_by_ts=raw_high_by_ts,
+            raw_low_by_ts=raw_low_by_ts,
+        )
+        if sweep_stop_price is None:
+            return PlacementResult(
+                initial_stop_price=None,
+                initial_target_price=None,
+                stop_model_applied=stop_model,
+                take_profit_model_applied=tp_model,
+                placement_computed_at_ts=activation_ts,
+                placement_basis_ts=activation_ts,
+                placement_status=PLACEMENT_STATUS_MISSING_SWEEP_EXTREME,
+                placement_notes=sweep_note,
+                risk_distance=None,
+            )
+        stop_price = sweep_stop_price
+        risk_distance = _risk_distance(direction=direction, entry_proxy=entry_proxy, stop_price=stop_price)
+        placement_note = f"placement_v1_ok;stop_basis={sweep_note}"
+    else:
+        risk_distance = abs(entry_proxy - stop_price)
+        placement_note = "placement_v1_ok"
+
     if risk_distance <= 0:
         return PlacementResult(
             initial_stop_price=stop_price,
@@ -230,7 +320,7 @@ def _materialize_one(
         placement_computed_at_ts=activation_ts,
         placement_basis_ts=activation_ts,
         placement_status=PLACEMENT_STATUS_PLACED,
-        placement_notes="placement_v1_ok",
+        placement_notes=placement_note,
         risk_distance=float(risk_distance),
     )
 
@@ -258,6 +348,8 @@ def materialize_stop_target_levels(
     raw["Timestamp"] = pd.to_datetime(raw["Timestamp"], utc=True, errors="raise")
     raw = raw.sort_values("Timestamp", kind="mergesort").reset_index(drop=True)
     raw_open_by_ts = {pd.Timestamp(ts): float(op) for ts, op in zip(raw["Timestamp"], raw["Open"], strict=False)}
+    raw_high_by_ts = {pd.Timestamp(ts): float(high) for ts, high in zip(raw["Timestamp"], raw["High"], strict=False)}
+    raw_low_by_ts = {pd.Timestamp(ts): float(low) for ts, low in zip(raw["Timestamp"], raw["Low"], strict=False)}
     raw_timestamps = [pd.Timestamp(ts) for ts in raw["Timestamp"].tolist()]
 
     out = setups_df.copy()
@@ -269,6 +361,8 @@ def materialize_stop_target_levels(
             setup_row=setup,
             ruleset_row=ruleset,
             raw_open_by_ts=raw_open_by_ts,
+            raw_high_by_ts=raw_high_by_ts,
+            raw_low_by_ts=raw_low_by_ts,
             raw_timestamps=raw_timestamps,
         )
         materialized.append(result)

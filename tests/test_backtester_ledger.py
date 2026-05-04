@@ -88,6 +88,7 @@ def _rulesets_df(direction: str = "LONG") -> pd.DataFrame:
                 "entry_timing": "SIGNAL_BAR_CLOSE__ENTRY_NEXT_BAR_OPEN",
                 "entry_price_convention": "NEXT_BAR_OPEN",
                 "same_bar_policy_id": "SAME_BAR_CONSERVATIVE_V0_1",
+                "expiry_model": "BARS_AFTER_ACTIVATION:12",
                 "expiry_start_semantics": "AFTER_ACTIVATION",
                 "stop_model": "STOP_MODEL_PLACEHOLDER",
                 "take_profit_model": "TP_MODEL_PLACEHOLDER",
