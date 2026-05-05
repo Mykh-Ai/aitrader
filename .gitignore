@@ -37,5 +37,7 @@ research/results/local_higher_low_sweep_reclaim_long_v1_*.csv
 research/results/**/feed_window_*.csv
 research/results/**/raw.csv
 research/results/**/tmp*
+research/**/__pycache__/
+research/**/.pytest_cache/
 research/results/**/__pycache__/
 research/results/**/.pytest_cache/
