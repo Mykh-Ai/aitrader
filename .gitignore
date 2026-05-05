@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 .env
 .claude/
+.local_patches/
 analyzer_runs/
 backtest_runs/
 research/handoff/
@@ -28,3 +29,13 @@ research/results/**/bridge_*/raw.csv
 research/results/*failed_break_reclaim*/backtester_*/
 research/results/*failed_break_reclaim*/bridge_*/
 scripts/run_analyzer_daily.sh
+
+# H4 / local reclaim diagnostic generated artifacts
+research/results/h4_active_level_reclaim_close_test_v1_*.csv
+research/results/local_h4_reclaim_*.csv
+research/results/local_higher_low_sweep_reclaim_long_v1_*.csv
+research/results/**/feed_window_*.csv
+research/results/**/raw.csv
+research/results/**/tmp*
+research/results/**/__pycache__/
+research/results/**/.pytest_cache/
