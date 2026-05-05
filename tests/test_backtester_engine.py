@@ -427,6 +427,70 @@ def test_artifact_boundary_replay_core_does_not_require_shortlist_or_research_su
     assert loaded.lineage_df is None
 
 
+def test_artifact_boundary_normalizes_aggregator_close_labeled_raw_timestamps(tmp_path: Path):
+    raw_path = tmp_path / "raw.csv"
+    features_path = tmp_path / "features.csv"
+    setups_path = tmp_path / "setups.csv"
+    rulesets_path = tmp_path / "rulesets.csv"
+
+    raw = pd.DataFrame(
+        [
+            {
+                "Timestamp": "2024-01-01 00:01:00",
+                "Open": 100.0,
+                "High": 101.0,
+                "Low": 99.0,
+                "Close": 100.5,
+                "Volume": 1.0,
+                "AggTrades": 1,
+                "BuyQty": 1.0,
+                "SellQty": 0.0,
+                "VWAP": 100.0,
+                "OpenInterest": 1.0,
+                "FundingRate": 0.0,
+                "LiqBuyQty": 0.0,
+                "LiqSellQty": 0.0,
+                "IsSynthetic": 0,
+            },
+            {
+                "Timestamp": "2024-01-01 00:02:00",
+                "Open": 101.0,
+                "High": 102.0,
+                "Low": 100.0,
+                "Close": 101.5,
+                "Volume": 1.0,
+                "AggTrades": 1,
+                "BuyQty": 1.0,
+                "SellQty": 0.0,
+                "VWAP": 101.0,
+                "OpenInterest": 1.0,
+                "FundingRate": 0.0,
+                "LiqBuyQty": 0.0,
+                "LiqSellQty": 0.0,
+                "IsSynthetic": 0,
+            },
+        ]
+    )
+    raw.to_csv(raw_path, index=False)
+    _features_df().head(2).to_csv(features_path, index=False)
+    _setups_df().to_csv(setups_path, index=False)
+    _rulesets_df().to_csv(rulesets_path, index=False)
+
+    loaded = load_replay_inputs(
+        artifact_paths={"raw": raw_path, "features": features_path, "setups": setups_path},
+        rulesets=rulesets_path,
+    )
+
+    assert loaded.raw_df["Timestamp"].tolist() == [
+        pd.Timestamp("2024-01-01T00:00:00Z"),
+        pd.Timestamp("2024-01-01T00:01:00Z"),
+    ]
+    assert loaded.raw_df["FeedTimestampUTC"].tolist() == [
+        pd.Timestamp("2024-01-01T00:01:00Z"),
+        pd.Timestamp("2024-01-01T00:02:00Z"),
+    ]
+
+
 def test_manifest_contains_required_metadata_fields():
     _, manifest = run_replay_engine(
         _inputs(),

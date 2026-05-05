@@ -11,12 +11,34 @@ from typing import Any, Mapping, Protocol
 
 import pandas as pd
 
+from analyzer.feed_contract import (
+    CANDLE_OPEN_TIMESTAMP_COLUMN,
+    FEED_TIMESTAMP_UTC_COLUMN,
+    normalize_feed_timestamps,
+)
 from .rulesets import parse_expiry_model_bars
 
 REQUIRED_ARTIFACT_KEYS = ("raw", "features", "setups")
 OPTIONAL_ARTIFACT_KEYS = ("events", "lineage")
 
 REQUIRED_RAW_COLUMNS = ("Timestamp", "Open", "High", "Low", "Close", "IsSynthetic")
+AGGREGATOR_TIMESTAMP_CONTRACT_COLUMNS = (
+    "Timestamp",
+    "Open",
+    "High",
+    "Low",
+    "Close",
+    "Volume",
+    "AggTrades",
+    "BuyQty",
+    "SellQty",
+    "VWAP",
+    "OpenInterest",
+    "FundingRate",
+    "LiqBuyQty",
+    "LiqSellQty",
+    "IsSynthetic",
+)
 REQUIRED_FEATURE_COLUMNS = ("Timestamp",)
 REQUIRED_SETUP_COLUMNS = (
     "SetupId",
@@ -174,6 +196,28 @@ def _normalize_timestamp_column(df: pd.DataFrame, column: str, label: str) -> pd
     return out
 
 
+def _normalize_raw_timestamps(df: pd.DataFrame) -> pd.DataFrame:
+    if CANDLE_OPEN_TIMESTAMP_COLUMN in df.columns:
+        out = df.copy()
+        out[FEED_TIMESTAMP_UTC_COLUMN] = pd.to_datetime(
+            out.get(FEED_TIMESTAMP_UTC_COLUMN, out["Timestamp"]),
+            utc=True,
+            errors="raise",
+        )
+        out[CANDLE_OPEN_TIMESTAMP_COLUMN] = pd.to_datetime(
+            out[CANDLE_OPEN_TIMESTAMP_COLUMN],
+            utc=True,
+            errors="raise",
+        )
+        out["Timestamp"] = out[CANDLE_OPEN_TIMESTAMP_COLUMN]
+        return out
+
+    if set(AGGREGATOR_TIMESTAMP_CONTRACT_COLUMNS).issubset(df.columns):
+        return normalize_feed_timestamps(df)
+
+    return df.copy()
+
+
 def _validate_rulesets_replay_contract(rulesets_df: pd.DataFrame) -> None:
     _require_columns(rulesets_df, REQUIRED_RULESET_REPLAY_FIELDS, "rulesets_df")
     for field in REQUIRED_RULESET_REPLAY_FIELDS:
@@ -225,7 +269,7 @@ def load_replay_inputs(
     rulesets_df = pd.read_csv(rulesets) if isinstance(rulesets, (str, Path)) else rulesets.copy()
 
     loaded = ReplayInputs(
-        raw_df=_normalize_timestamp_column(dataframes["raw"], "Timestamp", "raw_df"),
+        raw_df=_normalize_timestamp_column(_normalize_raw_timestamps(dataframes["raw"]), "Timestamp", "raw_df"),
         features_df=_normalize_timestamp_column(dataframes["features"], "Timestamp", "features_df"),
         setups_df=_normalize_timestamp_column(dataframes["setups"], "SetupBarTs", "setups_df"),
         rulesets_df=rulesets_df.reset_index(drop=True),
