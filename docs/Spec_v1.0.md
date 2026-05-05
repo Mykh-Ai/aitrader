@@ -164,14 +164,16 @@ save_dataframe()        io.py                     — write 12 output CSVs
 The feature column registry is the authoritative list of what the Phase 1 pipeline materializes.
 
 **loader.py** — Loads raw aggregator CSV. Validates required columns, coerces numeric fields,
-normalizes `IsSynthetic` to `{0,1}`, parses `Timestamp` as UTC datetime, sorts ascending,
-rejects duplicate timestamps. Preserves gaps (no synthetic backfill).
+normalizes `IsSynthetic` to `{0,1}`, parses raw `Timestamp` as UTC datetime, normalizes the
+current close-labeled feed to candle-open `Timestamp`, sorts ascending, rejects duplicate
+normalized timestamps. Preserves gaps (no synthetic backfill).
 
 **base_metrics.py** — Computes: Delta, CVD, DeltaPct, BarRange, BodySize, UpperWick, LowerWick,
 CloseLocation, BodyToRange, UpperWickToRange, LowerWickToRange, OI_Change, LiqTotal.
 
-**swings.py** — Builds H1 and H4 bars from 1m data. Applies strict 3-bar local extremum
-(1 left / 1 right neighbor) for both TFs. No ATR filter in Phase 1. Writes
+**swings.py** — Builds H1 and H4 bars from normalized UTC 1m candle-open data. H4 bars use
+fixed UTC buckets (`00:00 / 04:00 / 08:00 / 12:00 / 16:00 / 20:00`), not UTC+2. Applies strict
+3-bar local extremum (1 left / 1 right neighbor) for both TFs. No ATR filter in Phase 1. Writes
 `SwingHigh_{TF}_Price`, `SwingHigh_{TF}_ConfirmedAt`, `SwingLow_{TF}_Price`,
 `SwingLow_{TF}_ConfirmedAt` columns. `ConfirmedAt = swing_bar_start + 2×TF`
 (H1: +2h; H4: +8h).
@@ -2413,12 +2415,17 @@ Current format: CSV. Parquet — planned for a later phase (типізація, 
 
 ### Primary key
 
-    Timestamp  (bar open timestamp, UTC, unique)
+    Timestamp  (normalized bar open timestamp, UTC, unique)
 
 ### Rules
 
-    - Timestamp must be unique (no duplicate rows)
-    - Timestamp is bar open timestamp in UTC
+    - Timestamp must be unique after normalization (no duplicate rows)
+    - raw feed `Timestamp` from `binance_aggregator_shi.py` is UTC close-labeled at flush time
+    - Analyzer preserves the raw label as `FeedTimestampUTC`
+    - Analyzer derives `CandleOpenTsUTC = FeedTimestampUTC - 1 minute`
+    - Analyzer canonical `Timestamp` is `CandleOpenTsUTC`
+    - `FEED_TIMEZONE = UTC`
+    - `FEED_TIMESTAMP_LABEL = CLOSE`
     - timestamp gaps are preserved from input feed (no synthetic backfill by Analyzer)
     - columns order: raw fields first, then derived metrics
 
@@ -2429,6 +2436,10 @@ Raw (з aggregator):
     Timestamp, Open, High, Low, Close,
     Volume, AggTrades, BuyQty, SellQty, VWAP,
     OpenInterest, FundingRate, LiqBuyQty, LiqSellQty, IsSynthetic
+
+Feed timestamp audit fields:
+
+    FeedTimestampUTC, CandleOpenTsUTC
 
 Base metrics (Block 1) — **implemented:**
 

@@ -196,7 +196,7 @@ Target boundary for production order lifecycle, restart reconciliation with exch
 
 | Column | Source | Description |
 |---|---|---|
-| Timestamp | system | UTC bar open time |
+| Timestamp | system | UTC close label written at flush time by `binance_aggregator_shi.py`; Analyzer normalizes it to candle-open `Timestamp` |
 | Open, High, Low, Close | aggTrade WS | OHLC prices |
 | Volume | aggTrade WS | Total traded volume |
 | AggTrades | aggTrade WS | Count of Binance aggTrade messages (not individual fills) |
@@ -211,6 +211,7 @@ Target boundary for production order lifecycle, restart reconciliation with exch
 
 ### Data notes
 
+- **Feed time contract:** `FEED_TIMEZONE = UTC`, `FEED_TIMESTAMP_LABEL = CLOSE` for the current `binance_aggregator_shi.py` feed. The raw label is preserved by Analyzer as `FeedTimestampUTC`; Analyzer derives `CandleOpenTsUTC = FeedTimestampUTC - 1 minute` and uses that as canonical `Timestamp`.
 - **AggTrades** counts aggTrade messages, not full exchange fill count.
 - **BuyQty / SellQty** are taker-aggressor volumes useful for delta/CVD context; interpret together with price response.
 - **Synthetic candles (`IsSynthetic=1`)** keep continuity when interval has no trades; VWAP falls back to Close.
@@ -219,6 +220,7 @@ Target boundary for production order lifecycle, restart reconciliation with exch
 ### Storage pattern
 
 - Raw feed files: `feed/YYYY-MM-DD.csv` (UTC-day partitioning).
+- Because the current feed is close-labeled, a full raw file normally has labels `00:00..23:59`, but the first label represents the prior minute interval after normalization.
 - Runtime directories are deployment-specific and should be kept in local server context rather than hard-coded in the public repo.
 
 ### Sources
@@ -305,6 +307,7 @@ For deployment scheduling, keep any host-specific wrapper in local-only ops mate
 
 - Structural swing detection excludes synthetic rows from structure-defining logic.
 - H1/H4 completeness thresholds protect against sparse bucket contamination.
+- H4 structure uses normalized UTC candle-open bars (`H4_BARS_UTC`) with fixed bucket boundaries `00:00 / 04:00 / 08:00 / 12:00 / 16:00 / 20:00 UTC`; do not use a UTC+2 variant unless another verified feed/postprocessor actually shifts timestamps.
 - Stateful logic resets on large timestamp gaps (`MAX_STATE_GAP_MINUTES`) as fail-closed safety.
 
 Normative analyzer contract: `docs/Spec_v1.0.md`.

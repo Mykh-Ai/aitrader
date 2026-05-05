@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from analyzer.loader import load_raw_csv
+from analyzer.feed_contract import FEED_TIMESTAMP_LABEL, FEED_TIMEZONE
 from analyzer.schema import SchemaValidationError
 
 
@@ -16,6 +17,37 @@ def test_loader_parses_timestamp_and_sorts():
     assert isinstance(df["Timestamp"].dtype, pd.DatetimeTZDtype)
     assert str(df["Timestamp"].dtype.tz) == "UTC"
     assert df["Timestamp"].is_monotonic_increasing
+
+
+def test_datetime_utcnow_feed_rows_parse_as_utc(tmp_path):
+    src = tmp_path / "utcnow_style.csv"
+    src.write_text(
+        "Timestamp,Open,High,Low,Close,Volume,AggTrades,BuyQty,SellQty,VWAP,OpenInterest,FundingRate,LiqBuyQty,LiqSellQty,IsSynthetic\n"
+        "2026-03-12 12:01:00,1,2,0,1,1,1,1,0,1,1,0,0,0,0\n",
+        encoding="utf-8",
+    )
+
+    df = load_raw_csv(src)
+
+    assert FEED_TIMEZONE == "UTC"
+    assert str(df["FeedTimestampUTC"].dtype.tz) == "UTC"
+    assert df.loc[0, "FeedTimestampUTC"] == pd.Timestamp("2026-03-12T12:01:00Z")
+
+
+def test_close_labeled_feed_row_normalizes_to_candle_open(tmp_path):
+    src = tmp_path / "close_labeled.csv"
+    src.write_text(
+        "Timestamp,Open,High,Low,Close,Volume,AggTrades,BuyQty,SellQty,VWAP,OpenInterest,FundingRate,LiqBuyQty,LiqSellQty,IsSynthetic\n"
+        "2026-03-12 12:01:00,1,2,0,1,1,1,1,0,1,1,0,0,0,0\n",
+        encoding="utf-8",
+    )
+
+    df = load_raw_csv(src)
+
+    assert FEED_TIMESTAMP_LABEL == "CLOSE"
+    assert df.loc[0, "FeedTimestampUTC"] == pd.Timestamp("2026-03-12T12:01:00Z")
+    assert df.loc[0, "CandleOpenTsUTC"] == pd.Timestamp("2026-03-12T12:00:00Z")
+    assert df.loc[0, "Timestamp"] == pd.Timestamp("2026-03-12T12:00:00Z")
 
 
 def test_loader_preserves_is_synthetic_values():

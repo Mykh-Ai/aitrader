@@ -43,6 +43,8 @@ OPTIONAL_RAW_COLUMNS: list[str] = []
 
 # Implemented in Phase 1A and expected in current pipeline output.
 FEATURE_COLUMNS_IMPLEMENTED = [
+    "FeedTimestampUTC",
+    "CandleOpenTsUTC",
     "Delta",
     "CVD",
     "DeltaPct",

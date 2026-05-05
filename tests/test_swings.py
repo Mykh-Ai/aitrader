@@ -114,6 +114,48 @@ def test_incomplete_h4_bucket_is_excluded_from_swing_structure():
     assert pd.isna(out["SwingHigh_H4_ConfirmedAt"]).all()
 
 
+def test_h4_aggregation_uses_normalized_open_timestamp_not_raw_close_label(tmp_path):
+    rows = []
+    raw_close_ts = pd.date_range(
+        "2025-01-01T00:01:00Z",
+        "2025-01-01T16:00:00Z",
+        freq="1min",
+        tz="UTC",
+    )
+    for ts in raw_close_ts:
+        high = 20.0 if ts == pd.Timestamp("2025-01-01T08:00:00Z") else 10.0
+        rows.append(
+            {
+                "Timestamp": ts.strftime("%Y-%m-%d %H:%M:%S"),
+                "Open": 1.0,
+                "High": high,
+                "Low": 1.0,
+                "Close": 1.0,
+                "Volume": 1.0,
+                "AggTrades": 1,
+                "BuyQty": 1.0,
+                "SellQty": 0.0,
+                "VWAP": 1.0,
+                "OpenInterest": 1.0,
+                "FundingRate": 0.0,
+                "LiqBuyQty": 0.0,
+                "LiqSellQty": 0.0,
+                "IsSynthetic": 0,
+            }
+        )
+
+    src = tmp_path / "close_labeled_h4.csv"
+    pd.DataFrame(rows).to_csv(src, index=False)
+
+    df = load_raw_csv(src)
+    out = annotate_swings(df)
+
+    assert df.loc[df["FeedTimestampUTC"] == pd.Timestamp("2025-01-01T08:00:00Z"), "CandleOpenTsUTC"].iloc[0] == pd.Timestamp("2025-01-01T07:59:00Z")
+    confirm_row = out.loc[out["Timestamp"] == pd.Timestamp("2025-01-01T12:00:00Z")].iloc[0]
+    assert confirm_row["SwingHigh_H4_Price"] == 20.0
+    assert confirm_row["SwingHigh_H4_ConfirmedAt"] == pd.Timestamp("2025-01-01T12:00:00Z")
+
+
 def test_dense_real_minute_data_still_confirms_expected_h1_swing():
     chunks: list[pd.DataFrame] = []
     chunks.append(_minute_df(highs=[100.0] * 60, lows=[10.0] * 60, start="2025-01-01T00:00:00Z"))

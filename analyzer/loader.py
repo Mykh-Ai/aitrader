@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from .feed_contract import normalize_feed_timestamps
 from .schema import (
     NUMERIC_RAW_COLUMNS,
     SchemaValidationError,
@@ -70,7 +71,8 @@ def load_raw_csv(path: str | Path) -> pd.DataFrame:
     """Load and minimally validate raw aggregator CSV.
 
     Phase 1A behavior:
-    - parse ``Timestamp`` as UTC datetime
+    - parse raw ``Timestamp`` as UTC datetime
+    - normalize the close-labeled raw feed timestamp to canonical candle-open ``Timestamp``
     - verify required columns exist
     - validate required numeric columns are numeric-coercible and non-empty
     - normalize and validate ``IsSynthetic`` to strict {0,1}
@@ -86,7 +88,7 @@ def load_raw_csv(path: str | Path) -> pd.DataFrame:
         joined = ", ".join(missing)
         raise SchemaValidationError(f"Missing required raw columns: {joined}")
 
-    df["Timestamp"] = pd.to_datetime(df["Timestamp"], utc=True, errors="raise")
+    df = normalize_feed_timestamps(df)
     df = _coerce_numeric_columns(df)
     df = _normalize_is_synthetic(df)
 
