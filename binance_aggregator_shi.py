@@ -13,7 +13,7 @@ Binance BTCUSDT Perpetual Futures — публічні дані для сигн�
 
 Зберігання: CSV по днях → feed/YYYY-MM-DD.csv
 
-WS streams (fstream.binance.com):
+WS streams (fstream.binance.com/market):
   - btcusdt@aggTrade        → trades
   - btcusdt@forceOrder      → liquidations
   - btcusdt@markPrice@1s    → funding rate + mark price
@@ -45,7 +45,7 @@ except ImportError:
 
 # ─── Конфігурація ────────────────────────────────────────────────
 SYMBOL = "BTCUSDT"
-WS_BASE = "wss://fstream.binance.com/stream?streams="
+WS_BASE = "wss://fstream.binance.com/market/stream?streams="
 REST_BASE = "https://fapi.binance.com"
 
 FEED_DIR = os.environ.get("FEED_DIR", "./feed")
@@ -54,6 +54,10 @@ os.makedirs(FEED_DIR, exist_ok=True)
 os.makedirs(LOGS_DIR, exist_ok=True)
 
 AGG_INTERVAL = 60  # секунд
+WS_STALE_AGG_TRADE_SECONDS = int(os.environ.get("WS_STALE_AGG_TRADE_SECONDS", "180"))
+WS_STALE_MARK_PRICE_SECONDS = int(os.environ.get("WS_STALE_MARK_PRICE_SECONDS", "180"))
+WS_WATCHDOG_INTERVAL_SECONDS = int(os.environ.get("WS_WATCHDOG_INTERVAL_SECONDS", "30"))
+MAX_CONSECUTIVE_SYNTHETIC_CANDLES = int(os.environ.get("MAX_CONSECUTIVE_SYNTHETIC_CANDLES", "5"))
 
 # ─── CSV ─────────────────────────────────────────────────────────
 CSV_HEADER = (
@@ -137,7 +141,13 @@ class CandleBuffer:
 
 buffer = CandleBuffer()
 lock = threading.Lock()
+state_lock = threading.Lock()
+active_ws_lock = threading.Lock()
 last_flushed_ts = None
+active_ws = None
+FEED_STATE = {
+    "consecutive_synthetic_candles": 0,
+}
 
 
 # ─── Логування ───────────────────────────────────────────────────
@@ -158,7 +168,7 @@ def log(msg: str):
 # ═══════════════════════════════════════════════════════════════════
 #
 # Binance дозволяє підписатись на кілька стрімів одним з'єднанням:
-#   wss://fstream.binance.com/stream?streams=stream1/stream2/stream3
+#   wss://fstream.binance.com/market/stream?streams=stream1/stream2/stream3
 #
 # Формат повідомлення: {"stream": "btcusdt@aggTrade", "data": {...}}
 # ═══════════════════════════════════════════════════════════════════
@@ -172,12 +182,159 @@ STREAMS = "/".join([
 ])
 WS_URL = WS_BASE + STREAMS
 
-WS_STATE = {"connected": False, "retries": 0}
+WS_STATE = {
+    "connected": False,
+    "connected_at": None,
+    "retries": 0,
+    "last_agg_trade_ts": None,
+    "last_mark_price_ts": None,
+    "last_ws_message_ts": None,
+    "last_real_trade_price": None,
+    "real_trade_minute": None,
+    "real_trade_count": 0,
+    "watchdog_reconnects": 0,
+    "watchdog_close_requested": False,
+}
+
+
+def _current_minute_key() -> str:
+    return datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+
+
+def _age_seconds(timestamp, now=None):
+    if timestamp is None:
+        return None
+    now = time.time() if now is None else now
+    return max(0.0, now - timestamp)
+
+
+def _age_text(age) -> str:
+    return "n/a" if age is None else f"{age:.0f}s"
+
+
+def _is_stale(timestamp, connected_at, now, threshold_seconds: int) -> bool:
+    reference_ts = timestamp if timestamp is not None else connected_at
+    return reference_ts is not None and (now - reference_ts) > threshold_seconds
+
+
+def _ws_snapshot(now=None):
+    now = time.time() if now is None else now
+    minute_key = _current_minute_key()
+    with state_lock:
+        connected = WS_STATE["connected"]
+        connected_at = WS_STATE["connected_at"]
+        last_agg_trade_ts = WS_STATE["last_agg_trade_ts"]
+        last_mark_price_ts = WS_STATE["last_mark_price_ts"]
+        last_ws_message_ts = WS_STATE["last_ws_message_ts"]
+        real_trade_count = (
+            WS_STATE["real_trade_count"]
+            if WS_STATE["real_trade_minute"] == minute_key
+            else 0
+        )
+        snapshot = {
+            "connected": connected,
+            "connected_at": connected_at,
+            "last_agg_trade_ts": last_agg_trade_ts,
+            "last_mark_price_ts": last_mark_price_ts,
+            "last_ws_message_ts": last_ws_message_ts,
+            "last_real_trade_price": WS_STATE["last_real_trade_price"],
+            "real_trade_count": real_trade_count,
+            "watchdog_reconnects": WS_STATE["watchdog_reconnects"],
+            "watchdog_close_requested": WS_STATE["watchdog_close_requested"],
+        }
+
+    snapshot["agg_trade_age"] = _age_seconds(last_agg_trade_ts, now)
+    snapshot["mark_price_age"] = _age_seconds(last_mark_price_ts, now)
+    snapshot["ws_message_age"] = _age_seconds(last_ws_message_ts, now)
+    snapshot["agg_trade_stale"] = connected and _is_stale(
+        last_agg_trade_ts, connected_at, now, WS_STALE_AGG_TRADE_SECONDS
+    )
+    snapshot["mark_price_stale"] = connected and _is_stale(
+        last_mark_price_ts, connected_at, now, WS_STALE_MARK_PRICE_SECONDS
+    )
+    snapshot["stale"] = snapshot["agg_trade_stale"] or snapshot["mark_price_stale"]
+    return snapshot
+
+
+def request_ws_reconnect(reason: str) -> bool:
+    """Close the active WS so the single ws_loop reconnects naturally."""
+
+    global active_ws
+
+    with active_ws_lock:
+        ws = active_ws
+        with state_lock:
+            if WS_STATE["watchdog_close_requested"]:
+                return False
+
+        if ws is None:
+            log("⚠️ WS watchdog found no active WebSocketApp to close")
+            return False
+
+        try:
+            ws.close()
+        except Exception as e:
+            log(f"⚠️ WS watchdog close failed: {e}")
+            return False
+
+        with state_lock:
+            WS_STATE["watchdog_close_requested"] = True
+            WS_STATE["watchdog_reconnects"] += 1
+            reconnects = WS_STATE["watchdog_reconnects"]
+
+        log(f"⚠️ WS watchdog reconnect #{reconnects}: {reason}")
+
+    return True
+
+
+def check_ws_freshness(now=None) -> bool:
+    """Return True when stale connected WS data triggered a forced close."""
+
+    snapshot = _ws_snapshot(now=now)
+    if (
+        not snapshot["connected"]
+        or not snapshot["stale"]
+        or snapshot["watchdog_close_requested"]
+    ):
+        return False
+
+    reasons = []
+    if snapshot["agg_trade_stale"]:
+        reasons.append(
+            f"aggTrade age={_age_text(snapshot['agg_trade_age'])} "
+            f"(threshold={WS_STALE_AGG_TRADE_SECONDS}s)"
+        )
+    if snapshot["mark_price_stale"]:
+        reasons.append(
+            f"markPrice age={_age_text(snapshot['mark_price_age'])} "
+            f"(threshold={WS_STALE_MARK_PRICE_SECONDS}s)"
+        )
+
+    with lock:
+        mark_price = buffer.mark_price
+        synthetic_count = FEED_STATE["consecutive_synthetic_candles"]
+
+    reason = (
+        "; ".join(reasons)
+        + f" | last_real_trade_price={snapshot['last_real_trade_price']} "
+        + f"| mark_price={mark_price:.2f} "
+        + f"| consecutive_synthetic={synthetic_count}"
+    )
+    return request_ws_reconnect(reason)
 
 
 def _on_open(ws):
-    WS_STATE["connected"] = True
-    WS_STATE["retries"] = 0
+    now = time.time()
+    with state_lock:
+        WS_STATE["connected"] = True
+        WS_STATE["connected_at"] = now
+        WS_STATE["last_agg_trade_ts"] = None
+        WS_STATE["last_mark_price_ts"] = None
+        WS_STATE["last_ws_message_ts"] = now
+        WS_STATE["retries"] = 0
+        WS_STATE["real_trade_minute"] = None
+        WS_STATE["real_trade_count"] = 0
+        WS_STATE["watchdog_close_requested"] = False
     log(f"✅ Binance Futures WS connected — {SYMBOL}")
     log(f"   Streams: aggTrade, forceOrder, markPrice@1s")
 
@@ -190,6 +347,10 @@ def _on_message(ws, raw):
 
     stream = msg.get("stream", "")
     data = msg.get("data", {})
+    now = time.time()
+
+    with state_lock:
+        WS_STATE["last_ws_message_ts"] = now
 
     # ── aggTrade ─────────────────────────────────────────────
     # {"e":"aggTrade","s":"BTCUSDT","p":"97123.50","q":"0.010",
@@ -198,8 +359,17 @@ def _on_message(ws, raw):
         price = float(data["p"])
         qty = float(data["q"])
         is_buyer_maker = data["m"]
+        minute_key = _current_minute_key()
         with lock:
             buffer.add_trade(price, qty, is_buyer_maker)
+            FEED_STATE["consecutive_synthetic_candles"] = 0
+        with state_lock:
+            WS_STATE["last_agg_trade_ts"] = now
+            WS_STATE["last_real_trade_price"] = price
+            if WS_STATE["real_trade_minute"] != minute_key:
+                WS_STATE["real_trade_minute"] = minute_key
+                WS_STATE["real_trade_count"] = 0
+            WS_STATE["real_trade_count"] += 1
 
     # ── forceOrder (liquidations) ────────────────────────────
     # {"e":"forceOrder","o":{"s":"BTCUSDT","S":"SELL","q":"0.500",
@@ -218,6 +388,8 @@ def _on_message(ws, raw):
         with lock:
             buffer.funding_rate = float(data.get("r", 0))
             buffer.mark_price = float(data.get("p", 0))
+        with state_lock:
+            WS_STATE["last_mark_price_ts"] = now
 
 
 def _on_error(ws, error):
@@ -229,12 +401,16 @@ def _on_error(ws, error):
 
 
 def _on_close(ws, code, msg):
-    WS_STATE["connected"] = False
+    with state_lock:
+        WS_STATE["connected"] = False
+        WS_STATE["connected_at"] = None
     log(f"⚠️ WS closed: code={code} msg={msg}")
 
 
 def ws_loop():
     """Reconnect loop з exponential backoff."""
+    global active_ws
+
     backoff = 2
     while True:
         try:
@@ -245,10 +421,23 @@ def ws_loop():
                 on_error=_on_error,
                 on_close=_on_close,
             )
-            ws.run_forever(ping_interval=20, ping_timeout=10)
+            with active_ws_lock:
+                active_ws = ws
+            try:
+                ws.run_forever(ping_interval=20, ping_timeout=10)
+            finally:
+                with active_ws_lock:
+                    if active_ws is ws:
+                        active_ws = None
+                with state_lock:
+                    WS_STATE["connected"] = False
+                    WS_STATE["connected_at"] = None
+                    WS_STATE["watchdog_close_requested"] = False
         except Exception as e:
-            WS_STATE["retries"] += 1
-            log(f"⚠️ WS exception: {e} | retry #{WS_STATE['retries']}")
+            with state_lock:
+                WS_STATE["retries"] += 1
+                retries = WS_STATE["retries"]
+            log(f"⚠️ WS exception: {e} | retry #{retries}")
         time.sleep(backoff)
         backoff = min(backoff * 2, 60)
 
@@ -277,6 +466,13 @@ def oi_loop():
     while True:
         fetch_open_interest()
         time.sleep(60)
+
+
+def watchdog_loop():
+    """Close stale connected WS sessions; ws_loop owns reconnection."""
+    while True:
+        time.sleep(WS_WATCHDOG_INTERVAL_SECONDS)
+        check_ws_freshness()
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -337,22 +533,68 @@ def flush_candle():
             return
 
         is_synthetic = 0
+        skip_synthetic = False
         if buffer.is_empty():
-            selected_price = buffer.mark_price or buffer.last_price or 0.0
-            buffer.open = selected_price
-            buffer.high = selected_price
-            buffer.low = selected_price
-            buffer.close = selected_price
-            is_synthetic = 1
+            FEED_STATE["consecutive_synthetic_candles"] += 1
+            synthetic_count = FEED_STATE["consecutive_synthetic_candles"]
+            if synthetic_count > MAX_CONSECUTIVE_SYNTHETIC_CANDLES:
+                oi = buffer.open_interest
+                fr = buffer.funding_rate
+                mark = buffer.mark_price
+                last_price = buffer.last_price
+                buffer.reset()
+                buffer.open_interest = oi
+                buffer.funding_rate = fr
+                buffer.mark_price = mark
+                buffer.last_price = last_price
+                last_flushed_ts = ts
+                skip_synthetic = True
+            else:
+                selected_price = buffer.mark_price or buffer.last_price or 0.0
+                buffer.open = selected_price
+                buffer.high = selected_price
+                buffer.low = selected_price
+                buffer.close = selected_price
+                is_synthetic = 1
+        else:
+            FEED_STATE["consecutive_synthetic_candles"] = 0
 
-        row = buffer.to_csv_row(ts, is_synthetic)
+        if skip_synthetic:
+            synthetic_count = FEED_STATE["consecutive_synthetic_candles"]
+            mark_price = buffer.mark_price
+            last_price = buffer.last_price
+            oi = buffer.open_interest
+            fr = buffer.funding_rate
+        else:
+            synthetic_count = FEED_STATE["consecutive_synthetic_candles"]
+            selected_price = None
+            row = buffer.to_csv_row(ts, is_synthetic)
 
-        # Зберігаємо OI/FR для наступної свічки
-        oi = buffer.open_interest
-        fr = buffer.funding_rate
-        buffer.reset()
-        buffer.open_interest = oi
-        buffer.funding_rate = fr
+            # Зберігаємо OI/FR для наступної свічки
+            oi = buffer.open_interest
+            fr = buffer.funding_rate
+            mark = buffer.mark_price
+            last_price = buffer.last_price
+            buffer.reset()
+            buffer.open_interest = oi
+            buffer.funding_rate = fr
+            buffer.mark_price = mark
+            buffer.last_price = last_price
+
+    if skip_synthetic:
+        log(
+            f"🚨 Synthetic candle limit exceeded at {ts}: "
+            f"consecutive_synthetic={synthetic_count}, "
+            f"max={MAX_CONSECUTIVE_SYNTHETIC_CANDLES}; "
+            f"skipping CSV write until real aggTrade data resumes | "
+            f"mark_price={mark_price:.2f} last_price={last_price:.2f} "
+            f"OI={oi:.0f} FR={fr:.6f}"
+        )
+        request_ws_reconnect(
+            f"synthetic candle limit exceeded "
+            f"({synthetic_count}>{MAX_CONSECUTIVE_SYNTHETIC_CANDLES})"
+        )
+        return
 
     csv_path = get_csv_path()
     existing_last_ts = _read_last_data_timestamp(csv_path)
@@ -389,12 +631,32 @@ def health_loop():
             with open(csv_path, "r") as f:
                 candles = max(0, sum(1 for _ in f) - 1)
 
-        ws_icon = "✅" if WS_STATE["connected"] else "❌"
+        snapshot = _ws_snapshot()
+        with lock:
+            open_interest = buffer.open_interest
+            funding_rate = buffer.funding_rate
+            mark_price = buffer.mark_price
+            synthetic_count = FEED_STATE["consecutive_synthetic_candles"]
+
+        if not snapshot["connected"]:
+            ws_status = "DISCONNECTED"
+        elif snapshot["stale"]:
+            ws_status = "STALE"
+        else:
+            ws_status = "OK"
+
         log(
-            f"💓 Health: WS={ws_icon} | "
-            f"OI={buffer.open_interest:.0f} | "
-            f"FR={buffer.funding_rate:.6f} | "
-            f"Mark={buffer.mark_price:.2f} | "
+            f"💓 Health: WS={ws_status} connected={snapshot['connected']} | "
+            f"aggTradeAge={_age_text(snapshot['agg_trade_age'])} | "
+            f"markPriceAge={_age_text(snapshot['mark_price_age'])} | "
+            f"wsMsgAge={_age_text(snapshot['ws_message_age'])} | "
+            f"consecutive_synthetic={synthetic_count} | "
+            f"real_trade_count_current_minute={snapshot['real_trade_count']} | "
+            f"last_real_trade_price={snapshot['last_real_trade_price']} | "
+            f"mark_price={mark_price:.2f} | "
+            f"watchdog_reconnects={snapshot['watchdog_reconnects']} | "
+            f"OI={open_interest:.0f} | "
+            f"FR={funding_rate:.6f} | "
             f"Candles={candles}/1440"
         )
 
@@ -409,6 +671,11 @@ def main():
     log(f"   Execution     : Binance Spot Margin BTC/USDC")
     log(f"   Interval      : {AGG_INTERVAL}s")
     log(f"   Feed dir      : {FEED_DIR}")
+    log(
+        f"   WS watchdog   : aggTrade>{WS_STALE_AGG_TRADE_SECONDS}s, "
+        f"markPrice>{WS_STALE_MARK_PRICE_SECONDS}s, check={WS_WATCHDOG_INTERVAL_SECONDS}s"
+    )
+    log(f"   Synthetic cap : {MAX_CONSECUTIVE_SYNTHETIC_CANDLES} consecutive candles")
     log("=" * 60)
 
     # Graceful shutdown
@@ -424,6 +691,7 @@ def main():
     # Потоки
     threading.Thread(target=ws_loop, daemon=True, name="ws-binance").start()
     threading.Thread(target=oi_loop, daemon=True, name="oi-poller").start()
+    threading.Thread(target=watchdog_loop, daemon=True, name="ws-watchdog").start()
     threading.Thread(target=health_loop, daemon=True, name="health").start()
 
     # Синхронізація на початок хвилини

@@ -245,6 +245,29 @@ Local dev:
 python binance_aggregator_shi.py
 ```
 
+### Collector stale-feed recovery
+
+The collector treats Binance WebSocket market-data freshness separately from
+the socket connection flag. A stale feed is visible as repeated rows with
+`IsSynthetic=1`, `Volume=0`, and a constant `Close` for many minutes.
+
+Operational inspection on the current server deployment:
+
+```bash
+docker logs --tail 200 shi-aggregator
+tail -20 /opt/aitrader/feed/YYYY-MM-DD.csv
+```
+
+Manual recovery:
+
+```bash
+docker restart shi-aggregator
+```
+
+Runtime archives cannot reconstruct every enriched field after a collector
+outage. Open interest, funding, and liquidation quantities may be missing or
+only partially recoverable historically.
+
 ## 8) Analyzer section (operational details preserved)
 
 ### Scope
@@ -544,12 +567,20 @@ run_backtest_campaign(
 )
 ```
 
+### Binance Futures WebSocket routing
+
+The SHI feed collector uses Binance USD-M Futures market streams via `wss://fstream.binance.com/market/stream?streams=`. Binance decommissioned unrouted legacy Futures stream paths for market/private channels after 2026-04-23; using `wss://fstream.binance.com/stream?streams=` can complete the WebSocket handshake but not push `aggTrade`, `forceOrder`, or `markPrice` payloads.
+
 ### Environment quick reference
 
 | Variable | Default | Description |
 |---|---|---|
 | `FEED_DIR` | `./feed` | Collector CSV directory |
 | `LOGS_DIR` | `./logs` | Collector log directory |
+| `WS_STALE_AGG_TRADE_SECONDS` | `180` | Watchdog threshold for missing aggTrade messages while WS is connected |
+| `WS_STALE_MARK_PRICE_SECONDS` | `180` | Watchdog threshold for missing markPrice messages while WS is connected |
+| `WS_WATCHDOG_INTERVAL_SECONDS` | `30` | Collector stale-WS watchdog check interval |
+| `MAX_CONSECUTIVE_SYNTHETIC_CANDLES` | `5` | Maximum flat synthetic candle writes before skipping until real aggTrade data resumes |
 
 ## 11) Known current limitations
 
@@ -576,7 +607,7 @@ When wording differs, prefer current runtime/code behavior and these aligned doc
 Example health log format:
 
 ```text
-💓 Health: WS=✅ | OI=83287 | FR=0.000027 | Mark=70400.00 | Candles=120/1440
+💓 Health: WS=OK connected=True | aggTradeAge=0s | markPriceAge=1s | wsMsgAge=0s | consecutive_synthetic=0 | real_trade_count_current_minute=18 | last_real_trade_price=70400.5 | mark_price=70400.4 | watchdog_reconnects=0 | OI=83287 | FR=0.000027 | Candles=120/1440
 ```
 
 ## Target architecture constraints (execution layer, planned)
