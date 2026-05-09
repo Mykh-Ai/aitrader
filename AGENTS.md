@@ -32,6 +32,16 @@ If documents conflict, prefer the most operationally current source supported by
   - `binance_aggregator_shi.py`: raw data collection.
 - Make minimal, localized changes; do not refactor broadly without direct evidence/need.
 
+
+## 4.1) Critical feed recovery context
+
+- Binance USD-M Futures legacy WebSocket paths without routing (`wss://fstream.binance.com/stream?streams=...`) stopped pushing market/private stream payloads after `2026-04-23`; collector code must use `wss://fstream.binance.com/market/stream?streams=...`.
+- The SHI enriched feed has a known historical gap from `2026-04-23 17:05:00` through `2026-05-06 22:51:00` UTC. Original `feed/YYYY-MM-DD.csv` files in that window contain flat/broken synthetic rows and must be treated as forensic evidence, not valid market data.
+- Do not overwrite `feed/` to hide the outage. Use `feed_recovered/` for patched Analyzer/Backtester input in the affected window.
+- `feed_recovered/` mirrors DeltaScout's recovered SHI-compatible feed. Its provenance lives in `D:\Project_V\btc-orderflow-system\deltascout\research_material\recovery_reports\recovery_quality_2026-04-23_1705_to_2026-05-06_2251.csv`.
+- Recovered rows use real price/OHLCV/trades/buy/sell/VWAP from the legacy volume-alert archive, OI copied or forward-filled where possible, untrusted funding during the WS gap, and missing historical liquidation quantities. Do not make funding/liquidation-based conclusions from recovered rows unless explicitly marked degraded/unsupported.
+- The recovery builder is in DeltaScout: `python -m deltascout.research_bundle.build_recovered_feed_gap --mirror-output-root D:\Project_V\Aitrader\feed_recovered`.
+
 ### B) Research tasks
 - `research/OPS.md` governs detailed routine-cycle execution.
 - Respect existing project-memory pattern:
