@@ -56,3 +56,5 @@ processed_at,analyzer_run_id,backtest_output_dir,formalizable_rows,promotion_out
 2026-05-03,2026-04-30_to_2026-04-30_run_001,N/A,0,N/A,NO_REPLAYABLE_RULESETS,routine cycle 2026-05-03; FE=0
 2026-05-03,2026-05-01_to_2026-05-01_run_001,N/A,0,N/A,NO_REPLAYABLE_RULESETS,routine cycle 2026-05-03; FE=0
 2026-05-03,2026-05-02_to_2026-05-02_run_001,N/A,0,N/A,NO_REPLAYABLE_RULESETS,routine cycle 2026-05-03; FE=0
+2026-05-15,2026-05-13_to_2026-05-13_run_001,backtest_runs/2026-05-13_to_2026-05-13_run_001_routine_20260515,1,REJECT,BACKTESTED_REJECT,routine cycle 2026-05-15; FE=1
+2026-05-15,2026-05-14_to_2026-05-14_run_001,backtest_runs/2026-05-14_to_2026-05-14_run_001_routine_20260515,1,REJECT,BACKTESTED_REJECT,routine cycle 2026-05-15; FE=1
