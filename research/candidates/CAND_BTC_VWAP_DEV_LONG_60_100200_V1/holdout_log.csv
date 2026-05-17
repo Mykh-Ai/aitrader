@@ -1,0 +1,2 @@
+candidate_id,holdout_verdict,events,valid_replay_events,trades,independent_days,net_0_00000,net_0_00010,net_0_00015,net_0_00020,reason
+CAND_BTC_VWAP_DEV_LONG_60_100200_V1,BLOCKED_NO_USABLE_DATA,0,0,0,0,0.0,0.0,0.0,0.0,no_usable_completed_clean_holdout_days

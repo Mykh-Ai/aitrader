@@ -1,0 +1,2 @@
+candidate_id,independent_days,largest_day_abs_result_share,top3_day_abs_result_share,status,notes
+CAND_BTC_VWAP_DEV_LONG_60_100200_V1,0,1.0,1.0,BLOCKED,no_usable_completed_clean_holdout_days
