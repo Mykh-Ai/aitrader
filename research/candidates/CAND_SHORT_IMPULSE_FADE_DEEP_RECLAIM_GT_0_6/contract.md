@@ -1,6 +1,8 @@
 # CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6 Contract
 
-Status: frozen research candidate, `WAIT / VALIDATE`
+Status: `REJECT` under Sprint 03 formal mapping
+
+Sprint 03 supersedes the Sprint 02 watch status. The frozen `ReclaimDepthToImpulseRange > 0.6` condition was materialized as a formal replayable ruleset and failed baseline and hard cost gate `0.00015`.
 
 ## Frozen Definition
 
@@ -39,5 +41,4 @@ Status: frozen research candidate, `WAIT / VALIDATE`
 
 ## Promotion Status
 
-No promotion. This candidate is `WAIT / VALIDATE`.
-
+No promotion. Current formal verdict is `REJECT`.

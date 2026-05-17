@@ -73,12 +73,13 @@ Evidence:
 - `research/run_log.csv`: 59 rows, 33 `BACKTESTED_REJECT`, 24 `NO_REPLAYABLE_RULESETS`, 2 `DUPLICATE_SKIP`, 0 non-REJECT promotion outcomes.
 - Local `backtest_runs/`: 220 promotion rows, all `REJECT`; 220 validation rows, all `FAIL`.
 - Recovered-gap `backtest_runs/recovered_gap_2026-04-23_2026-05-06/`: 67 promotion rows, all `REJECT`; 67 validation rows, all `FAIL`.
+- Sprint 03 formal candidate replay: `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1` = `WAIT`; `CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6` = `REJECT`; 0 `PROMOTE`.
 
 ## 7. Active Candidates
 
-- `CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6`: best short-side research lead; wait/validate only.
+- `CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6`: rejected under Sprint 03 formal mapping; do not continue as a primary short lead unless a new, pre-declared reason reopens it.
 - `CAND_LONG_IMPULSE_FADE_LATE_US_STRUCTURAL`: long-side late-US watch; wait/validate only.
-- `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1`: frozen true-holdout candidate; no more tuning.
+- `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1`: formal replayable ruleset exists; WAIT pending true holdout, same-bar review, and execution cost review.
 - `CAND_H4_FAILED_BREAK_RECLAIM_EXTENDED_V1`: active only as redesign watch. Current EXTENDED_V1 implementation is quarantined as invalid for intended H4 A/B/C formation.
 
 ## 8. Rejected Families

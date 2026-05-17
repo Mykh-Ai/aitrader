@@ -45,15 +45,16 @@ Use `research/canonical/DATA_INVENTORY.md` before any data-window claim.
 
 - Routine/local copied backtests: `backtest_runs/`
 - Official Sprint 02 recovered aggregate rerun: `backtest_runs/recovered_gap_2026-04-23_2026-05-06/`
+- Sprint 03 formal candidate replay: `backtest_runs/sprint_03_candidate_rulesets/`
 - Research sidecar backtester artifacts may also exist under `research/results/**/backtester_*`
 
 Do not aggregate sibling derived runs into a promotion claim.
 
 ## 7. Current Active Candidates
 
-- `CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6`: best short lead; watch/validate only.
+- `CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6`: rejected under Sprint 03 formal mapping.
 - `CAND_LONG_IMPULSE_FADE_LATE_US_STRUCTURAL`: long watch; sample too small.
-- `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1`: frozen true-holdout candidate.
+- `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1`: formal replayable ruleset exists; WAIT pending true holdout and cost/same-bar review.
 - `CAND_H4_FAILED_BREAK_RECLAIM_EXTENDED_V1`: redesign watch only; current implementation rejected for intended H4 A/B/C logic.
 
 Read `research/canonical/CANDIDATE_REGISTRY.csv` and `research/canonical/ACTIVE_WATCHLIST.md`.
@@ -102,3 +103,5 @@ Primary feed gap conclusions are invalid as market evidence. FE=0 / no setup / n
 Stop broad search loops. Move to controlled candidate validation:
 
 Data repair -> canonical recovered reruns -> candidate registry -> frozen contracts -> pooled replay -> true forward holdout -> cost stress -> robustness -> promotion verdict -> only then Phase 4 Bridge.
+
+Sprint 03 narrowed the active short path to `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1`. It is WAIT, not PROMOTE.

@@ -1,20 +1,11 @@
-candidate_id,total_trades,resolved_return_trades,independent_trade_days,gross_result,largest_day,largest_day_trades,largest_day_result,largest_day_abs_result_share,largest_day_positive_result_share,top3_day_abs_result_share,pass_fail,notes
-CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6,34,34,16,0.0077161351,2026-04-18,4,-0.0037294399,0.169946,0.0,0.432221,PASS,"PASS requires >=10 trade-days, largest abs day <=33%, top3 abs days <=60%; report is sidecar evidence, not official promotion."
+candidate_id,total_trades,resolved_return_trades,independent_trade_days,net_result,largest_day,largest_day_trades,largest_day_result,largest_day_abs_result_share,top3_day_abs_result_share,pass_fail,notes
+CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6,14,14,7,-0.0023540122,2026-05-14,1,-0.0020893464,0.409027,0.738923,FAIL,"PASS requires >=10 trade-days, largest abs day <=33%, top3 abs days <=60%; cost level 0.00015 conservative replay"
 
 source_day,trades,day_result
-2026-04-18,4,-0.0037294398920631002
-2026-03-26,2,0.0030882758445588
-2026-04-15,2,0.0026673109425051
-2026-03-29,2,0.0021096319469231
-2026-03-22,1,0.0014905534155052
-2026-05-08,1,0.0014517586804249
-2026-04-10,2,-0.0014284469813131999
-2026-03-21,6,0.0013717114339425998
-2026-04-01,1,0.0009808951360427
-2026-04-09,2,-0.000861895052723
-2026-04-06,1,-0.0007020022198837
-2026-04-16,3,0.0006962350429643001
-2026-03-19,2,0.0005272564494333001
-2026-03-30,1,-0.0003925869984775
-2026-04-12,2,0.00036763419931739997
-2026-05-12,2,7.924312572320003e-05
+2026-05-14,1,-0.0020893464037271
+2026-05-07,5,-0.0012019116180445998
+2026-05-12,2,0.0004832287708647001
+2026-05-09,2,0.0004425458577738
+2026-05-10,1,-0.0004397955595186
+2026-05-13,2,0.00023078644070219996
+2026-05-08,1,0.0002204802653178

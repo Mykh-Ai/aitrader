@@ -1,6 +1,8 @@
 # CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1 Contract
 
-Status: frozen holdout candidate, `VALIDATE`
+Status: formal replayable ruleset, `WAIT`
+
+Sprint 03 materialized this candidate as a formal ruleset. Hard cost gate `0.00015` passes, warning gate `0.00020` fails, same-bar report is WAIT, and true holdout has not started.
 
 ## Frozen Definition
 
@@ -43,5 +45,4 @@ Status: frozen holdout candidate, `VALIDATE`
 
 ## Promotion Status
 
-No promotion. This candidate is `WAIT / VALIDATE`.
-
+No promotion. Current formal verdict is `WAIT`.

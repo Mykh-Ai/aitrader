@@ -4,14 +4,13 @@ Last updated: 2026-05-16
 
 ## CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6
 
+- Status: `REJECT` under Sprint 03 formal mapping.
 - Hypothesis: H2 short impulse fade works best when reclaim depth is real, specifically `ReclaimDepthToImpulseRange > 0.6`.
-- Why still alive: 34 diagnostic trades show 70.59% `FULL_FADE`, 2.94% `NO_FADE`, positive PnL, and cluster-first checks do not erase the signal.
-- Current evidence: frozen sidecar slice has 34 trades and 16 trade-days; cost stress report stays positive through `0.00020`; post-recovery support is still too small and not true holdout.
-- Weaknesses: PnL concentration is high at trade level; top 2 winners equal 81.34% of total PnL in prior diagnostic. Same-bar audit is not promotion-grade.
-- Required next validation: true forward accumulation on clean data with threshold frozen at `>0.6`.
-- Minimum promotion gates: >=25 post-holdout trades, >=10 post-holdout trade-days, positive after cost stress, no single-day dominance, source concentration pass, same-bar pass.
-- Exact next replay action: materialize the frozen contract as a candidate-specific deterministic replay/mapping, then run recovered and pooled replay on clean pre-gap plus recovered gap plus post-gap, without changing threshold.
-- Exact reason why not live: no post-holdout sample, no formal cost model pass, no frozen stop/exit contract.
+- Formal evidence: 14 formal candidate events, no-lookahead PASS, stop/exit frozen, but cost stress fails at every level including `0.00015`.
+- Source concentration: FAIL, only 7 trade-days; largest day abs result share 0.409027 and top3 abs share 0.738923.
+- Same-bar: PASS for ambiguity handling, but economic result remains negative.
+- Exact next action: do not continue as primary active watch. Reopen only as a new pre-declared candidate, not by tuning threshold or adding filters after the REJECT.
+- Exact reason why not live: formal replay hard cost gate fails and sample/concentration gates fail.
 
 ## CAND_LONG_IMPULSE_FADE_LATE_US_STRUCTURAL
 
@@ -39,9 +38,9 @@ Last updated: 2026-05-16
 
 - Hypothesis: on the `ctx_spike_count >= 2` short reclaim surface, one-bar entry delay improves path order and reduces immediate adverse selection.
 - Why still alive: `entry_delay_1` keeps the full 191-trade sample and improves winrate from 48.69% to 61.26%, mean return from +0.00002978 to +0.00017416, and max drawdown from -0.01288895 to -0.00702553.
-- Current evidence: pseudo-holdout and leave-one-day-out are constructive; Sprint 02 cost stress stays positive through `0.00015` and fails transparently at `0.00020`.
-- Weaknesses: no true unseen holdout; top-3 day removal plus 0.00010 cost turns slightly negative; source window needs exact verification.
+- Current evidence: Sprint 03 formal replay has 301 candidate events, 61 trade-days, no-lookahead PASS, source concentration PASS, and cost `0.00015` positive.
+- Weaknesses: no true unseen holdout; cost `0.00020` fails; same-bar report is WAIT with 40/301 ambiguous trades.
 - Required next validation: true future holdout on new clean Analyzer days with no parameter changes.
 - Minimum promotion gates: global gates, plus cost sensitivity pass at realistic spot margin fee/slippage assumptions.
-- Exact next replay action: run true future holdout on the frozen `entry_delay_1` contract, compare against `baseline_current`, and publish paired deltas without changing `ctx_spike_count >= 2` or delay.
-- Exact reason why not live: diagnostic-only transform, no true holdout, no execution-grade cost model, and official promotion remains `REJECT`.
+- Exact next replay action: run true future holdout after the Sprint 03 freeze timestamp with unchanged `ctx_spike_count >= 2` and `entry_delay_1`.
+- Exact reason why not live: true holdout is not started, cost `0.00020` fails, and same-bar verdict remains WAIT.
