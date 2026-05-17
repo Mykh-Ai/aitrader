@@ -1,0 +1,5 @@
+candidate_id,cost_level,trades,gross_result,net_result,winrate,max_drawdown,profit_factor,pass_fail,notes
+CAND_LONG_IMPULSE_FADE_LATE_US_STRUCTURAL,0.00000,20,0.0097353384,0.0097353384,0.736842,-0.0018530134,4.133385,PASS,Late-US structural watch selector only; return_pct basis. resolved_return_rows=19/20.
+CAND_LONG_IMPULSE_FADE_LATE_US_STRUCTURAL,0.00010,20,0.0097353384,0.0078353384,0.736842,-0.0019530134,3.172276,PASS,Late-US structural watch selector only; return_pct basis. resolved_return_rows=19/20.
+CAND_LONG_IMPULSE_FADE_LATE_US_STRUCTURAL,0.00015,20,0.0097353384,0.0068853384,0.684211,-0.0020030134,2.780096,PASS,Late-US structural watch selector only; return_pct basis. resolved_return_rows=19/20.
+CAND_LONG_IMPULSE_FADE_LATE_US_STRUCTURAL,0.00020,20,0.0097353384,0.0059353384,0.684211,-0.0020530134,2.424039,PASS,Late-US structural watch selector only; return_pct basis. resolved_return_rows=19/20.

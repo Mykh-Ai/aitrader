@@ -1,0 +1,5 @@
+candidate_id,cost_level,trades,gross_result,net_result,winrate,max_drawdown,profit_factor,pass_fail,notes
+CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6,0.00000,34,0.0077161351,0.0077161351,0.470588,-0.0046744559,1.608476,PASS,34-row cluster-first threshold slice; ReclaimDepthToImpulseRange > 0.6; return_pct basis. resolved_return_rows=34/34.
+CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6,0.00010,34,0.0077161351,0.0043161351,0.470588,-0.0051744559,1.298053,PASS,34-row cluster-first threshold slice; ReclaimDepthToImpulseRange > 0.6; return_pct basis. resolved_return_rows=34/34.
+CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6,0.00015,34,0.0077161351,0.0026161351,0.470588,-0.0054244559,1.170088,PASS,34-row cluster-first threshold slice; ReclaimDepthToImpulseRange > 0.6; return_pct basis. resolved_return_rows=34/34.
+CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6,0.00020,34,0.0077161351,0.0009161351,0.470588,-0.006190604,1.05627,PASS,34-row cluster-first threshold slice; ReclaimDepthToImpulseRange > 0.6; return_pct basis. resolved_return_rows=34/34.

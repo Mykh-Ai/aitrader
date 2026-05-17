@@ -1,0 +1,5 @@
+candidate_id,cost_level,trades,gross_result,net_result,winrate,max_drawdown,profit_factor,pass_fail,notes
+CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1,0.00000,191,0.03326387,0.03326387,0.612565,-0.00702553,1.603542,PASS,Frozen entry_delay_1 on ctx_spike_count >= 2 surface; return_pct basis. resolved_return_rows=191/191.
+CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1,0.00010,191,0.03326387,0.01416387,0.554974,-0.00990162,1.224519,PASS,Frozen entry_delay_1 on ctx_spike_count >= 2 surface; return_pct basis. resolved_return_rows=191/191.
+CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1,0.00015,191,0.03326387,0.00461387,0.513089,-0.01235162,1.068309,PASS,Frozen entry_delay_1 on ctx_spike_count >= 2 surface; return_pct basis. resolved_return_rows=191/191.
+CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1,0.00020,191,0.03326387,-0.00493613,0.471204,-0.01751637,0.931843,FAIL,Frozen entry_delay_1 on ctx_spike_count >= 2 surface; return_pct basis. resolved_return_rows=191/191.
