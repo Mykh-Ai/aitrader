@@ -1,0 +1,21 @@
+# CAND_BTC_VWAP_DEV_LONG_60_100200_V1 Distribution Audit
+
+- `trades`: `273`
+- `wins`: `61`
+- `losses`: `212`
+- `winrate`: `0.223443`
+- `avg_winner`: `0.0048629759`
+- `avg_loser`: `-0.0007690547`
+- `payoff_ratio`: `6.323316`
+- `profit_factor`: `1.819445`
+- `median_trade_result`: `-0.0005069957`
+- `mean_trade_result`: `0.0004893844`
+- `p10`: `-0.0013088273`
+- `p25`: `-0.0008525092`
+- `p75`: `-0.0001395784`
+- `p90`: `0.0046277328`
+- `max_win`: `0.0162258382`
+- `max_loss`: `-0.0048102148`
+- `skewness`: `2.651727`
+- `consecutive_loss_max`: `13`
+- `consecutive_win_max`: `4`
