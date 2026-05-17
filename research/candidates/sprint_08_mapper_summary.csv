@@ -1,0 +1,4 @@
+candidate_id,selected_events,valid_replay_events,invalid_events,invalid_reasons
+CAND_BTC_EXH_SHORT_24_V1,181,181,0,{}
+CAND_BTC_VWAP_DEV_LONG_60_100200_V1,423,423,0,{}
+CAND_BTC_VWAP_DEV_SHORT_60_100200_V1,305,301,4,"{""short_stop_not_above_entry"": 2, ""short_target_not_below_entry"": 2}"
