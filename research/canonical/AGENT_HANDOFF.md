@@ -1,6 +1,6 @@
 # AGENT_HANDOFF
 
-Last updated: 2026-05-16
+Last updated: 2026-05-17
 
 ## 1. What This Project Is
 
@@ -24,6 +24,7 @@ The project is searching for edge through Analyzer artifacts, deterministic repl
 - Execution target remains isolated margin only as a design constraint.
 - Broad H1 remains a control family, not the main edge path.
 - `entry_delay_1` is frozen for holdout; do not tune it.
+- Sprint 03 freeze point is commit `23d1cc3`.
 - Primary-feed outage window is contaminated.
 
 ## 4. Where Raw / Recovered Data Lives
@@ -52,10 +53,8 @@ Do not aggregate sibling derived runs into a promotion claim.
 
 ## 7. Current Active Candidates
 
-- `CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6`: rejected under Sprint 03 formal mapping.
-- `CAND_LONG_IMPULSE_FADE_LATE_US_STRUCTURAL`: long watch; sample too small.
-- `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1`: formal replayable ruleset exists; WAIT pending true holdout and cost/same-bar review.
-- `CAND_H4_FAILED_BREAK_RECLAIM_EXTENDED_V1`: redesign watch only; current implementation rejected for intended H4 A/B/C logic.
+- `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1`: main validation candidate; formal replayable ruleset exists; `ACTIVE_VALIDATION / WAIT` pending true holdout and cost/same-bar review.
+- `CAND_LONG_IMPULSE_FADE_LATE_US_STRUCTURAL`: passive watch only; sample too small; no formal ruleset mapping yet.
 
 Read `research/canonical/CANDIDATE_REGISTRY.csv` and `research/canonical/ACTIVE_WATCHLIST.md`.
 
@@ -63,6 +62,7 @@ Read `research/canonical/CANDIDATE_REGISTRY.csv` and `research/canonical/ACTIVE_
 
 - Broad H1 reclaim as main edge path.
 - Daily broad replay as primary research loop.
+- `CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6` as current formal ruleset.
 - Current H4 EXTENDED_V1 as intended H4 evidence.
 - Local H1 duplicate cluster family.
 - Primary-feed gap FE=0 conclusions.
@@ -105,3 +105,5 @@ Stop broad search loops. Move to controlled candidate validation:
 Data repair -> canonical recovered reruns -> candidate registry -> frozen contracts -> pooled replay -> true forward holdout -> cost stress -> robustness -> promotion verdict -> only then Phase 4 Bridge.
 
 Sprint 03 narrowed the active short path to `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1`. It is WAIT, not PROMOTE.
+
+True holdout starts only after Sprint 03 commit `23d1cc3`; everything before that commit is already-seen evidence.

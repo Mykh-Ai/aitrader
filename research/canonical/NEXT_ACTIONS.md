@@ -35,9 +35,9 @@ Last updated: 2026-05-16
 
 ## 5. Candidate Validation Tasks
 
-1. Materialize `CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6` as a formal deterministic replay/mapping with threshold `ReclaimDepthToImpulseRange > 0.6`.
-2. Continue forward watch until it reaches >=25 post-holdout trades and >=10 post-holdout trade-days.
-3. Run true forward holdout for `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1` with no parameter changes.
+1. Run true forward holdout for `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1` with no parameter changes after the Sprint 03 freeze timestamp.
+2. Keep `CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6` rejected under Sprint 03 formal mapping; do not retune threshold.
+3. If deep reclaim is ever reopened, treat it as a new pre-declared candidate with a new holdout clock.
 4. Continue `CAND_LONG_IMPULSE_FADE_LATE_US_STRUCTURAL` with the frozen watch selector only.
 5. Keep current `CAND_H4_FAILED_BREAK_RECLAIM_EXTENDED_V1` quarantined; rebuild detector before any replay.
 6. For every candidate, report raw and cluster-first results at 30m/60m/120m/240m/480m/1440m.

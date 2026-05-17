@@ -1,6 +1,6 @@
 # REJECTED_FAMILIES
 
-Last updated: 2026-05-16
+Last updated: 2026-05-17
 
 ## Broad H1 Reclaim Baseline
 
@@ -28,6 +28,15 @@ Last updated: 2026-05-16
 - Status: rejected as current implementation; concept may be redesigned.
 - Required to reopen: new explicit H4 A/B/C detector, minimum risk/fee viability, clean/recovered replay.
 - Warning: do not cite current EXTENDED_V1 R/MFE as evidence for H4 setup-class edge.
+
+## Sprint 03 Formal Deep-Reclaim Short Ruleset
+
+- Tested windows: already-seen canonical Analyzer artifacts plus recovered gap artifacts, formal Sprint 03 pooled replay.
+- Reason rejected: formal Backtester-integrated cost stress is negative at baseline and at hard gate `0.00015`.
+- Metrics summary: 14 trades, 7 trade-days, cost `0.00015` net `-0.0023540122`, source concentration FAIL.
+- Status: rejected as current formal ruleset.
+- Required to reopen: only as a new pre-declared candidate with a new holdout clock.
+- Warning: do not reopen by lowering `0.6`, adding a filter after seeing this result, or repeating a threshold tuning loop.
 
 ## Local H1 Duplicate Entries
 

@@ -2,6 +2,7 @@
 
 Candidate: `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1`
 Rule version: `SPRINT03_CTX_GE2_ENTRY_DELAY_1_V1`
+Freeze commit: `23d1cc3`
 
 ## Formal Mapping
 
@@ -34,4 +35,8 @@ Rule version: `SPRINT03_CTX_GE2_ENTRY_DELAY_1_V1`
 
 ## Verdict
 
-`WAIT`
+`ACTIVE_VALIDATION / WAIT`
+
+Cost `0.00015` is the hard gate and passed on already-seen Sprint 03 replay. Cost `0.00020` failed and remains an execution-risk warning, not a research reject by itself.
+
+True holdout has not started in this file. All Sprint 03 replay rows are already-seen evidence. Promotion is prohibited until the holdout protocol gates pass after freeze commit `23d1cc3`.

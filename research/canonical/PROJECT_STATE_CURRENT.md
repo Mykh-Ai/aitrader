@@ -1,6 +1,6 @@
 # PROJECT_STATE_CURRENT
 
-Last updated: 2026-05-16
+Last updated: 2026-05-17
 
 ## 1. Current Phase
 
@@ -73,19 +73,18 @@ Evidence:
 - `research/run_log.csv`: 59 rows, 33 `BACKTESTED_REJECT`, 24 `NO_REPLAYABLE_RULESETS`, 2 `DUPLICATE_SKIP`, 0 non-REJECT promotion outcomes.
 - Local `backtest_runs/`: 220 promotion rows, all `REJECT`; 220 validation rows, all `FAIL`.
 - Recovered-gap `backtest_runs/recovered_gap_2026-04-23_2026-05-06/`: 67 promotion rows, all `REJECT`; 67 validation rows, all `FAIL`.
-- Sprint 03 formal candidate replay: `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1` = `WAIT`; `CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6` = `REJECT`; 0 `PROMOTE`.
+- Sprint 03 formal candidate replay: `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1` = `ACTIVE_VALIDATION / WAIT`; `CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6` = `REJECT_AS_FORMAL_RULESET`; 0 `PROMOTE`.
 
 ## 7. Active Candidates
 
-- `CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6`: rejected under Sprint 03 formal mapping; do not continue as a primary short lead unless a new, pre-declared reason reopens it.
-- `CAND_LONG_IMPULSE_FADE_LATE_US_STRUCTURAL`: long-side late-US watch; wait/validate only.
-- `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1`: formal replayable ruleset exists; WAIT pending true holdout, same-bar review, and execution cost review.
-- `CAND_H4_FAILED_BREAK_RECLAIM_EXTENDED_V1`: active only as redesign watch. Current EXTENDED_V1 implementation is quarantined as invalid for intended H4 A/B/C formation.
+- `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1`: main validation candidate; formal replayable ruleset exists; `ACTIVE_VALIDATION / WAIT` pending true holdout, same-bar de-risk, and execution cost review.
+- `CAND_LONG_IMPULSE_FADE_LATE_US_STRUCTURAL`: passive watch only; do not tune and do not treat as a replayable strategy.
 
 ## 8. Rejected Families
 
 - Broad H1 reclaim baseline as main edge path.
 - Daily broad replay as primary research loop.
+- `CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6` as current formal ruleset; Sprint 03 replay failed baseline and cost gates.
 - Current H4 EXTENDED_V1 as evidence for intended H4 candle false-break/reclaim.
 - Local H1 duplicate cluster family.
 - Primary-feed FE=0 conclusions during the synthetic outage.
@@ -125,10 +124,10 @@ Data repair -> canonical state -> candidate registry -> frozen candidate contrac
 1. Preserve `analyzer_runs/recovered_gap_2026-04-23_2026-05-06/` as the official recovered Analyzer rerun.
 2. Preserve `backtest_runs/recovered_gap_2026-04-23_2026-05-06/` as the official recovered aggregate replay.
 3. Keep primary-feed gap runs marked as contaminated in all future reports.
-4. Freeze `CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6` as a watch contract with threshold `>0.6`; do not add predicates.
-5. Freeze `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1` for true forward holdout; no tuning.
-6. Continue `CAND_LONG_IMPULSE_FADE_LATE_US_STRUCTURAL` watch on new clean days.
-7. Replace current H4 EXTENDED_V1 with an explicit H4 Candle A/B/C detector before any new H4 replay.
-8. Add explicit fee/slippage/spread stress to candidate validation reports.
-9. Add same-bar ambiguity summary to each candidate registry update.
-10. Promote only after all mandatory gates pass: >=25 post-holdout trades, >=10 post-holdout trade-days, positive net after cost stress, no single-day dominance, no unresolved same-bar bias, stable parameter neighborhood, source concentration pass, execution-observable entry, explicit stop/exit, isolated margin only, no cross, no martingale.
+4. Keep `CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6` in rejected/archive state; do not lower threshold or add filters after the Sprint 03 result.
+5. Start true holdout for `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1` after Sprint 03 commit `23d1cc3`; no tuning.
+6. Update `research/candidates/CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1/holdout_log.csv` after each new clean batch.
+7. Execute the same-bar de-risk plan for `CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1`.
+8. Continue `CAND_LONG_IMPULSE_FADE_LATE_US_STRUCTURAL` passive watch on new clean days only.
+9. Replace current H4 EXTENDED_V1 with an explicit H4 Candle A/B/C detector before any future H4 validation.
+10. Promote only after all mandatory gates pass: >=25 post-holdout trades, >=10 post-holdout trade-days, positive net after cost stress `0.00015`, no single-day dominance, no unresolved verdict-changing same-bar bias, source concentration pass, execution-observable entry, explicit stop/exit, isolated margin only, no cross, no martingale.
