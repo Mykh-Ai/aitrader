@@ -1,0 +1,1 @@
+date,rows,min_timestamp,max_timestamp,post_freeze_rows,synthetic_pct,zero_ohlc_rows,volume_sum,coverage_close_to_full_utc_day,completed_utc_day_after_freeze,usable_for_holdout,reason

@@ -25,6 +25,8 @@ FE=0 / no setup / no event inside the contaminated window must be treated as dat
 | 2026-04-23 17:05..2026-05-06 22:51 UTC | `feed/` | Contaminated synthetic/flat outage window | Audit-only; do not use for market conclusions |
 | 2026-04-23..2026-05-06 | `feed_recovered/` | Recovered SHI-compatible feed | Allowed for research reruns with degraded funding/liquidation caveat |
 | 2026-05-07..2026-05-14 | `feed/` | Clean post-gap local archive, 0 synthetic rows in checked files | Allowed |
+| 2026-05-15..2026-05-16 | `feed/` from server sync | Complete 1440-row days with Analyzer runs copied locally after Sprint 03 | Backfill/audit only; not true holdout because timestamps are before Sprint 03 freeze |
+| 2026-05-17 | `feed/` | Original zip state contains a single synthetic zero row after Sprint 03 freeze; server has only partial in-progress current-day data until UTC rotation | Not valid holdout evidence; wait for completed UTC day and feed audit PASS |
 
 ## Problem Days
 

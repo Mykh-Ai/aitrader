@@ -33,6 +33,8 @@ Last updated: 2026-05-17
 - Holdout starts after the freeze point, not at the start of the recovered gap and not at any previously inspected date.
 - Holdout data must come from clean feed or explicitly accepted recovered source with degraded fields documented.
 - Every holdout batch must use the unchanged Sprint 03 mapper and unchanged stop/exit/cost model.
+- Analyze only completed UTC days. Partial current-day files are not valid holdout evidence.
+- `feed/2026-05-17.csv` contains a single synthetic zero row after Sprint 03 freeze in the original zip state. This row is not valid holdout evidence and must not be used for candidate validation.
 
 ## Minimum Holdout Gates
 
