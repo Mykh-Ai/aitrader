@@ -75,6 +75,18 @@ Official recovered rerun outcome:
 
 This confirms recovered feed restores Analyzer surface, but it does not create a promotable strategy.
 
+## Feed Recovered Git Policy
+
+`feed_recovered/` is preserved as an external/local recovered data artifact, not as a tracked git data directory.
+
+- Git tracking status: ignored after Sprint 05 cleanup.
+- Manifest: `research/canonical/FEED_RECOVERED_MANIFEST.csv`.
+- Reason: recovered raw data is reproducible from the documented DeltaScout recovery builder and is large data input, while canonical evidence is preserved through recovered Analyzer/Backtester summaries and candidate files.
+- Verification path: compare file names, row counts, min/max timestamps, synthetic row counts, and SHA256 hashes in `FEED_RECOVERED_MANIFEST.csv`.
+- Restore path: rebuild from DeltaScout with `python -m deltascout.research_bundle.build_recovered_feed_gap --mirror-output-root D:\Project_V\Aitrader\feed_recovered`, then compare against the manifest.
+
+Do not delete `feed_recovered/` without a separate data-retention decision.
+
 ## Recovered Backtester Rerun
 
 Official recovered Backtester rerun outcome:

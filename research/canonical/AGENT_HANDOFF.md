@@ -78,6 +78,8 @@ Do not use primary-feed outputs over that window as market evidence. Use recover
 
 Primary feed gap conclusions are invalid as market evidence. FE=0 / no setup / no event inside the contaminated window must be treated as data outage, not market behavior.
 
+`feed_recovered/` is a local external data artifact after Sprint 05. It is ignored by git and documented in `research/canonical/FEED_RECOVERED_MANIFEST.csv`; do not delete it without a separate retention decision.
+
 ## 10. What Must Not Be Done
 
 - Do not start live trading.
@@ -97,6 +99,7 @@ Primary feed gap conclusions are invalid as market evidence. FE=0 / no setup / n
 6. `python -m pytest -q`
 7. `Import-Csv research/run_log.csv | Group-Object routine_status`
 8. `Get-ChildItem backtest_runs -Recurse -Filter backtest_promotion_decisions.csv`
+9. `Get-Content research/canonical/ARTIFACT_RETENTION_POLICY.md`
 
 ## 12. Current Strategic Direction
 
