@@ -1,0 +1,46 @@
+{
+  "freeze_timestamp": "2026-05-17T11:12:14.334104+00:00",
+  "source_analyzer_dirs": 61,
+  "candidates": {
+    "CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1": {
+      "candidate_events": "research\\candidates\\CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1\\candidate_events.csv",
+      "event_count": 301,
+      "artifact_dir": "backtest_runs\\sprint_03_candidate_rulesets\\artifacts\\CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1",
+      "verdict": "WAIT",
+      "no_lookahead": {
+        "status": "PASS",
+        "events": 301,
+        "issues": []
+      },
+      "same_bar": {
+        "verdict": "WAIT",
+        "total_trades": 301,
+        "ambiguous_trades": 40,
+        "same_bar_pct": 13.289036544850498,
+        "pessimistic_result": 0.0100437998,
+        "optimistic_result": 0.0134791115,
+        "conservative_result": 0.0123921046
+      }
+    },
+    "CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6": {
+      "candidate_events": "research\\candidates\\CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6\\candidate_events.csv",
+      "event_count": 14,
+      "artifact_dir": "backtest_runs\\sprint_03_candidate_rulesets\\artifacts\\CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6",
+      "verdict": "REJECT",
+      "no_lookahead": {
+        "status": "PASS",
+        "events": 14,
+        "issues": []
+      },
+      "same_bar": {
+        "verdict": "PASS",
+        "total_trades": 14,
+        "ambiguous_trades": 1,
+        "same_bar_pct": 7.142857142857143,
+        "pessimistic_result": -0.0023540122,
+        "optimistic_result": -0.0020438861,
+        "conservative_result": -0.0023540122
+      }
+    }
+  }
+}

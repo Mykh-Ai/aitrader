@@ -1,0 +1,11 @@
+candidate_id,total_trades,resolved_return_trades,independent_trade_days,net_result,largest_day,largest_day_trades,largest_day_result,largest_day_abs_result_share,top3_day_abs_result_share,pass_fail,notes
+CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6,14,14,7,-0.0023540122,2026-05-14,1,-0.0020893464,0.409027,0.738923,FAIL,"PASS requires >=10 trade-days, largest abs day <=33%, top3 abs days <=60%; cost level 0.00015 conservative replay"
+
+source_day,trades,day_result
+2026-05-14,1,-0.0020893464037271
+2026-05-07,5,-0.0012019116180445998
+2026-05-12,2,0.0004832287708647001
+2026-05-09,2,0.0004425458577738
+2026-05-10,1,-0.0004397955595186
+2026-05-13,2,0.00023078644070219996
+2026-05-08,1,0.0002204802653178

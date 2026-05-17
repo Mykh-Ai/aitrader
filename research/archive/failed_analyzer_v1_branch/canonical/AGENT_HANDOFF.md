@@ -2,12 +2,6 @@
 
 Last updated: 2026-05-17
 
-## Reset Notice
-
-Sprint 02-10 Analyzer v1 replay research is closed as a failed branch.
-
-Start with `research/canonical/SHI_RESET_2026_05_ANALYZER_V1_VERDICT.md`, `docs/SHI_MARKET_STATE_MONITOR_V1_SPEC.md`, and `NEXT_TASK_MARKET_MONITOR.md`. Candidate language below is historical archive context only.
-
 ## 1. What This Project Is
 
 AiTrader / Strategy Shi is a research and deterministic backtesting stack:
@@ -18,9 +12,9 @@ Only Aggregator, Analyzer, and Backtester research flow are active. Executor is 
 
 ## 2. Current Phase
 
-Reset / architecture redesign.
+Phase 2 / Phase 3 overlap.
 
-The next direction is Market State Monitor v1. The project is not continuing old Analyzer v1 setup replay as the main research loop.
+The project is searching for edge through Analyzer artifacts, deterministic replay, sidecar diagnostics, and candidate validation.
 
 ## 3. What Is Locked
 

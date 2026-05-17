@@ -21,9 +21,11 @@ tmp/
 temp/
 scratch/
 debug_outputs/
+transfer_out/
 *.tmp
 *.bak
 *.backup
+*.zip
 *_debug.csv
 *_tmp.csv
 *_probe.csv

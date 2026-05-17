@@ -1,0 +1,23 @@
+{
+  "candidate_id": "CAND_BTC_EXH_SHORT_24_V1",
+  "independent_days": 54,
+  "invalid_events": 0,
+  "mapped_events": 181,
+  "max_drawdown": -0.0152688594,
+  "median_result": -0.0005436309,
+  "net_0_00000": 0.1113946773,
+  "net_0_00010": 0.0932946773,
+  "net_0_00015": 0.0842446773,
+  "net_0_00020": 0.0751946773,
+  "promotion_status": "NO_PROMOTE_HOLDOUT_REQUIRED",
+  "rule_version": "SPRINT08_BTC_FORMAL_REPLAY_V1",
+  "same_bar_ambiguous_count": 0,
+  "same_bar_status": "PASS",
+  "single_day_dominance_verdict": "PASS",
+  "skipped_due_to_active_position": 0,
+  "source_concentration_verdict": "PASS",
+  "trades": 181,
+  "valid_replay_events": 181,
+  "verdict": "REPLAY_PASS_REVIEW",
+  "winrate": 0.403315
+}

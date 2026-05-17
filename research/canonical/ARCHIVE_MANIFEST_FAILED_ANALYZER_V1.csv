@@ -1,0 +1,21 @@
+path,action,reason,kept_or_archived,notes
+research/archive/failed_analyzer_v1_branch/README.md,create,Archive explanation for closed Analyzer v1 branch,archived,Explains why Sprint 02-10 branch is closed and what remains useful
+research/archive/failed_analyzer_v1_branch/canonical/,copy,Preserve summary-level canonical reports from Sprint 02-10,archived,Raw feed not copied
+research/archive/failed_analyzer_v1_branch/candidates/,copy,Preserve candidate verdicts summaries checklists and audit files,archived,Full candidate event dumps not copied as archive policy
+research/archive/failed_analyzer_v1_branch/scripts/,copy,Preserve scripts used by old branch for traceability,archived,Old scripts are evidence not next architecture
+research/archive/failed_analyzer_v1_branch/results/,copy,Preserve summary-level results only,archived,Large discovery events/features/proxy scans intentionally not copied
+research/archive/failed_analyzer_v1_branch/backtest_summaries/,copy,Preserve official replay summaries without heavy generated noise,archived,Full replay output dirs remain outside archive scope
+research/canonical/SPRINT_06_EVENT_DISCOVERY_REPORT.md,keep,Required reset evidence,kept,Also copied into archive
+research/canonical/SPRINT_07_BTC_SURFACE_REPAIR_REPORT.md,keep,Required reset evidence,kept,Also copied into archive
+research/canonical/SPRINT_08_BTC_FORMAL_REPLAY_REPORT.md,keep,Required reset evidence,kept,Also copied into archive
+research/canonical/SPRINT_09_REPLAY_INTEGRITY_REPORT.md,keep,Required reset evidence,kept,Also copied into archive
+research/canonical/SPRINT_10_TRUE_HOLDOUT_REPORT.md,keep,Required reset evidence,kept,Also copied into archive
+research/canonical/SHI_RESET_2026_05_ANALYZER_V1_VERDICT.md,create,Canonical reset verdict for Analyzer v1 failure,kept,New canonical truth
+docs/SHI_MARKET_STATE_MONITOR_V1_SPEC.md,create,New architecture specification,kept,Market monitor replaces setup-detector direction
+NEXT_TASK_MARKET_MONITOR.md,create,Next agent task for reset continuation,kept,SHI_RESET_02_BUILD_MARKET_STATE_MONITOR_SKELETON
+feed/,keep,Protected raw data,kept,Must not be deleted or archived into failed branch
+feed_recovered/,keep,Protected recovered data,kept,Must not be deleted or archived into failed branch
+aggregator code,keep,Data collection remains valid,kept,No live or Executor changes
+tests/,keep,Executable safety contract,kept,Run after archive
+Executor,prohibit,Live/execution remains forbidden,not_present_or_untouched,No Executor run or integration
+transfer_out/,delete,Tracked duplicate transfer bundle and old zip-style handoff package,removed,Sprint 10 artifacts already exist in canonical/archive locations

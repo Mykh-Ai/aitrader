@@ -1,0 +1,2 @@
+﻿date,data_source,feed_audit_status,usable_for_holdout,analyzer_run,holdout_replay,verdict,notes
+2026-05-17,local feed audit,WAIT_NO_HOLDOUT_DATA,false,N/A,N/A,WAIT_NO_HOLDOUT_DATA,No completed post-freeze UTC day available locally; do not run holdout replay.

@@ -2,8 +2,6 @@
 
 Last updated: 2026-05-17
 
-Reset status: historical only. Sprint 02-10 Analyzer v1 replay research is closed by `research/canonical/SHI_RESET_2026_05_ANALYZER_V1_VERDICT.md`. No candidate below is active for continuation, promotion, Phase 4, or live execution.
-
 Only two candidates remain on active/watch navigation after Sprint 03. Deep-reclaim short is rejected as a formal ruleset. H4 EXTENDED_V1 remains quarantined and is not watch evidence.
 
 ## 1. CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1

@@ -1,0 +1,2 @@
+candidate_id,status,largest_day_net_share,notes
+CAND_BTC_VWAP_DEV_SHORT_60_100200_V1,PASS,0.180451,PASS requires largest positive day <= 0.33 of total positive net

@@ -1,5 +1,0 @@
-fa8a30f Sprint 09 replay integrity and distribution audit
-50d4356 Sprint 08 BTC formal replay specs and deterministic mapper
-7b9c018 Sprint 07 BTC surface repair and replay candidate extraction
-6fd6a87 Sprint 06 event discovery kill-or-continue
-f6aaa64 Sprint 05 research reset and analyzer v2 discovery spec

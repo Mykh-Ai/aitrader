@@ -1,0 +1,5 @@
+candidate_id,cost_level,trades,gross_result,net_result,winrate,max_drawdown,profit_factor,pass_fail,notes
+CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1,0.00000,301,,0.0575368599,0.598007,-0.0061264591,1.789267,PASS,formal Sprint 03 replay; conservative same-bar policy; cost model applied inside Backtester
+CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1,0.00010,301,,0.0274411088,0.528239,-0.0087855288,1.318372,PASS,formal Sprint 03 replay; conservative same-bar policy; cost model applied inside Backtester
+CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1,0.00015,301,,0.0123921046,0.498339,-0.0101360018,1.13243,PASS,formal Sprint 03 replay; conservative same-bar policy; cost model applied inside Backtester
+CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1,0.00020,301,,-0.0026576521,0.445183,-0.012484149,0.973838,FAIL,formal Sprint 03 replay; conservative same-bar policy; cost model applied inside Backtester

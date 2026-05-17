@@ -2,15 +2,9 @@
 
 Last updated: 2026-05-17
 
-## Reset Notice
-
-This file is superseded for strategic direction by `research/canonical/SHI_RESET_2026_05_ANALYZER_V1_VERDICT.md`.
-
-The Sprint 02-10 Analyzer/Backtester replay branch is closed as a failed Analyzer v1 research branch. Any active-candidate language below is retained as historical evidence only and must not be interpreted as authorization to continue old replay research, open Phase 4, or run Executor.
-
 ## 1. Current Phase
 
-Reset / architecture redesign. The next work item is Market State Monitor v1, not Analyzer v1 setup replay.
+Phase 2 / Phase 3 overlap: data accumulation, Analyzer runs, deterministic Backtester replay, candidate discovery, and statistical evidence building.
 
 Phase 4 Bridge is not active as an approval layer yet. Executor/live trading is out of scope.
 
