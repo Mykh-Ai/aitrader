@@ -1,5 +1,0 @@
-candidate_id,cost_level,trades,gross_result,net_result,winrate,max_drawdown,profit_factor,pass_fail,notes
-CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6,0.00000,14,,-0.0002538167,0.571429,-0.0019390443,0.939959,FAIL,formal Sprint 03 replay; conservative same-bar policy; cost model applied inside Backtester
-CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6,0.00010,14,,-0.001653912,0.5,-0.0020392432,0.662974,FAIL,formal Sprint 03 replay; conservative same-bar policy; cost model applied inside Backtester
-CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6,0.00015,14,,-0.0023540122,0.428571,-0.0022390657,0.556365,FAIL,formal Sprint 03 replay; conservative same-bar policy; cost model applied inside Backtester
-CAND_SHORT_IMPULSE_FADE_DEEP_RECLAIM_GT_0_6,0.00020,14,,-0.0030541475,0.428571,-0.0028391926,0.464792,FAIL,formal Sprint 03 replay; conservative same-bar policy; cost model applied inside Backtester

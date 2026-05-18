@@ -1,2 +1,0 @@
-candidate_id,status,largest_day_net_share,notes
-CAND_BTC_EXH_SHORT_24_V1,PASS,0.163982,PASS requires largest positive day <= 0.33 of total positive net

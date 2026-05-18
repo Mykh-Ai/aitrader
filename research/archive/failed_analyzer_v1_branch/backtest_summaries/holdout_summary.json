@@ -1,7 +1,0 @@
-{
-  "candidate_id": "CAND_SHORT_CTX_SPIKE_GE2_ENTRY_DELAY_1",
-  "rule_version": "SPRINT03_CTX_GE2_ENTRY_DELAY_1_V1",
-  "verdict": "WAIT_NO_HOLDOUT_DATA",
-  "reason": "no feed-audited usable post-freeze UTC day",
-  "created_at": "2026-05-17T12:46:22.380782+00:00"
-}

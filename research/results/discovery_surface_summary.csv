@@ -1,6 +1,0 @@
-surface,days,avg_rows,avg_volume_sum,avg_daily_return_pct,avg_high_low_range_pct,avg_realized_volatility,avg_max_1h_move,avg_max_4h_move,notes
-trend_day,32,1411.375,147438.751797,0.230209,3.87793,2.129347,1.781476,2.558361,descriptive_opportunity_surface_only_no_strategy_rules
-chop_day,11,1440.0,50004.505791,-0.05391,1.854029,1.467316,0.901556,1.268009,descriptive_opportunity_surface_only_no_strategy_rules
-expansion_day,24,1440.0,190219.481686,0.688759,4.353045,2.584153,1.938024,2.976264,descriptive_opportunity_surface_only_no_strategy_rules
-reversal_day,9,1440.0,167144.797462,0.582639,4.200669,2.359231,1.938258,3.063953,descriptive_opportunity_surface_only_no_strategy_rules
-data_lineage,68,1414.397,129015.100697,0.14685,3.173727,2.023863,1.512908,2.112817,"{""primary"": 54, ""primary_plus_recovered_gap"": 14}"

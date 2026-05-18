@@ -1,2 +1,0 @@
-candidate_id,independent_days,largest_day_abs_result_share,top3_day_abs_result_share,status,notes
-CAND_BTC_EXH_SHORT_24_V1,54,0.078587,0.204959,PASS,PASS requires largest<=0.20 and top3<=0.45

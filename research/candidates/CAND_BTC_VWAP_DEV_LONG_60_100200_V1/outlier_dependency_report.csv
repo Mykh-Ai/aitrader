@@ -1,2 +1,0 @@
-total_raw_pnl,top_1_trade_contribution,pnl_without_top_1_raw,pnl_without_top_1_net_0_00015,top_3_trade_contribution,pnl_without_top_3_raw,pnl_without_top_3_net_0_00015,top_5_trade_contribution,pnl_without_top_5_raw,pnl_without_top_5_net_0_00015,top_10_trade_contribution,pnl_without_top_10_raw,pnl_without_top_10_net_0_00015,verdict
-0.1336019329,0.121449,0.1173760947,0.0765760947,0.328849,0.0896671193,0.0491671193,0.515206,0.0647694502,0.0245694502,0.886057,0.0152230369,-0.0242269631,WARN

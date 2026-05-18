@@ -1,2 +1,0 @@
-trades,wins,losses,winrate,avg_winner,avg_loser,payoff_ratio,profit_factor,median_trade_result,mean_trade_result,p10,p25,p75,p90,max_win,max_loss,skewness,consecutive_loss_max,consecutive_win_max
-181,73,108,0.403315,0.0032642076,-0.0011749303,2.778214,1.877867,-0.0005436309,0.0006154402,-0.0017072576,-0.0010721091,0.0019378255,0.0040285782,0.0108076524,-0.0048146665,1.347698,9,7

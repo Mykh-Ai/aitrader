@@ -1,46 +1,17 @@
-# research/
+# Research Boundary
 
-Offline research artifacts for AiTrader strategy development.
+Status: RESET AFTER FAILED ANALYZER V1 BRANCH.
 
-Boundary:
-- Nothing here touches production logic.
-- Public materials stay research-focused and host-agnostic.
-- Server access details, private prompts, verdict workflows, and operator handoff files belong in local-only ops materials.
+This directory is no longer an active Sprint 02-10 research workspace. Old candidates, replay survivors, holdout reports, routine run logs, scripts, and result directories were archived under the top-level failed Analyzer v1 archive package.
 
-## Public structure
+Active research state:
 
-```text
-research/
-├── OPS.example.md                   — safe template for local ops notes
-├── run_log.csv                      — processing history
-├── slice_analysis_reclaim_context.py
-├── findings/                        — frozen research memos
-├── results/                         — structured research snapshots
-├── verdicts/README.md               — placeholder for local-only verdicts
-└── handoff/README.md                — placeholder for private runbook area
-```
+- active_candidates = NONE
+- replay_candidates = NONE
+- holdout_candidates = NONE
+- old_research_branch = archived
+- Analyzer_v1 = legacy / failed
+- Backtester = legacy / audit required
+- Next = Market State Monitor design
 
-## Public workflow boundary
-
-1. Run `research_cycle.py` in your own environment.
-2. Review the structured output locally.
-3. Commit only safe artifacts such as findings or summary CSVs that do not expose private operational context.
-
-Examples:
-
-```bash
-python3 research_cycle.py
-python3 research_cycle.py --dry-run
-python research/slice_analysis_reclaim_context.py --runs-dir analyzer_runs
-```
-
-## Local-only boundary
-
-Keep these out of the public repo:
-- server host, IP, SSH, and absolute path details
-- cron, deploy, runtime, and virtualenv procedures
-- private prompts and verdict runbooks
-- ephemeral handoff packages
-- copied transition-data archives from local server context
-
-Public docs should refer to these generically as `local-only ops materials`, `private runbook area`, or `local server context`.
+Do not continue the old failed-break/reclaim Analyzer v1 path from this directory.

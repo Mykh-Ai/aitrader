@@ -1,6 +1,0 @@
-metric,count,min,p10,median,p90,max
-entry_stop_distance,181,20.0,36.7,74.9,170.6,340.2
-entry_target_distance,181,195.93366137,317.7606526,593.27643257,1257.48704399,2874.70494063
-target_stop_ratio,181,1.5537347958,3.3166417698,7.9004588361,18.7700019236,44.030200933
-invalid_trades_excluded,0,0.0,0.0,0.0,0.0,0.0
-static_target_at_entry_verified,1,0.0,0.0,0.0,0.0,0.0
