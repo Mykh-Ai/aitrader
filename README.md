@@ -10,9 +10,17 @@ BTC Market State Monitor design.
 
 The current active work is design-only reset/research infrastructure. This repository is not an active strategy project, not an execution bot, and not in Phase 4.
 
+Active candidates = NONE.
+
+Replay candidates = NONE.
+
+Holdout candidates = NONE.
+
 ## Archived
 
 Sprint 02-10 Analyzer v1 / Backtester research branch is archived as failed research evidence.
+
+Old Analyzer v1 / Sprint 02-10 = archived / not active.
 
 Primary archive package:
 
