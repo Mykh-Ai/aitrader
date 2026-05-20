@@ -24,3 +24,5 @@ Archived historical docs:
 These files are preserved in `_archive/FAILED_ANALYZER_V1_RESEARCH_BRANCH_2026_05.zip` and listed in `_archive/FAILED_ANALYZER_V1_RESEARCH_BRANCH_2026_05_MANIFEST.csv`.
 
 Do not revive Analyzer v1, run Backtester research, open Phase 4, or write Market Monitor implementation from archived docs.
+
+Market State Monitor implementation starts only after governance cleanup is accepted.

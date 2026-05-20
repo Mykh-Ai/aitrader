@@ -12,10 +12,6 @@ htmlcov/
 .local_patches/
 analyzer_runs/
 backtest_runs/
-research/handoff/
-!research/handoff/
-research/handoff/*
-!research/handoff/README.md
 local_runs/
 tmp/
 temp/
@@ -31,49 +27,9 @@ transfer_out/
 *_probe.csv
 *_draft.md
 CLAUDE.md
-research/OPS.md
-prompts/weekly_research.txt
-prompts/Shi_research.txt
-research/verdicts/*.md
-!research/verdicts/README.md
-research/findings/transition_vps_data/
-!research/findings/transition_vps_data/
-research/findings/transition_vps_data/*
-!research/findings/transition_vps_data/README.md
-research/scripts/collect_transition_data.sh
-research/results/failed_break_reclaim_extended_tp_surface_*/stop_*_tp_*_expiry_*/
-research/results/**/feed_window_*.csv
-research/results/**/bridge_*/raw.csv
-research/results/*failed_break_reclaim*/backtester_*/
-research/results/*failed_break_reclaim*/bridge_*/
-scripts/run_analyzer_daily.sh
-
-# H4 / local reclaim diagnostic generated artifacts
-research/results/h4_active_level_reclaim_close_test_v1_*.csv
-research/results/local_h4_reclaim_*.csv
-research/results/local_higher_low_sweep_reclaim_long_v1_*.csv
-research/results/**/feed_window_*.csv
-research/results/**/raw.csv
-research/results/**/tmp*
 research/**/__pycache__/
 research/**/.pytest_cache/
 research/results/**/__pycache__/
 research/results/**/.pytest_cache/
 
-# Sprint 05 external/local data and sidecar research artifacts.
-# Keep these on disk when present; their retention policy and manifests live in research/canonical/.
 feed_recovered/
-research/findings/IMPULSE_*.md
-research/findings/SHORT_IMPULSE_*.md
-research/findings/LOCAL_H1_*.md
-research/results/archive_replay_impulse_*.json
-research/results/impulse_*.csv
-research/results/short_impulse_*.csv
-research/results/local_h1_*.csv
-research/scripts/impulse_fade_long_entry_observable_proxy_scan.py
-research/scripts/impulse_fade_long_forward_watchlist.py
-research/scripts/impulse_fade_reclaim_short_low_stress_v1.py
-research/scripts/impulse_long_growth_observable_scan.py
-research/scripts/local_h1_reclaim_sweep_extreme_stop_v1.py
-tests/test_impulse_fade_reclaim_short_low_stress_v1.py
-tests/test_local_h1_reclaim_sweep_extreme_stop_v1.py

@@ -18,6 +18,8 @@ Backtester = legacy / audit required
 
 Next = Market State Monitor design
 
+Implementation = not started; governance cleanup must be accepted first
+
 ## Boundary
 
 AiTrader remains open only as reset/research infrastructure. The old Analyzer v1 / Sprint 02-10 branch is closed and must not be continued.

@@ -69,7 +69,7 @@ Reason: plain `pytest` may hang or time out in some environments due to external
 
 Pre-cleanup baseline recorded for the old full tree: `501 passed, 11 warnings`.
 
-Active-tree reset baseline after excluding archived research-script tests: `464 passed, 11 warnings`.
+Active-tree reset baseline after physically removing archived research-script tests: `464 passed, 11 warnings`.
 
 ## Current reset documents
 
@@ -85,3 +85,5 @@ Active-tree reset baseline after excluding archived research-script tests: `464 
 ## Hard boundary
 
 No live. No Executor. No Phase 4. No active trading strategy.
+
+Market State Monitor implementation starts only after governance cleanup is accepted.
