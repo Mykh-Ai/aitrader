@@ -7,6 +7,10 @@
 
 Do not overwrite `feed/` to hide the 2026 websocket outage. Use `feed_recovered/` only as documented recovered input.
 
+## Removed legacy feed day
+
+`feed/2026-03-10.csv` was removed from the active repo because it used a legacy incompatible feed schema. Active feed starts from the normalized schema after 2026-03-10. This avoids carrying an adapter exception for a single early legacy day.
+
 ## Historical SHI feed schema
 
 - `Timestamp`
