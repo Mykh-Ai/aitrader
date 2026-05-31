@@ -37,6 +37,11 @@ def test_research_summary_loads_multiple_run_dirs_and_writes_outputs(tmp_path: P
         "move_20260508_000100_SELL_SIDE_000001",
     ]
     assert rows["market_move_role"].tolist() == ["PRIMARY", "PRIMARY"]
+    assert rows["group_span_minutes"].tolist() == [0, 0]
+    assert rows["grouping_window_mode"].tolist() == [
+        "ANCHORED_FIXED_WINDOW",
+        "ANCHORED_FIXED_WINDOW",
+    ]
 
     groups = pd.read_csv(output_dir / "post_sweep_group_summary.csv")
     assert groups.columns.tolist() == GROUP_SUMMARY_COLUMNS
@@ -47,6 +52,9 @@ def test_research_summary_loads_multiple_run_dirs_and_writes_outputs(tmp_path: P
     markdown = (output_dir / "post_sweep_research_summary.md").read_text(encoding="utf-8")
     assert "- Grouped unresolved market moves: 2" in markdown
     assert "- Multi-event market moves: 0" in markdown
+    assert "- Max group span minutes: 0" in markdown
+    assert "- Groups over configured window: 0" in markdown
+    assert "- Grouping window mode: ANCHORED_FIXED_WINDOW=2" in markdown
 
 
 def test_research_summary_handles_missing_and_header_only_observation_files(tmp_path: Path):
@@ -116,6 +124,10 @@ def _observation_row(observation_id: str, event_id: str, side: str) -> dict[str,
             "market_move_id": f"move_20260508_000100_{side}_000001",
             "market_move_role": "PRIMARY",
             "market_move_event_count": 1,
+            "group_start_timestamp": "2026-05-08T00:01:00Z",
+            "group_end_timestamp": "2026-05-08T00:01:00Z",
+            "group_span_minutes": 0,
+            "grouping_window_mode": "ANCHORED_FIXED_WINDOW",
             "zone_id": "zone_000001",
             "side": side,
             "zone_type": "H1_LEVEL_ZONE",
@@ -170,6 +182,10 @@ def _event_row(event_id: str, side: str) -> dict[str, object]:
         "market_move_id": f"move_20260508_000100_{side}_000001",
         "market_move_role": "PRIMARY",
         "market_move_event_count": 1,
+        "group_start_timestamp": "2026-05-08T00:01:00Z",
+        "group_end_timestamp": "2026-05-08T00:01:00Z",
+        "group_span_minutes": 0,
+        "grouping_window_mode": "ANCHORED_FIXED_WINDOW",
         "evidence_json": (
             '{"confidence_tier":"MEDIUM","source_timeframes":"H1",'
             '"event_class":"LIQUIDITY_SWEEP_UNRESOLVED"}'

@@ -58,6 +58,10 @@ def test_buy_side_unresolved_event_creates_complete_observation_after_event_cand
     assert row["market_move_id"] == "move_20260508_000100_BUY_SIDE_000001"
     assert row["market_move_role"] == "PRIMARY"
     assert row["market_move_event_count"] == 1
+    assert row["group_start_timestamp"] == "2026-05-08T00:01:00Z"
+    assert row["group_end_timestamp"] == "2026-05-08T00:01:00Z"
+    assert row["group_span_minutes"] == 0
+    assert row["grouping_window_mode"] == "ANCHORED_FIXED_WINDOW"
     assert row["observation_start_timestamp"] == "2026-05-08T00:02:00Z"
     assert row["observation_bars_expected"] == 30
     assert row["observation_bars_available"] == 30
@@ -99,6 +103,10 @@ def _event_row(side):
         "market_move_id": "move_20260508_000100_BUY_SIDE_000001",
         "market_move_role": "PRIMARY",
         "market_move_event_count": 1,
+        "group_start_timestamp": "2026-05-08T00:01:00Z",
+        "group_end_timestamp": "2026-05-08T00:01:00Z",
+        "group_span_minutes": 0,
+        "grouping_window_mode": "ANCHORED_FIXED_WINDOW",
         "evidence_json": (
             '{"data_quality":"RAW","event_class":"LIQUIDITY_SWEEP_UNRESOLVED",'
             '"price_lower":100,"price_mid":105,"price_upper":110,'

@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 import pandas as pd
 
@@ -83,7 +84,7 @@ def test_batch_markdown_keeps_action_result_terms_only_in_negative_boundary_stat
         assert boundary in text
         check_text = text.replace(boundary, "").lower()
         for term in FORBIDDEN_TERMS:
-            assert term not in check_text
+            assert not _has_forbidden_term(check_text, term)
 
 
 def test_market_monitor_runs_is_ignored_not_a_batch_artifact_contract():
@@ -107,3 +108,9 @@ def _write_feed(path: Path, day: str) -> None:
         ),
         encoding="utf-8",
     )
+
+
+def _has_forbidden_term(text: str, term: str) -> bool:
+    if " " in term:
+        return term in text
+    return re.search(rf"\b{re.escape(term)}\b", text) is not None

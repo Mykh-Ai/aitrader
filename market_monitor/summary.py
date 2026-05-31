@@ -53,6 +53,9 @@ def write_market_summary(
             "multi_event_market_move_count": 0,
             "avg_unresolved_events_per_market_move": "0",
             "max_unresolved_events_per_market_move": 0,
+            "max_group_span_minutes": "0",
+            "groups_over_configured_window": 0,
+            "grouping_window_mode": "ANCHORED_FIXED_WINDOW",
         }
     observation_stats = observation_stats or {
         "total": 0,
@@ -127,6 +130,9 @@ def write_market_summary(
             "- Max unresolved events per market move: "
             f"{event_stats.get('max_unresolved_events_per_market_move', 0)}"
         ),
+        f"- Max group span minutes: {event_stats.get('max_group_span_minutes', '0')}",
+        f"- Groups over configured window: {event_stats.get('groups_over_configured_window', 0)}",
+        f"- Grouping window mode: {event_stats.get('grouping_window_mode', 'ANCHORED_FIXED_WINDOW')}",
         f"- Post-sweep observations: {observation_stats.get('total', 0)}",
         f"- Complete post-sweep observations: {observation_stats.get('complete', 0)}",
         f"- Incomplete post-sweep observations: {observation_stats.get('incomplete', 0)}",

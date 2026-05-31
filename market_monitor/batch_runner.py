@@ -7,6 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from market_monitor.feed_adapter import FeedContractError, load_feed
+from market_monitor.events import MARKET_MOVE_GROUP_WINDOW_MINUTES
 from market_monitor.outputs import write_outputs
 from market_monitor.research_summary import (
     ResearchSummaryResult,
@@ -33,6 +34,8 @@ MANIFEST_COLUMNS = [
     "multi_event_market_move_count",
     "avg_unresolved_events_per_market_move",
     "max_unresolved_events_per_market_move",
+    "max_group_span_minutes",
+    "groups_over_configured_window",
     "post_sweep_observation_count",
     "complete_observation_count",
     "incomplete_observation_count",
@@ -344,6 +347,8 @@ def _processed_manifest_row(
             else "0"
         ),
         max_unresolved_events_per_market_move=_max_market_move_event_count(market_move_groups),
+        max_group_span_minutes=_max_group_span_minutes(market_move_groups),
+        groups_over_configured_window=_groups_over_configured_window(market_move_groups),
         post_sweep_observation_count=len(observations),
         complete_observation_count=complete,
         incomplete_observation_count=len(observations) - complete,
@@ -370,6 +375,8 @@ def _manifest_row(
     multi_event_market_move_count: int | str = "",
     avg_unresolved_events_per_market_move: float | str = "",
     max_unresolved_events_per_market_move: int | str = "",
+    max_group_span_minutes: float | str = "",
+    groups_over_configured_window: int | str = "",
     post_sweep_observation_count: int | str = "",
     complete_observation_count: int | str = "",
     incomplete_observation_count: int | str = "",
@@ -393,6 +400,8 @@ def _manifest_row(
         "multi_event_market_move_count": multi_event_market_move_count,
         "avg_unresolved_events_per_market_move": avg_unresolved_events_per_market_move,
         "max_unresolved_events_per_market_move": max_unresolved_events_per_market_move,
+        "max_group_span_minutes": max_group_span_minutes,
+        "groups_over_configured_window": groups_over_configured_window,
         "post_sweep_observation_count": post_sweep_observation_count,
         "complete_observation_count": complete_observation_count,
         "incomplete_observation_count": incomplete_observation_count,
@@ -505,6 +514,11 @@ def _write_batch_summary(
             "- Max unresolved events per market move: "
             f"{_max_column(processed_rows, 'max_unresolved_events_per_market_move')}"
         ),
+        f"- Max group span minutes: {_fmt_float(_max_float_column(processed_rows, 'max_group_span_minutes'))}",
+        (
+            "- Groups over configured window: "
+            f"{_sum_column(processed_rows, 'groups_over_configured_window')}"
+        ),
         f"- Post-sweep observations: {_sum_column(processed_rows, 'post_sweep_observation_count')}",
         f"- Complete observations: {_sum_column(processed_rows, 'complete_observation_count')}",
         f"- Incomplete observations: {_sum_column(processed_rows, 'incomplete_observation_count')}",
@@ -578,6 +592,15 @@ def _max_column(frame: pd.DataFrame, column: str) -> int:
     return int(values.max())
 
 
+def _max_float_column(frame: pd.DataFrame, column: str) -> float:
+    if frame.empty or column not in frame.columns:
+        return 0.0
+    values = pd.to_numeric(frame[column], errors="coerce").dropna()
+    if values.empty:
+        return 0.0
+    return float(values.max())
+
+
 def _multi_event_move_count(market_move_groups: pd.DataFrame) -> int:
     if market_move_groups.empty or "event_count" not in market_move_groups.columns:
         return 0
@@ -586,6 +609,17 @@ def _multi_event_move_count(market_move_groups: pd.DataFrame) -> int:
 
 def _max_market_move_event_count(market_move_groups: pd.DataFrame) -> int:
     return _max_column(market_move_groups, "event_count")
+
+
+def _max_group_span_minutes(market_move_groups: pd.DataFrame) -> str:
+    return _fmt_float(_max_float_column(market_move_groups, "group_span_minutes"))
+
+
+def _groups_over_configured_window(market_move_groups: pd.DataFrame) -> int:
+    if market_move_groups.empty or "group_span_minutes" not in market_move_groups.columns:
+        return 0
+    spans = pd.to_numeric(market_move_groups["group_span_minutes"], errors="coerce").fillna(0)
+    return int((spans > MARKET_MOVE_GROUP_WINDOW_MINUTES).sum())
 
 
 def _last_numeric(frame: pd.DataFrame, column: str) -> int:
@@ -622,3 +656,7 @@ def _relative_output(path: Path | None, batch_root: Path) -> str:
         return Path(path).relative_to(batch_root).as_posix()
     except ValueError:
         return _relative_path(Path(path))
+
+
+def _fmt_float(value: float) -> str:
+    return f"{float(value):.6g}"

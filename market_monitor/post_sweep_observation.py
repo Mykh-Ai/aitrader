@@ -16,6 +16,10 @@ POST_SWEEP_OBSERVATION_COLUMNS = [
     "market_move_id",
     "market_move_role",
     "market_move_event_count",
+    "group_start_timestamp",
+    "group_end_timestamp",
+    "group_span_minutes",
+    "grouping_window_mode",
     "zone_id",
     "side",
     "zone_type",
@@ -76,6 +80,10 @@ def build_post_sweep_observations(
         ("market_move_id", ""),
         ("market_move_role", "NONE"),
         ("market_move_event_count", 0),
+        ("group_start_timestamp", ""),
+        ("group_end_timestamp", ""),
+        ("group_span_minutes", ""),
+        ("grouping_window_mode", ""),
     ]:
         if column not in unresolved.columns:
             unresolved[column] = default
@@ -153,6 +161,10 @@ def _observation_row(
         "market_move_id": str(event.get("market_move_id", "")),
         "market_move_role": str(event.get("market_move_role", "NONE")),
         "market_move_event_count": int(float(event.get("market_move_event_count", 0) or 0)),
+        "group_start_timestamp": str(event.get("group_start_timestamp", "")),
+        "group_end_timestamp": str(event.get("group_end_timestamp", "")),
+        "group_span_minutes": event.get("group_span_minutes", ""),
+        "grouping_window_mode": str(event.get("grouping_window_mode", "")),
         "zone_id": event["zone_id"],
         "side": side,
         "zone_type": evidence["zone_type"],
@@ -182,6 +194,11 @@ def _observation_row(
             "first_return_inside_at": row["first_return_inside_at"],
             "max_excursion_beyond_zone": float(row["max_excursion_beyond_zone"]),
             "max_return_inside_zone": float(row["max_return_inside_zone"]),
+            "group_end_timestamp": str(row["group_end_timestamp"]),
+            "group_span_minutes": (
+                float(row["group_span_minutes"]) if row["group_span_minutes"] != "" else ""
+            ),
+            "group_start_timestamp": str(row["group_start_timestamp"]),
             "market_move_event_count": int(row["market_move_event_count"]),
             "market_move_id": str(row["market_move_id"]),
             "market_move_role": str(row["market_move_role"]),
