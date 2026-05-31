@@ -6,6 +6,11 @@ import pandas as pd
 
 from market_monitor.events import EVENT_LOG_COLUMNS, build_event_log, event_stats
 from market_monitor.liquidity_zones import LIQUIDITY_MAP_COLUMNS, build_liquidity_map
+from market_monitor.post_sweep_observation import (
+    POST_SWEEP_OBSERVATION_COLUMNS,
+    build_post_sweep_observations,
+    observation_stats,
+)
 from market_monitor.structure import STRUCTURE_LEVEL_COLUMNS, build_structure_levels
 from market_monitor.summary import write_market_summary
 from market_monitor.zone_registry import (
@@ -64,6 +69,7 @@ REQUIRED_CSV_SCHEMAS = {
     "volume_delta_state.csv": VOLUME_DELTA_STATE_COLUMNS,
     "accumulation_zones.csv": ACCUMULATION_ZONES_COLUMNS,
     "event_log.csv": EVENT_LOG_COLUMNS,
+    "post_sweep_observation.csv": POST_SWEEP_OBSERVATION_COLUMNS,
     "liquidity_zone_registry.csv": REGISTRY_COLUMNS,
 }
 
@@ -96,6 +102,11 @@ def write_outputs(
         volume_delta_state=volume_delta_state,
         previous_registry=registry_in,
     )
+    post_sweep_observation = build_post_sweep_observations(
+        event_log=event_log,
+        feed=feed,
+        volume_delta_state=volume_delta_state,
+    )
     market_state_timeline = build_market_state_timeline(feed)
     accumulation_zones = pd.DataFrame(columns=ACCUMULATION_ZONES_COLUMNS)
 
@@ -106,6 +117,7 @@ def write_outputs(
         "volume_delta_state.csv": volume_delta_state,
         "accumulation_zones.csv": accumulation_zones,
         "event_log.csv": event_log,
+        "post_sweep_observation.csv": post_sweep_observation,
         "liquidity_zone_registry.csv": liquidity_zone_registry,
     }
     for filename, columns in REQUIRED_CSV_SCHEMAS.items():
@@ -129,6 +141,7 @@ def write_outputs(
         registry_output=registry_out_path,
         registry_stats=registry_stats,
         event_stats=event_stats(event_log),
+        observation_stats=observation_stats(post_sweep_observation),
     )
 
     return frames
