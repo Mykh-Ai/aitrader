@@ -4,7 +4,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from market_monitor.events import EVENT_LOG_COLUMNS, build_event_log, event_stats
+from market_monitor.events import (
+    EVENT_LOG_COLUMNS,
+    MARKET_MOVE_GROUP_COLUMNS,
+    build_event_log,
+    build_market_move_groups,
+    event_stats,
+)
 from market_monitor.liquidity_zones import LIQUIDITY_MAP_COLUMNS, build_liquidity_map
 from market_monitor.post_sweep_observation import (
     POST_SWEEP_OBSERVATION_COLUMNS,
@@ -69,6 +75,7 @@ REQUIRED_CSV_SCHEMAS = {
     "volume_delta_state.csv": VOLUME_DELTA_STATE_COLUMNS,
     "accumulation_zones.csv": ACCUMULATION_ZONES_COLUMNS,
     "event_log.csv": EVENT_LOG_COLUMNS,
+    "market_move_groups.csv": MARKET_MOVE_GROUP_COLUMNS,
     "post_sweep_observation.csv": POST_SWEEP_OBSERVATION_COLUMNS,
     "liquidity_zone_registry.csv": REGISTRY_COLUMNS,
 }
@@ -102,6 +109,7 @@ def write_outputs(
         volume_delta_state=volume_delta_state,
         previous_registry=registry_in,
     )
+    market_move_groups = build_market_move_groups(event_log)
     post_sweep_observation = build_post_sweep_observations(
         event_log=event_log,
         feed=feed,
@@ -117,6 +125,7 @@ def write_outputs(
         "volume_delta_state.csv": volume_delta_state,
         "accumulation_zones.csv": accumulation_zones,
         "event_log.csv": event_log,
+        "market_move_groups.csv": market_move_groups,
         "post_sweep_observation.csv": post_sweep_observation,
         "liquidity_zone_registry.csv": liquidity_zone_registry,
     }

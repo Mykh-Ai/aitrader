@@ -12,6 +12,7 @@ APPROACH_THRESHOLD_MIN_USD = 20.0
 SWEEP_MIN_EXCURSION_FRACTION = 0.0002
 SWEEP_MIN_EXCURSION_USD = 10.0
 SWEEP_ACTIVITY_ZSCORE_THRESHOLD = 1.5
+MARKET_MOVE_GROUP_WINDOW_MINUTES = 2
 
 EVENT_LOG_COLUMNS = [
     "event_id",
@@ -29,8 +30,33 @@ EVENT_LOG_COLUMNS = [
     "delta_zscore",
     "oi_change",
     "reaction_status",
+    "market_move_id",
+    "market_move_role",
+    "market_move_event_count",
     "evidence_json",
     "data_quality",
+]
+
+MARKET_MOVE_GROUP_COLUMNS = [
+    "market_move_id",
+    "event_timestamp",
+    "side",
+    "primary_event_id",
+    "primary_zone_id",
+    "event_count",
+    "zone_ids",
+    "event_ids",
+    "min_zone_price_lower",
+    "max_zone_price_upper",
+    "representative_zone_price_mid",
+    "max_excursion_abs",
+    "max_volume_zscore",
+    "max_abs_delta_zscore",
+    "total_oi_change",
+    "precision_statuses",
+    "confidence_tiers",
+    "data_quality",
+    "evidence_json",
 ]
 
 LIFECYCLE_EVENT_TYPES = {
@@ -90,7 +116,79 @@ def build_event_log(
         kind="mergesort",
     ).reset_index(drop=True)
     out["event_id"] = [f"event_{idx + 1:06d}" for idx in range(len(out))]
+    out = assign_market_move_groups(out)
     return out[EVENT_LOG_COLUMNS]
+
+
+def assign_market_move_groups(event_log: pd.DataFrame) -> pd.DataFrame:
+    out = event_log.copy()
+    if out.empty:
+        return pd.DataFrame(columns=EVENT_LOG_COLUMNS)
+    out["market_move_id"] = ""
+    out["market_move_role"] = "NONE"
+    out["market_move_event_count"] = 0
+    unresolved = out[out["event_type"] == "LIQUIDITY_SWEEP_UNRESOLVED"].copy()
+    if unresolved.empty:
+        return out[EVENT_LOG_COLUMNS]
+
+    groups: list[list[int]] = []
+    for _, side_frame in unresolved.sort_values(
+        ["side", "event_timestamp", "zone_id", "event_id"], kind="mergesort"
+    ).groupby("side", sort=True):
+        current: list[int] = []
+        previous_ts: pd.Timestamp | None = None
+        for idx, row in side_frame.iterrows():
+            event_ts = pd.Timestamp(row["event_timestamp"])
+            if (
+                current
+                and previous_ts is not None
+                and event_ts - previous_ts > pd.Timedelta(minutes=MARKET_MOVE_GROUP_WINDOW_MINUTES)
+            ):
+                groups.append(current)
+                current = []
+            current.append(idx)
+            previous_ts = event_ts
+        if current:
+            groups.append(current)
+
+    groups.sort(
+        key=lambda idxs: (
+            pd.Timestamp(out.loc[idxs[0], "event_timestamp"]),
+            str(out.loc[idxs[0], "side"]),
+            str(out.loc[idxs[0], "event_id"]),
+        )
+    )
+    for group_number, idxs in enumerate(groups, start=1):
+        group = out.loc[idxs].copy()
+        first_ts = pd.Timestamp(group["event_timestamp"].map(pd.Timestamp).min())
+        side = str(group.iloc[0]["side"])
+        move_id = _market_move_id(first_ts, side, group_number)
+        primary_idx = _primary_event_index(group)
+        out.loc[idxs, "market_move_id"] = move_id
+        out.loc[idxs, "market_move_event_count"] = len(idxs)
+        out.loc[idxs, "market_move_role"] = "SECONDARY"
+        out.loc[primary_idx, "market_move_role"] = "PRIMARY"
+    return out[EVENT_LOG_COLUMNS]
+
+
+def build_market_move_groups(event_log: pd.DataFrame) -> pd.DataFrame:
+    if event_log.empty or "market_move_id" not in event_log.columns:
+        return pd.DataFrame(columns=MARKET_MOVE_GROUP_COLUMNS)
+    grouped = event_log[
+        (event_log["event_type"] == "LIQUIDITY_SWEEP_UNRESOLVED")
+        & (event_log["market_move_id"].fillna("").astype(str) != "")
+    ].copy()
+    if grouped.empty:
+        return pd.DataFrame(columns=MARKET_MOVE_GROUP_COLUMNS)
+
+    rows = []
+    for _, group in grouped.groupby("market_move_id", sort=True):
+        rows.append(_market_move_group_row(group))
+    rows = sorted(
+        rows,
+        key=lambda row: (pd.Timestamp(row["event_timestamp"]), str(row["side"]), str(row["market_move_id"])),
+    )
+    return pd.DataFrame(rows, columns=MARKET_MOVE_GROUP_COLUMNS)
 
 
 def event_stats(event_log: pd.DataFrame) -> dict[str, object]:
@@ -107,10 +205,15 @@ def event_stats(event_log: pd.DataFrame) -> dict[str, object]:
             "unresolved_sweep_by_side": "BUY_SIDE=0, SELL_SIDE=0",
             "unresolved_sweep_by_data_quality": "RAW=0, RECOVERED_DEGRADED=0",
             "crossed_without_sweep_evidence": 0,
+            "grouped_market_move_count": 0,
+            "multi_event_market_move_count": 0,
+            "avg_unresolved_events_per_market_move": "0",
+            "max_unresolved_events_per_market_move": 0,
         }
     counts = event_log["event_type"].value_counts().sort_index()
     unresolved = event_log[event_log["event_type"] == "LIQUIDITY_SWEEP_UNRESOLVED"]
     lifecycle = event_log[event_log["event_type"].isin(LIFECYCLE_EVENT_TYPES)]
+    move_stats = _market_move_stats(unresolved)
     return {
         "total": len(lifecycle),
         "by_type": ", ".join(f"{name}={count}" for name, count in counts.items()),
@@ -127,6 +230,7 @@ def event_stats(event_log: pd.DataFrame) -> dict[str, object]:
             unresolved, "data_quality", ["RAW", "RECOVERED_DEGRADED"]
         ),
         "crossed_without_sweep_evidence": _crossed_without_sweep_evidence(event_log),
+        **move_stats,
     }
 
 
@@ -566,6 +670,165 @@ def _crossed_without_sweep_evidence(event_log: pd.DataFrame) -> int:
             for _, row in crossed.iterrows()
         )
     )
+
+
+def _market_move_stats(unresolved: pd.DataFrame) -> dict[str, object]:
+    if unresolved.empty or "market_move_id" not in unresolved.columns:
+        return {
+            "grouped_market_move_count": 0,
+            "multi_event_market_move_count": 0,
+            "avg_unresolved_events_per_market_move": "0",
+            "max_unresolved_events_per_market_move": 0,
+        }
+    moves = unresolved[unresolved["market_move_id"].fillna("").astype(str) != ""]
+    if moves.empty:
+        return {
+            "grouped_market_move_count": 0,
+            "multi_event_market_move_count": 0,
+            "avg_unresolved_events_per_market_move": "0",
+            "max_unresolved_events_per_market_move": 0,
+        }
+    counts = moves.groupby("market_move_id", sort=True).size()
+    return {
+        "grouped_market_move_count": int(len(counts)),
+        "multi_event_market_move_count": int((counts > 1).sum()),
+        "avg_unresolved_events_per_market_move": f"{float(counts.mean()):.6g}",
+        "max_unresolved_events_per_market_move": int(counts.max()),
+    }
+
+
+def _market_move_group_row(group: pd.DataFrame) -> dict[str, object]:
+    group = group.sort_values(["event_timestamp", "zone_id", "event_id"], kind="mergesort")
+    primary = group[group["market_move_role"] == "PRIMARY"]
+    primary_row = primary.iloc[0] if not primary.empty else group.iloc[0]
+    evidence = [_event_evidence(row) for _, row in group.iterrows()]
+    lowers = [_float_or_none(item.get("price_lower", "")) for item in evidence]
+    uppers = [_float_or_none(item.get("price_upper", "")) for item in evidence]
+    mids = [_float_or_none(item.get("price_mid", "")) for item in evidence]
+    representative_mid = _float_or_none(_event_evidence(primary_row).get("price_mid", ""))
+    if representative_mid is None:
+        representative_mid = next((value for value in mids if value is not None), 0.0)
+    precision_statuses = _pipe_unique(str(item.get("precision_status", "")) for item in evidence)
+    confidence_tiers = _pipe_unique(str(item.get("confidence_tier", "")) for item in evidence)
+    data_quality = _pipe_unique(str(value) for value in group["data_quality"])
+    row = {
+        "market_move_id": str(primary_row["market_move_id"]),
+        "event_timestamp": _format_ts(pd.Timestamp(group["event_timestamp"].map(pd.Timestamp).min())),
+        "side": str(primary_row["side"]),
+        "primary_event_id": str(primary_row["event_id"]),
+        "primary_zone_id": str(primary_row["zone_id"]),
+        "event_count": len(group),
+        "zone_ids": "|".join(str(value) for value in group["zone_id"]),
+        "event_ids": "|".join(str(value) for value in group["event_id"]),
+        "min_zone_price_lower": min((value for value in lowers if value is not None), default=0.0),
+        "max_zone_price_upper": max((value for value in uppers if value is not None), default=0.0),
+        "representative_zone_price_mid": representative_mid,
+        "max_excursion_abs": _numeric_max(group, "excursion_abs"),
+        "max_volume_zscore": _numeric_max(group, "volume_zscore"),
+        "max_abs_delta_zscore": _numeric_abs_max(group, "delta_zscore"),
+        "total_oi_change": _numeric_sum(group, "oi_change"),
+        "precision_statuses": precision_statuses,
+        "confidence_tiers": confidence_tiers,
+        "data_quality": data_quality,
+    }
+    row["evidence_json"] = _json(
+        {
+            "event_count": int(row["event_count"]),
+            "event_ids": str(row["event_ids"]),
+            "group_window_minutes": MARKET_MOVE_GROUP_WINDOW_MINUTES,
+            "grouping_rule": "same_side_within_2_minutes",
+            "market_move_id": str(row["market_move_id"]),
+            "primary_event_id": str(row["primary_event_id"]),
+            "primary_zone_id": str(row["primary_zone_id"]),
+            "zone_ids": str(row["zone_ids"]),
+        }
+    )
+    return row
+
+
+def _primary_event_index(group: pd.DataFrame) -> int:
+    scored = group.copy()
+    scored["_confidence_score"] = scored.apply(_event_confidence_score, axis=1)
+    scored["_zone_width_pct"] = scored.apply(_event_zone_width_pct, axis=1)
+    scored["_zone_id_sort"] = scored["zone_id"].astype(str)
+    scored["_event_id_sort"] = scored["event_id"].astype(str)
+    scored = scored.sort_values(
+        [
+            "_confidence_score",
+            "excursion_abs",
+            "_zone_width_pct",
+            "_zone_id_sort",
+            "_event_id_sort",
+        ],
+        ascending=[False, False, True, True, True],
+        kind="mergesort",
+    )
+    return int(scored.index[0])
+
+
+def _event_confidence_score(row: pd.Series) -> float:
+    evidence = _event_evidence(row)
+    return _float_or_none(evidence.get("confidence_score", "")) or 0.0
+
+
+def _event_zone_width_pct(row: pd.Series) -> float:
+    evidence = _event_evidence(row)
+    value = _float_or_none(evidence.get("zone_width_pct", ""))
+    if value is not None:
+        return value
+    lower = _float_or_none(evidence.get("price_lower", ""))
+    upper = _float_or_none(evidence.get("price_upper", ""))
+    mid = _float_or_none(evidence.get("price_mid", ""))
+    if lower is None or upper is None or not mid:
+        return float("inf")
+    return abs(upper - lower) / abs(mid) * 100
+
+
+def _event_evidence(row: pd.Series) -> dict[str, object]:
+    try:
+        return json.loads(str(row.get("evidence_json", "{}")))
+    except json.JSONDecodeError:
+        return {}
+
+
+def _market_move_id(first_ts: pd.Timestamp, side: str, group_number: int) -> str:
+    compact_ts = _format_ts(first_ts).replace("-", "").replace(":", "").replace("Z", "")
+    compact_ts = compact_ts.replace("T", "_")
+    return f"move_{compact_ts}_{side}_{group_number:06d}"
+
+
+def _float_or_none(value) -> float | None:
+    try:
+        if value == "":
+            return None
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if pd.isna(parsed):
+        return None
+    return parsed
+
+
+def _numeric_max(frame: pd.DataFrame, column: str) -> float:
+    values = pd.to_numeric(frame[column], errors="coerce").dropna()
+    return 0.0 if values.empty else float(values.max())
+
+
+def _numeric_abs_max(frame: pd.DataFrame, column: str) -> float:
+    values = pd.to_numeric(frame[column], errors="coerce").dropna().abs()
+    return 0.0 if values.empty else float(values.max())
+
+
+def _numeric_sum(frame: pd.DataFrame, column: str) -> float:
+    return float(pd.to_numeric(frame[column], errors="coerce").fillna(0).sum())
+
+
+def _pipe_unique(values) -> str:
+    out: list[str] = []
+    for value in values:
+        if value and value not in out:
+            out.append(value)
+    return "|".join(out)
 
 
 def _format_ts(value) -> str:

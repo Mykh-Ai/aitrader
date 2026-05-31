@@ -32,12 +32,21 @@ def test_research_summary_loads_multiple_run_dirs_and_writes_outputs(tmp_path: P
     rows = pd.read_csv(output_dir / "post_sweep_research_summary.csv")
     assert rows.columns.tolist() == ROW_SUMMARY_COLUMNS
     assert rows["source_run_dir"].tolist() == [str(run_a), str(run_b)]
+    assert rows["market_move_id"].tolist() == [
+        "move_20260508_000100_BUY_SIDE_000001",
+        "move_20260508_000100_SELL_SIDE_000001",
+    ]
+    assert rows["market_move_role"].tolist() == ["PRIMARY", "PRIMARY"]
 
     groups = pd.read_csv(output_dir / "post_sweep_group_summary.csv")
     assert groups.columns.tolist() == GROUP_SUMMARY_COLUMNS
     assert "ALL" in groups["group_type"].tolist()
     assert set(groups[groups["group_type"] == "side"]["group_value"]) == {"BUY_SIDE", "SELL_SIDE"}
     assert "MEDIUM" in groups[groups["group_type"] == "confidence_tier"]["group_value"].tolist()
+    assert "PRIMARY" in groups[groups["group_type"] == "market_move_role"]["group_value"].tolist()
+    markdown = (output_dir / "post_sweep_research_summary.md").read_text(encoding="utf-8")
+    assert "- Grouped unresolved market moves: 2" in markdown
+    assert "- Multi-event market moves: 0" in markdown
 
 
 def test_research_summary_handles_missing_and_header_only_observation_files(tmp_path: Path):
@@ -104,6 +113,9 @@ def _observation_row(observation_id: str, event_id: str, side: str) -> dict[str,
             "observation_id": observation_id,
             "source_event_id": event_id,
             "source_event_timestamp": "2026-05-08T00:01:00Z",
+            "market_move_id": f"move_20260508_000100_{side}_000001",
+            "market_move_role": "PRIMARY",
+            "market_move_event_count": 1,
             "zone_id": "zone_000001",
             "side": side,
             "zone_type": "H1_LEVEL_ZONE",
@@ -155,6 +167,9 @@ def _event_row(event_id: str, side: str) -> dict[str, object]:
         "delta_zscore": 2,
         "oi_change": 1,
         "reaction_status": "UNRESOLVED",
+        "market_move_id": f"move_20260508_000100_{side}_000001",
+        "market_move_role": "PRIMARY",
+        "market_move_event_count": 1,
         "evidence_json": (
             '{"confidence_tier":"MEDIUM","source_timeframes":"H1",'
             '"event_class":"LIQUIDITY_SWEEP_UNRESOLVED"}'
