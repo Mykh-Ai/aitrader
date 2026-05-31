@@ -20,6 +20,7 @@ def write_market_summary(
     registry_input=None,
     registry_output=None,
     registry_stats: dict[str, int] | None = None,
+    event_stats: dict[str, object] | None = None,
 ) -> None:
     latest_close_value = None if feed.empty else float(feed.iloc[-1]["ClosePrice"])
     latest_close = "" if latest_close_value is None else f"{latest_close_value:.8g}"
@@ -33,6 +34,15 @@ def write_market_summary(
     clustered_count = _clustered_count(liquidity_map)
     top_source_types = _top_source_types(liquidity_map)
     registry_stats = registry_stats or {}
+    event_stats = event_stats or {
+        "total": len(event_log),
+        "by_type": "none",
+        "approached": 0,
+        "touched": 0,
+        "crossed_unclassified": 0,
+        "merged": 0,
+        "expired": 0,
+    }
     lines = [
         "# Market State Monitor Summary",
         "",
@@ -64,6 +74,13 @@ def write_market_summary(
         ),
         f"- Top source types: {top_source_types}",
         f"- Number of events: {len(event_log)}",
+        f"- Number of lifecycle events: {event_stats.get('total', 0)}",
+        f"- Events by type: {event_stats.get('by_type', 'none')}",
+        f"- Approached zones: {event_stats.get('approached', 0)}",
+        f"- Touched zones: {event_stats.get('touched', 0)}",
+        f"- Crossed unclassified zones: {event_stats.get('crossed_unclassified', 0)}",
+        f"- Merged zones with events: {event_stats.get('merged', 0)}",
+        f"- Expired zones with events: {event_stats.get('expired', 0)}",
         "",
         "## Boundary Statement",
         "",
