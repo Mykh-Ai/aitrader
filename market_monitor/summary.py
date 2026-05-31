@@ -17,6 +17,9 @@ def write_market_summary(
     run_timestamp: str,
     input_files: list[str],
     output_dir: Path,
+    registry_input=None,
+    registry_output=None,
+    registry_stats: dict[str, int] | None = None,
 ) -> None:
     latest_close_value = None if feed.empty else float(feed.iloc[-1]["ClosePrice"])
     latest_close = "" if latest_close_value is None else f"{latest_close_value:.8g}"
@@ -29,6 +32,7 @@ def write_market_summary(
     status_counts = _column_counts(liquidity_map, "status")
     clustered_count = _clustered_count(liquidity_map)
     top_source_types = _top_source_types(liquidity_map)
+    registry_stats = registry_stats or {}
     lines = [
         "# Market State Monitor Summary",
         "",
@@ -36,6 +40,15 @@ def write_market_summary(
         f"- Input files: {', '.join(input_files)}",
         f"- Input row count: {len(feed)}",
         f"- Output directory: {output_dir}",
+        f"- Registry input: {registry_input or 'none'}",
+        f"- Registry output: {registry_output or output_dir / 'liquidity_zone_registry.csv'}",
+        f"- Carried zones loaded: {registry_stats.get('carried_loaded', 0)}",
+        f"- New zones created: {registry_stats.get('new_created', 0)}",
+        f"- Zones carried forward: {registry_stats.get('carried_forward', 0)}",
+        f"- Zones merged: {registry_stats.get('merged', 0)}",
+        f"- Zones expired: {registry_stats.get('expired', 0)}",
+        f"- Zones crossed unclassified: {registry_stats.get('crossed_unclassified', 0)}",
+        f"- Active registry zones: {registry_stats.get('active_registry', 0)}",
         f"- Latest close price: {latest_close}",
         f"- Data quality summary: {quality_summary}",
         f"- Number of structure levels: {len(structure_levels)}",

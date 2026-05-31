@@ -70,6 +70,7 @@ def build_liquidity_map(levels: pd.DataFrame, latest_close: float | None) -> pd.
     merged = _merge_zones(preliminary, latest_close)
     rows = [_finalize_zone(zone, latest_close) for zone in merged]
     rows = [_apply_status(row, latest_close) for row in rows]
+    rows = [row for row in rows if row["status"] != "INVALIDATED"]
     rows = [row for row in rows if _passes_pruning(row)]
 
     zones = pd.DataFrame(rows, columns=LIQUIDITY_MAP_COLUMNS)

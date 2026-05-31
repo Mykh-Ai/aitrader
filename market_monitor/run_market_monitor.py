@@ -23,6 +23,16 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Deterministic timestamp override for tests and reproducible runs.",
     )
+    parser.add_argument(
+        "--registry-in",
+        default=None,
+        help="Optional input liquidity zone registry CSV to carry forward.",
+    )
+    parser.add_argument(
+        "--registry-out",
+        default=None,
+        help="Optional output liquidity zone registry CSV. Defaults to output/liquidity_zone_registry.csv.",
+    )
     args = parser.parse_args(argv)
 
     input_path = Path(args.input)
@@ -37,6 +47,8 @@ def main(argv: list[str] | None = None) -> int:
             output_dir,
             run_timestamp=run_timestamp,
             input_files=input_files,
+            registry_in_path=Path(args.registry_in) if args.registry_in else None,
+            registry_out_path=Path(args.registry_out) if args.registry_out else None,
         )
     except (FeedContractError, FileNotFoundError) as exc:
         print(f"market monitor failed: {exc}", file=sys.stderr)
@@ -46,7 +58,8 @@ def main(argv: list[str] | None = None) -> int:
         "market monitor complete: "
         f"rows={len(feed)} output={output_dir} "
         f"structure_levels={len(frames['structure_levels.csv'])} "
-        f"liquidity_zones={len(frames['liquidity_map.csv'])}"
+        f"liquidity_zones={len(frames['liquidity_map.csv'])} "
+        f"registry_zones={len(frames['liquidity_zone_registry.csv'])}"
     )
     return 0
 
