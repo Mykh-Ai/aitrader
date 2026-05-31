@@ -7,6 +7,9 @@ import pandas as pd
 
 APPROACH_THRESHOLD_FRACTION = 0.001
 APPROACH_THRESHOLD_MIN_USD = 20.0
+SWEEP_MIN_EXCURSION_FRACTION = 0.0002
+SWEEP_MIN_EXCURSION_USD = 10.0
+SWEEP_ACTIVITY_ZSCORE_THRESHOLD = 1.5
 
 EVENT_LOG_COLUMNS = [
     "event_id",
@@ -34,6 +37,18 @@ LIFECYCLE_EVENT_TYPES = {
     "LIQUIDITY_ZONE_CROSSED_UNCLASSIFIED",
     "LIQUIDITY_ZONE_MERGED",
     "LIQUIDITY_ZONE_EXPIRED",
+}
+INTERPRETIVE_EVENT_TYPES = {
+    "LIQUIDITY_SWEEP_UNRESOLVED",
+}
+ALLOWED_EVENT_TYPES = LIFECYCLE_EVENT_TYPES | INTERPRETIVE_EVENT_TYPES
+EVENT_TYPE_ORDER = {
+    "LIQUIDITY_ZONE_APPROACHED": 10,
+    "LIQUIDITY_ZONE_TOUCHED": 20,
+    "LIQUIDITY_ZONE_CROSSED_UNCLASSIFIED": 30,
+    "LIQUIDITY_SWEEP_UNRESOLVED": 31,
+    "LIQUIDITY_ZONE_MERGED": 40,
+    "LIQUIDITY_ZONE_EXPIRED": 50,
 }
 
 
@@ -66,9 +81,11 @@ def build_event_log(
     if not events:
         return pd.DataFrame(columns=EVENT_LOG_COLUMNS)
     out = pd.DataFrame(events, columns=EVENT_LOG_COLUMNS)
-    out = out[out["event_type"].isin(LIFECYCLE_EVENT_TYPES)]
+    out = out[out["event_type"].isin(ALLOWED_EVENT_TYPES)].copy()
+    out["_event_type_order"] = out["event_type"].map(EVENT_TYPE_ORDER).fillna(999)
     out = out.sort_values(
-        ["event_timestamp", "event_type", "zone_id"], kind="mergesort"
+        ["event_timestamp", "zone_id", "_event_type_order", "event_type"],
+        kind="mergesort",
     ).reset_index(drop=True)
     out["event_id"] = [f"event_{idx + 1:06d}" for idx in range(len(out))]
     return out[EVENT_LOG_COLUMNS]
@@ -84,10 +101,16 @@ def event_stats(event_log: pd.DataFrame) -> dict[str, object]:
             "crossed_unclassified": 0,
             "merged": 0,
             "expired": 0,
+            "unresolved_sweep": 0,
+            "unresolved_sweep_by_side": "BUY_SIDE=0, SELL_SIDE=0",
+            "unresolved_sweep_by_data_quality": "RAW=0, RECOVERED_DEGRADED=0",
+            "crossed_without_sweep_evidence": 0,
         }
     counts = event_log["event_type"].value_counts().sort_index()
+    unresolved = event_log[event_log["event_type"] == "LIQUIDITY_SWEEP_UNRESOLVED"]
+    lifecycle = event_log[event_log["event_type"].isin(LIFECYCLE_EVENT_TYPES)]
     return {
-        "total": len(event_log),
+        "total": len(lifecycle),
         "by_type": ", ".join(f"{name}={count}" for name, count in counts.items()),
         "approached": int((event_log["event_type"] == "LIQUIDITY_ZONE_APPROACHED").sum()),
         "touched": int((event_log["event_type"] == "LIQUIDITY_ZONE_TOUCHED").sum()),
@@ -96,6 +119,12 @@ def event_stats(event_log: pd.DataFrame) -> dict[str, object]:
         ),
         "merged": int((event_log["event_type"] == "LIQUIDITY_ZONE_MERGED").sum()),
         "expired": int((event_log["event_type"] == "LIQUIDITY_ZONE_EXPIRED").sum()),
+        "unresolved_sweep": len(unresolved),
+        "unresolved_sweep_by_side": _fixed_counts(unresolved, "side", ["BUY_SIDE", "SELL_SIDE"]),
+        "unresolved_sweep_by_data_quality": _fixed_counts(
+            unresolved, "data_quality", ["RAW", "RECOVERED_DEGRADED"]
+        ),
+        "crossed_without_sweep_evidence": _crossed_without_sweep_evidence(event_log),
     }
 
 
@@ -115,19 +144,29 @@ def _interaction_events(
     cross_row = _first_cross(zone, run_slice)
     touch_row = _first_touch(zone, run_slice)
     if cross_row is not None:
-        return [
-            _market_event(
-                zone=zone,
-                event_type="LIQUIDITY_ZONE_CROSSED_UNCLASSIFIED",
-                candle=cross_row,
-                feed=feed,
-                previous_status=previous_status,
-                context=context,
-                trigger="price_crossed_zone_far_side",
-                excursion_abs=_cross_excursion(zone, cross_row),
-                new_status="CROSSED_UNCLASSIFIED",
-            )
-        ]
+        cross_event = _market_event(
+            zone=zone,
+            event_type="LIQUIDITY_ZONE_CROSSED_UNCLASSIFIED",
+            candle=cross_row,
+            feed=feed,
+            previous_status=previous_status,
+            context=context,
+            trigger="price_crossed_zone_far_side",
+            excursion_abs=_cross_excursion(zone, cross_row),
+            new_status="CROSSED_UNCLASSIFIED",
+        )
+        events = [cross_event]
+        unresolved_event = _unresolved_sweep_event(
+            zone=zone,
+            candle=cross_row,
+            feed=feed,
+            previous_status=previous_status,
+            context=context,
+        )
+        if unresolved_event is not None:
+            events.append(unresolved_event)
+        return events
+
     if touch_row is not None:
         return [
             _market_event(
@@ -159,6 +198,92 @@ def _interaction_events(
             )
         ]
     return []
+
+
+def _unresolved_sweep_event(
+    *,
+    zone: dict[str, object],
+    candle: pd.Series,
+    feed: pd.DataFrame,
+    previous_status: dict[str, str],
+    context: dict[str, dict[str, float]],
+) -> dict[str, object] | None:
+    event_timestamp = pd.Timestamp(candle["Timestamp"])
+    first_seen_at = pd.Timestamp(zone["first_seen_at"])
+    if first_seen_at >= event_timestamp:
+        return None
+
+    if _is_repeated_prior_cross_without_new_transition(
+        zone=zone,
+        candle=candle,
+        feed=feed,
+        previous_status=previous_status,
+    ):
+        return None
+
+    excursion_abs = _cross_excursion(zone, candle)
+    min_excursion_abs = _min_sweep_excursion(zone)
+    if excursion_abs <= 0 or excursion_abs < min_excursion_abs:
+        return None
+
+    event_ts = _format_ts(event_timestamp)
+    ctx = context.get(
+        event_ts,
+        {"volume_zscore": 0.0, "delta_zscore": 0.0, "oi_change": 0.0},
+    )
+    data_quality = _event_data_quality(zone, candle)
+    activity_evidence = _activity_evidence(ctx, data_quality)
+    if not activity_evidence:
+        return None
+
+    evidence = {
+        "activity_evidence": activity_evidence,
+        "activity_passed": True,
+        "candidate_evidence_status": "SUFFICIENT_UNRESOLVED",
+        "confidence_score": int(float(zone.get("confidence_score", 0) or 0)),
+        "confidence_tier": str(zone.get("confidence_tier", "")),
+        "data_quality": data_quality,
+        "delta_zscore": float(ctx["delta_zscore"]),
+        "event_class": "LIQUIDITY_SWEEP_UNRESOLVED",
+        "event_close": float(candle["ClosePrice"]),
+        "event_high": float(candle["HiPrice"]),
+        "event_low": float(candle["LowPrice"]),
+        "event_timestamp": event_ts,
+        "excursion_abs": float(excursion_abs),
+        "excursion_passed": True,
+        "first_seen_at": _format_ts(first_seen_at),
+        "min_excursion_abs": float(min_excursion_abs),
+        "oi_change": float(ctx["oi_change"]),
+        "pre_existing_zone": True,
+        "price_lower": float(zone["price_lower"]),
+        "price_mid": float(zone["price_mid"]),
+        "price_upper": float(zone["price_upper"]),
+        "reaction_status": "UNRESOLVED",
+        "side": str(zone["side"]),
+        "source_timeframes": str(zone.get("source_timeframes", "")),
+        "volume_zscore": float(ctx["volume_zscore"]),
+        "zone_id": str(zone["zone_id"]),
+        "zone_type": str(zone["zone_type"]),
+    }
+    return {
+        "event_id": "",
+        "event_timestamp": event_ts,
+        "event_type": "LIQUIDITY_SWEEP_UNRESOLVED",
+        "zone_id": zone["zone_id"],
+        "side": zone["side"],
+        "price_before": _price_before(feed, event_timestamp),
+        "event_high": float(candle["HiPrice"]),
+        "event_low": float(candle["LowPrice"]),
+        "event_close": float(candle["ClosePrice"]),
+        "excursion_abs": float(excursion_abs),
+        "excursion_atr": 0,
+        "volume_zscore": ctx["volume_zscore"],
+        "delta_zscore": ctx["delta_zscore"],
+        "oi_change": ctx["oi_change"],
+        "reaction_status": "UNRESOLVED",
+        "evidence_json": _json(evidence),
+        "data_quality": data_quality,
+    }
 
 
 def _registry_lifecycle_event(
@@ -345,6 +470,49 @@ def _cross_excursion(zone: dict[str, object], candle: pd.Series) -> float:
     return max(0.0, float(zone["price_lower"]) - float(candle["LowPrice"]))
 
 
+def _min_sweep_excursion(zone: dict[str, object]) -> float:
+    return max(SWEEP_MIN_EXCURSION_USD, float(zone["price_mid"]) * SWEEP_MIN_EXCURSION_FRACTION)
+
+
+def _activity_evidence(ctx: dict[str, float], data_quality: str) -> list[str]:
+    if data_quality != "RAW":
+        return []
+    evidence = []
+    if float(ctx["volume_zscore"]) >= SWEEP_ACTIVITY_ZSCORE_THRESHOLD:
+        evidence.append("volume_zscore")
+    if abs(float(ctx["delta_zscore"])) >= SWEEP_ACTIVITY_ZSCORE_THRESHOLD:
+        evidence.append("delta_zscore")
+    if abs(float(ctx["oi_change"])) > 0:
+        evidence.append("oi_change")
+    return evidence
+
+
+def _event_data_quality(zone: dict[str, object], candle: pd.Series) -> str:
+    values = {str(zone.get("data_quality", "")), str(candle.get("DataQuality", ""))}
+    if values == {"RAW"}:
+        return "RAW"
+    if "RECOVERED_DEGRADED" in values:
+        return "RECOVERED_DEGRADED"
+    return sorted(value for value in values if value)[0] if any(values) else "RAW"
+
+
+def _is_repeated_prior_cross_without_new_transition(
+    *,
+    zone: dict[str, object],
+    candle: pd.Series,
+    feed: pd.DataFrame,
+    previous_status: dict[str, str],
+) -> bool:
+    if previous_status.get(str(zone["zone_id"])) != "CROSSED_UNCLASSIFIED":
+        return False
+    previous_rows = feed[feed["Timestamp"] < pd.Timestamp(candle["Timestamp"])]
+    if previous_rows.empty:
+        return True
+    if zone["side"] == "BUY_SIDE":
+        return bool((previous_rows["HiPrice"] > float(zone["price_upper"])).all())
+    return bool((previous_rows["LowPrice"] < float(zone["price_lower"])).all())
+
+
 def _price_before(feed: pd.DataFrame, timestamp) -> float | str:
     previous = feed[feed["Timestamp"] < pd.Timestamp(timestamp)]
     if previous.empty:
@@ -372,6 +540,26 @@ def _context_map(volume_delta_state: pd.DataFrame) -> dict[str, dict[str, float]
         }
         for _, row in volume_delta_state.iterrows()
     }
+
+
+def _fixed_counts(frame: pd.DataFrame, column: str, values: list[str]) -> str:
+    counts = frame[column].value_counts() if not frame.empty else {}
+    return ", ".join(f"{value}={int(counts.get(value, 0))}" for value in values)
+
+
+def _crossed_without_sweep_evidence(event_log: pd.DataFrame) -> int:
+    crossed = event_log[event_log["event_type"] == "LIQUIDITY_ZONE_CROSSED_UNCLASSIFIED"]
+    unresolved = event_log[event_log["event_type"] == "LIQUIDITY_SWEEP_UNRESOLVED"]
+    unresolved_keys = {
+        (str(row["event_timestamp"]), str(row["zone_id"]))
+        for _, row in unresolved.iterrows()
+    }
+    return int(
+        sum(
+            (str(row["event_timestamp"]), str(row["zone_id"])) not in unresolved_keys
+            for _, row in crossed.iterrows()
+        )
+    )
 
 
 def _format_ts(value) -> str:
