@@ -4,6 +4,8 @@ import json
 
 import pandas as pd
 
+from market_monitor.score_instrumentation import SCORE_INSTRUMENTATION_COLUMNS
+
 
 POST_SWEEP_OBSERVATION_BARS = 30
 
@@ -17,6 +19,10 @@ POST_SWEEP_OBSERVATION_COLUMNS = [
     "zone_price_lower",
     "zone_price_upper",
     "zone_price_mid",
+    "confidence_score",
+    "confidence_tier",
+    "source_timeframes",
+    *SCORE_INSTRUMENTATION_COLUMNS,
     "observation_start_timestamp",
     "observation_end_timestamp",
     "observation_bars_expected",
@@ -140,6 +146,10 @@ def _observation_row(
         "zone_price_lower": lower,
         "zone_price_upper": upper,
         "zone_price_mid": mid,
+        "confidence_score": evidence.get("confidence_score", ""),
+        "confidence_tier": evidence.get("confidence_tier", ""),
+        "source_timeframes": evidence.get("source_timeframes", ""),
+        **_score_instrumentation_from_evidence(evidence),
         "observation_start_timestamp": start_ts,
         "observation_end_timestamp": end_ts,
         "observation_bars_expected": POST_SWEEP_OBSERVATION_BARS,
@@ -172,6 +182,10 @@ def _observation_row(
             "zone_price_mid": mid,
             "zone_price_upper": upper,
             "zone_type": str(evidence["zone_type"]),
+            "confidence_score": evidence.get("confidence_score", ""),
+            "confidence_tier": evidence.get("confidence_tier", ""),
+            "source_timeframes": evidence.get("source_timeframes", ""),
+            **_score_instrumentation_from_evidence(evidence),
         }
     )
     return row
@@ -321,3 +335,7 @@ def _format_ts(value) -> str:
 
 def _json(payload: dict[str, object]) -> str:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+
+def _score_instrumentation_from_evidence(evidence: dict[str, object]) -> dict[str, object]:
+    return {column: evidence.get(column, "") for column in SCORE_INSTRUMENTATION_COLUMNS}

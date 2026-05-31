@@ -433,6 +433,7 @@ def _write_batch_summary(
     degraded_skipped = int((manifest["reason"] == "DEGRADED_DATA_EXCLUDED").sum())
     rows_processed = _sum_column(processed_rows, "input_rows")
     final_registry_zones = _last_numeric(processed_rows, "registry_zones_count")
+    score_instrumentation = _score_instrumentation_available(research_result)
     lines = [
         "# Market Monitor Batch Research Summary",
         "",
@@ -445,6 +446,7 @@ def _write_batch_summary(
         f"- End date: {end.isoformat() if end else ''}",
         f"- Max days: {max_days if max_days is not None else ''}",
         f"- Include degraded: {str(bool(include_degraded)).lower()}",
+        f"- Score instrumentation available: {score_instrumentation}",
         f"- Processed days: {processed}",
         f"- Skipped days: {skipped}",
         f"- Failed days: {failed}",
@@ -534,6 +536,14 @@ def _last_numeric(frame: pd.DataFrame, column: str) -> int:
     if values.empty:
         return 0
     return int(values.iloc[-1])
+
+
+def _score_instrumentation_available(research_result: ResearchSummaryResult) -> str:
+    try:
+        columns = pd.read_csv(research_result.row_summary_path, nrows=0).columns
+    except OSError:
+        return "no"
+    return "yes" if "score_components_json" in columns else "no"
 
 
 def _relative_path(path: Path | None) -> str:

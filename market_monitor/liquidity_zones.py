@@ -4,6 +4,11 @@ from dataclasses import dataclass
 
 import pandas as pd
 
+from market_monitor.score_instrumentation import (
+    SCORE_INSTRUMENTATION_COLUMNS,
+    score_instrumentation_fields,
+)
+
 
 LIQUIDITY_MAP_COLUMNS = [
     "zone_id",
@@ -24,6 +29,7 @@ LIQUIDITY_MAP_COLUMNS = [
     "distance_from_close_pct",
     "data_quality",
     "invalidation_reason",
+    *SCORE_INSTRUMENTATION_COLUMNS,
 ]
 
 ZONE_TYPE_BY_LEVEL = {
@@ -57,6 +63,7 @@ class SourceEvidence:
     level_types: tuple[str, ...]
     data_quality: str
     touch_count: int
+    cluster_member_count: int = 1
 
 
 def build_liquidity_map(levels: pd.DataFrame, latest_close: float | None) -> pd.DataFrame:
@@ -103,6 +110,7 @@ def _preliminary_zones(
             level_types=(str(level["level_type"]),),
             data_quality=str(level["data_quality"]),
             touch_count=int(level["touch_count"]),
+            cluster_member_count=1,
         )
         zones.append(
             {
@@ -170,6 +178,7 @@ def _collapse_cluster(cluster: list[dict[str, object]]) -> dict[str, object]:
             level_types=tuple(level_types),
             data_quality=data_quality,
             touch_count=sum(evidence.touch_count for evidence in evidence_items),
+            cluster_member_count=sum(evidence.cluster_member_count for evidence in evidence_items),
         ),
     }
 
@@ -185,6 +194,21 @@ def _merged_zone_type(side: str, zone_types: list[str]) -> str:
 def _finalize_zone(zone: dict[str, object], latest_close: float | None) -> dict[str, object]:
     evidence: SourceEvidence = zone["evidence"]  # type: ignore[assignment]
     confidence_score = _confidence_score(evidence)
+    confidence_tier = _confidence_tier(confidence_score)
+    source_level_ids = "|".join(evidence.level_ids)
+    source_timeframes = "|".join(evidence.timeframes)
+    components = _confidence_components(evidence)
+    instrumentation = score_instrumentation_fields(
+        source_level_ids=source_level_ids,
+        source_timeframes=source_timeframes,
+        zone_type=zone["zone_type"],
+        price_lower=zone["price_lower"],
+        price_upper=zone["price_upper"],
+        price_mid=zone["price_mid"],
+        confidence_score=confidence_score,
+        confidence_tier=confidence_tier,
+        score_components=components,
+    )
     return {
         "zone_id": "",
         "created_at": zone["created_at"],
@@ -194,16 +218,17 @@ def _finalize_zone(zone: dict[str, object], latest_close: float | None) -> dict[
         "price_lower": zone["price_lower"],
         "price_upper": zone["price_upper"],
         "price_mid": zone["price_mid"],
-        "source_level_ids": "|".join(evidence.level_ids),
-        "source_timeframes": "|".join(evidence.timeframes),
+        "source_level_ids": source_level_ids,
+        "source_timeframes": source_timeframes,
         "status": "ACTIVE",
         "confidence_score": confidence_score,
-        "confidence_tier": _confidence_tier(confidence_score),
+        "confidence_tier": confidence_tier,
         "touch_count": evidence.touch_count,
         "sweep_count": 0,
         "distance_from_close_pct": _distance_from_close(float(zone["price_mid"]), latest_close),
         "data_quality": evidence.data_quality,
         "invalidation_reason": "",
+        **instrumentation,
     }
 
 
@@ -235,24 +260,62 @@ def _passes_pruning(row: dict[str, object]) -> bool:
 
 
 def _confidence_score(evidence: SourceEvidence) -> int:
-    score = 0
+    components = _confidence_components(evidence)
+    return int(components["final_confidence_score"])
+
+
+def _confidence_components(evidence: SourceEvidence) -> dict[str, object]:
     level_types = set(evidence.level_types)
     timeframes = set(evidence.timeframes)
-    if "H4" in timeframes:
-        score += 55
-    if "H1" in timeframes:
-        score += 38
-    if level_types & {"PDH", "PDL"}:
-        score += 55
-    if any(level_type.endswith("_HIGH") or level_type.endswith("_LOW") for level_type in level_types):
-        score += 25
-    if level_types & {"EQUAL_HIGHS", "EQUAL_LOWS"}:
-        score += 15
-    score += min(max(len(evidence.level_ids) - 1, 0) * 8, 24)
-    score += min(evidence.touch_count, 4) * 2
-    if evidence.data_quality != "RAW":
-        score -= 15
-    return max(0, min(100, score))
+    h4_component = 55 if "H4" in timeframes else 0
+    h1_component = 38 if "H1" in timeframes else 0
+    pdh_pdl_component = 55 if level_types & {"PDH", "PDL"} else 0
+    high_low_component = (
+        25
+        if any(level_type.endswith("_HIGH") or level_type.endswith("_LOW") for level_type in level_types)
+        else 0
+    )
+    equal_level_component = 15 if level_types & {"EQUAL_HIGHS", "EQUAL_LOWS"} else 0
+    source_count_bonus = min(max(len(evidence.level_ids) - 1, 0) * 8, 24)
+    touch_bonus = min(evidence.touch_count, 4) * 2
+    data_quality_penalty = -15 if evidence.data_quality != "RAW" else 0
+    pre_clamp_score = (
+        h4_component
+        + h1_component
+        + pdh_pdl_component
+        + high_low_component
+        + equal_level_component
+        + source_count_bonus
+        + touch_bonus
+        + data_quality_penalty
+    )
+    final_score = max(0, min(100, pre_clamp_score))
+    return {
+        "base_score": 0,
+        "timeframe_score": h4_component + h1_component,
+        "h1_component": h1_component,
+        "h4_component": h4_component,
+        "session_component": None,
+        "high_low_component": high_low_component,
+        "pdh_pdl_component": pdh_pdl_component,
+        "equal_level_component": equal_level_component,
+        "source_count_bonus": source_count_bonus,
+        "cluster_bonus": 0,
+        "touch_bonus": touch_bonus,
+        "data_quality_penalty": data_quality_penalty,
+        "carry_forward_prior_score": None,
+        "pre_clamp_score": pre_clamp_score,
+        "final_confidence_score": final_score,
+        "confidence_tier": _confidence_tier(final_score),
+        "source_level_count": len(evidence.level_ids),
+        "cluster_member_count": evidence.cluster_member_count,
+        "source_timeframes": "|".join(sorted(timeframes)),
+        "level_types": "|".join(sorted(level_types)),
+        "instrumentation_limitations": (
+            "session_component is not separable from generic high_low_component "
+            "without changing the current scoring formula"
+        ),
+    }
 
 
 def _confidence_tier(score: int) -> str:

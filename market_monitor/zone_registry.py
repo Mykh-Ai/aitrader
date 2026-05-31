@@ -5,6 +5,10 @@ from pathlib import Path
 import pandas as pd
 
 from market_monitor.liquidity_zones import LIQUIDITY_MAP_COLUMNS
+from market_monitor.score_instrumentation import (
+    SCORE_INSTRUMENTATION_COLUMNS,
+    score_instrumentation_fields,
+)
 
 
 REGISTRY_COLUMNS = [
@@ -32,6 +36,7 @@ REGISTRY_COLUMNS = [
     "merged_into_zone_id",
     "data_quality",
     "invalidation_reason",
+    *SCORE_INSTRUMENTATION_COLUMNS,
 ]
 
 CARRY_FORWARD_STATUSES = {
@@ -133,6 +138,7 @@ def forward_liquidity_from_registry(
                 ),
                 "data_quality": row["data_quality"],
                 "invalidation_reason": row["invalidation_reason"],
+                **_instrumentation_from_row(row),
             }
         )
     return pd.DataFrame(rows, columns=LIQUIDITY_MAP_COLUMNS)
@@ -173,6 +179,7 @@ def _current_zones_to_registry(
                 "merged_into_zone_id": "",
                 "data_quality": zone["data_quality"],
                 "invalidation_reason": "",
+                **_instrumentation_from_row(zone),
             }
         )
     return _normalize_registry(pd.DataFrame(rows, columns=REGISTRY_COLUMNS))
@@ -228,7 +235,22 @@ def _collapse_registry_cluster(
     source_level_ids = _pipe_union(row["source_level_ids"] for row in cluster)
     source_timeframes = _pipe_union(row["source_timeframes"] for row in cluster)
     source_zone_types = sorted({str(row["zone_type"]) for row in cluster})
-    confidence_score = _merged_confidence_score(cluster, source_timeframes, source_zone_types)
+    confidence_components = _merged_confidence_components(
+        cluster, source_timeframes, source_zone_types
+    )
+    confidence_score = int(confidence_components["final_confidence_score"])
+    confidence_tier = _confidence_tier(confidence_score)
+    instrumentation = score_instrumentation_fields(
+        source_level_ids=source_level_ids,
+        source_timeframes=source_timeframes,
+        zone_type=_registry_merged_zone_type(str(target["side"]), source_zone_types),
+        price_lower=lower,
+        price_upper=upper,
+        price_mid=(lower + upper) / 2,
+        confidence_score=confidence_score,
+        confidence_tier=confidence_tier,
+        score_components=confidence_components,
+    )
 
     active = target.copy()
     active.update(
@@ -243,13 +265,14 @@ def _collapse_registry_cluster(
             "source_timeframes": source_timeframes,
             "zone_type": _registry_merged_zone_type(str(target["side"]), source_zone_types),
             "confidence_score": confidence_score,
-            "confidence_tier": _confidence_tier(confidence_score),
+            "confidence_tier": confidence_tier,
             "touch_count": sum(int(float(row["touch_count"])) for row in cluster),
             "cross_count": sum(int(float(row["cross_count"])) for row in cluster),
             "active_days": max(int(float(row["active_days"])) for row in cluster),
             "data_quality": _quality_values(row["data_quality"] for row in cluster),
             "merged_into_zone_id": "",
             "invalidation_reason": "",
+            **instrumentation,
         }
     )
 
@@ -373,6 +396,10 @@ def _normalize_registry(registry: pd.DataFrame | None) -> pd.DataFrame:
         "touch_count",
         "cross_count",
         "active_days",
+        "source_level_count",
+        "cluster_member_count",
+        "zone_width",
+        "zone_width_pct",
     ]:
         frame[column] = pd.to_numeric(frame[column], errors="coerce").fillna(0)
     text_columns = [column for column in REGISTRY_COLUMNS if column not in frame.select_dtypes("number").columns]
@@ -415,16 +442,64 @@ def _registry_merged_zone_type(side: str, source_zone_types: list[str]) -> str:
 def _merged_confidence_score(
     rows: list[dict[str, object]], source_timeframes: str, source_zone_types: list[str]
 ) -> int:
-    score = max(int(float(row["confidence_score"])) for row in rows)
+    return int(
+        _merged_confidence_components(rows, source_timeframes, source_zone_types)[
+            "final_confidence_score"
+        ]
+    )
+
+
+def _merged_confidence_components(
+    rows: list[dict[str, object]], source_timeframes: str, source_zone_types: list[str]
+) -> dict[str, object]:
+    prior_score = max(int(float(row["confidence_score"])) for row in rows)
     source_count = len(_pipe_union(row["source_level_ids"] for row in rows).split("|"))
-    score += min(max(source_count - 1, 0) * 4, 16)
-    if "H4" in source_timeframes:
-        score += 8
-    if any("PDH" in zone_type or "PDL" in zone_type for zone_type in source_zone_types):
-        score += 8
-    if _quality_values(row["data_quality"] for row in rows) != "RAW":
-        score -= 5
-    return max(0, min(100, score))
+    source_count_bonus = min(max(source_count - 1, 0) * 4, 16)
+    h4_component = 8 if "H4" in source_timeframes else 0
+    pdh_pdl_component = (
+        8
+        if any("PDH" in zone_type or "PDL" in zone_type for zone_type in source_zone_types)
+        else 0
+    )
+    data_quality_penalty = (
+        -5 if _quality_values(row["data_quality"] for row in rows) != "RAW" else 0
+    )
+    pre_clamp_score = (
+        prior_score + source_count_bonus + h4_component + pdh_pdl_component + data_quality_penalty
+    )
+    final_score = max(0, min(100, pre_clamp_score))
+    return {
+        "base_score": 0,
+        "timeframe_score": h4_component,
+        "h1_component": None,
+        "h4_component": h4_component,
+        "session_component": None,
+        "pdh_pdl_component": pdh_pdl_component,
+        "equal_level_component": None,
+        "source_count_bonus": source_count_bonus,
+        "cluster_bonus": 0,
+        "touch_bonus": None,
+        "data_quality_penalty": data_quality_penalty,
+        "carry_forward_prior_score": prior_score,
+        "pre_clamp_score": pre_clamp_score,
+        "final_confidence_score": final_score,
+        "confidence_tier": _confidence_tier(final_score),
+        "source_level_count": source_count,
+        "cluster_member_count": len(rows),
+        "source_timeframes": source_timeframes,
+        "source_zone_types": "|".join(source_zone_types),
+        "merged_from_zone_ids": sorted(str(row["zone_id"]) for row in rows),
+        "registry_status_before": "|".join(sorted({str(row["status"]) for row in rows})),
+        "registry_status_after": "post_merge_pre_lifecycle",
+        "instrumentation_limitations": (
+            "registry merge starts from prior max confidence_score; original initial "
+            "score components are not separable from carried rows"
+        ),
+    }
+
+
+def _instrumentation_from_row(row) -> dict[str, object]:
+    return {column: row[column] if column in row else "" for column in SCORE_INSTRUMENTATION_COLUMNS}
 
 
 def _pipe_union(values) -> str:
