@@ -8,6 +8,15 @@ import pandas as pd
 
 from market_monitor.feed_adapter import FeedContractError, load_feed
 from market_monitor.events import MARKET_MOVE_GROUP_WINDOW_MINUTES
+from market_monitor.label_taxonomy import (
+    SWEEP_ACCEPTED,
+    SWEEP_INVALID_SAMPLE,
+    SWEEP_NO_LABEL,
+    SWEEP_REJECTED,
+    SWEEP_UNRESOLVED,
+    format_label_counts,
+    label_stats,
+)
 from market_monitor.outputs import write_outputs
 from market_monitor.research_summary import (
     ResearchSummaryResult,
@@ -39,6 +48,13 @@ MANIFEST_COLUMNS = [
     "post_sweep_observation_count",
     "complete_observation_count",
     "incomplete_observation_count",
+    "sweep_label_count",
+    "sweep_label_rejected_count",
+    "sweep_label_accepted_count",
+    "sweep_label_unresolved_count",
+    "sweep_label_no_label_count",
+    "sweep_label_invalid_sample_count",
+    "sweep_label_clean_labelable_count",
 ]
 
 PROCESSED = "PROCESSED"
@@ -47,7 +63,7 @@ FAILED = "FAILED"
 
 BATCH_BOUNDARY_STATEMENT = (
     "This batch research summary is descriptive only. It does not classify "
-    "rejected/accepted sweeps, does not generate trading signals, does not "
+    "trade outcomes, does not generate trading signals, does not "
     "define entries/exits, does not calculate PnL, and does not trigger "
     "Backtester or Executor behavior."
 )
@@ -317,6 +333,9 @@ def _processed_manifest_row(
     event_log = frames["event_log.csv"]
     market_move_groups = frames["market_move_groups.csv"]
     observations = frames["post_sweep_observation.csv"]
+    taxonomy = frames["sweep_label_taxonomy.csv"]
+    taxonomy_stats = label_stats(taxonomy)
+    label_counts = taxonomy_stats["label_counts"]
     complete = _complete_observation_count(observations)
     unresolved_sweep_count = (
         int((event_log["event_type"] == "LIQUIDITY_SWEEP_UNRESOLVED").sum())
@@ -352,6 +371,13 @@ def _processed_manifest_row(
         post_sweep_observation_count=len(observations),
         complete_observation_count=complete,
         incomplete_observation_count=len(observations) - complete,
+        sweep_label_count=len(taxonomy),
+        sweep_label_rejected_count=label_counts[SWEEP_REJECTED],
+        sweep_label_accepted_count=label_counts[SWEEP_ACCEPTED],
+        sweep_label_unresolved_count=label_counts[SWEEP_UNRESOLVED],
+        sweep_label_no_label_count=label_counts[SWEEP_NO_LABEL],
+        sweep_label_invalid_sample_count=label_counts[SWEEP_INVALID_SAMPLE],
+        sweep_label_clean_labelable_count=taxonomy_stats["clean_labelable_count"],
     )
 
 
@@ -380,6 +406,13 @@ def _manifest_row(
     post_sweep_observation_count: int | str = "",
     complete_observation_count: int | str = "",
     incomplete_observation_count: int | str = "",
+    sweep_label_count: int | str = "",
+    sweep_label_rejected_count: int | str = "",
+    sweep_label_accepted_count: int | str = "",
+    sweep_label_unresolved_count: int | str = "",
+    sweep_label_no_label_count: int | str = "",
+    sweep_label_invalid_sample_count: int | str = "",
+    sweep_label_clean_labelable_count: int | str = "",
 ) -> dict[str, object]:
     return {
         "date": day.isoformat(),
@@ -405,6 +438,13 @@ def _manifest_row(
         "post_sweep_observation_count": post_sweep_observation_count,
         "complete_observation_count": complete_observation_count,
         "incomplete_observation_count": incomplete_observation_count,
+        "sweep_label_count": sweep_label_count,
+        "sweep_label_rejected_count": sweep_label_rejected_count,
+        "sweep_label_accepted_count": sweep_label_accepted_count,
+        "sweep_label_unresolved_count": sweep_label_unresolved_count,
+        "sweep_label_no_label_count": sweep_label_no_label_count,
+        "sweep_label_invalid_sample_count": sweep_label_invalid_sample_count,
+        "sweep_label_clean_labelable_count": sweep_label_clean_labelable_count,
     }
 
 
@@ -468,6 +508,13 @@ def _write_batch_summary(
     score_instrumentation = _score_instrumentation_available(research_result)
     unresolved_total = _sum_column(processed_rows, "unresolved_sweep_count")
     grouped_move_total = _sum_column(processed_rows, "grouped_market_move_count")
+    label_counts = {
+        SWEEP_ACCEPTED: _sum_column(processed_rows, "sweep_label_accepted_count"),
+        SWEEP_INVALID_SAMPLE: _sum_column(processed_rows, "sweep_label_invalid_sample_count"),
+        SWEEP_NO_LABEL: _sum_column(processed_rows, "sweep_label_no_label_count"),
+        SWEEP_REJECTED: _sum_column(processed_rows, "sweep_label_rejected_count"),
+        SWEEP_UNRESOLVED: _sum_column(processed_rows, "sweep_label_unresolved_count"),
+    }
     lines = [
         "# Market Monitor Batch Research Summary",
         "",
@@ -522,6 +569,17 @@ def _write_batch_summary(
         f"- Post-sweep observations: {_sum_column(processed_rows, 'post_sweep_observation_count')}",
         f"- Complete observations: {_sum_column(processed_rows, 'complete_observation_count')}",
         f"- Incomplete observations: {_sum_column(processed_rows, 'incomplete_observation_count')}",
+        "",
+        "## Sweep Label Taxonomy",
+        "",
+        f"- Sweep taxonomy label rows: {_sum_column(processed_rows, 'sweep_label_count')}",
+        f"- Sweep taxonomy label counts: {format_label_counts(label_counts)}",
+        (
+            "- Clean V1 labelable moves: "
+            f"{_sum_column(processed_rows, 'sweep_label_clean_labelable_count')}"
+        ),
+        f"- No-label moves: {label_counts[SWEEP_NO_LABEL]}",
+        f"- Invalid samples: {label_counts[SWEEP_INVALID_SAMPLE]}",
         "",
         "## Research Summary Link",
         "",

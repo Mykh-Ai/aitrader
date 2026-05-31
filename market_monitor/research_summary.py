@@ -7,11 +7,20 @@ from pathlib import Path
 import pandas as pd
 
 from market_monitor.events import GROUPING_WINDOW_MODE, MARKET_MOVE_GROUP_WINDOW_MINUTES
+from market_monitor.label_taxonomy import (
+    SWEEP_INVALID_SAMPLE,
+    SWEEP_NO_LABEL,
+    format_label_counts,
+    label_stats,
+)
 from market_monitor.score_instrumentation import SCORE_INSTRUMENTATION_COLUMNS
 
 
 ROW_SUMMARY_COLUMNS = [
     "source_run_dir",
+    "taxonomy_version",
+    "sweep_label",
+    "label_reason",
     "observation_id",
     "source_event_id",
     "source_event_timestamp",
@@ -81,9 +90,9 @@ GROUP_SUMMARY_COLUMNS = [
 ]
 
 BOUNDARY_STATEMENT = (
-    "This research summary is descriptive only. It does not classify rejected/accepted "
-    "sweeps, does not generate trading signals, does not define entries/exits, "
-    "does not calculate PnL, and does not trigger Backtester or Executor behavior."
+    "This research summary is descriptive only. It does not classify trade outcomes, "
+    "does not generate trading signals, does not define entries/exits, does not "
+    "calculate PnL, and does not trigger Backtester or Executor behavior."
 )
 
 
@@ -97,6 +106,10 @@ class ResearchSummaryResult:
     incomplete_count: int
     event_counts_by_type: dict[str, int]
     warnings: tuple[str, ...]
+    label_counts: dict[str, int]
+    clean_labelable_count: int
+    no_label_count: int
+    invalid_sample_count: int
 
 
 def build_post_sweep_research_summary(
@@ -111,6 +124,8 @@ def build_post_sweep_research_summary(
     loaded = [_load_run_dir(path) for path in input_paths]
     observations = _combined_observations(loaded)
     event_counts = _combined_event_counts(loaded)
+    labels = _combined_labels(loaded)
+    observations = _join_labels(observations, labels)
     group_summary = _group_summary(observations)
     warnings = tuple(warning for item in loaded for warning in item["warnings"])
 
@@ -126,8 +141,9 @@ def build_post_sweep_research_summary(
             observations=observations,
             group_summary=group_summary,
             event_counts=event_counts,
-            warnings=warnings,
-            run_timestamp=run_timestamp or "",
+        warnings=warnings,
+        labels=labels,
+        run_timestamp=run_timestamp or "",
         ),
         encoding="utf-8",
     )
@@ -142,6 +158,7 @@ def build_post_sweep_research_summary(
         incomplete_count=int((~complete).sum()) if len(observations) else 0,
         event_counts_by_type=event_counts,
         warnings=warnings,
+        **label_stats(labels),
     )
 
 
@@ -168,9 +185,11 @@ def _load_run_dir(path: Path) -> dict[str, object]:
         observations = pd.DataFrame(columns=ROW_SUMMARY_COLUMNS)
 
     event_counts = _event_counts(path / "event_log.csv")
+    labels = _load_labels(path / "sweep_label_taxonomy.csv", path)
     return {
         "observations": observations,
         "event_counts": event_counts,
+        "labels": labels,
         "warnings": warnings,
     }
 
@@ -199,6 +218,33 @@ def _combined_event_counts(loaded: list[dict[str, object]]) -> dict[str, int]:
         for event_type, count in item["event_counts"].items():
             counts[event_type] = counts.get(event_type, 0) + int(count)
     return dict(sorted(counts.items()))
+
+
+def _combined_labels(loaded: list[dict[str, object]]) -> pd.DataFrame:
+    frames = [item["labels"] for item in loaded if not item["labels"].empty]
+    if not frames:
+        return pd.DataFrame(columns=["source_run_dir", "market_move_id", "taxonomy_version", "label", "label_reason"])
+    out = pd.concat(frames, ignore_index=True)
+    return out.sort_values(["source_run_dir", "market_move_id"], kind="mergesort").reset_index(drop=True)
+
+
+def _join_labels(observations: pd.DataFrame, labels: pd.DataFrame) -> pd.DataFrame:
+    out = observations.copy()
+    for column in ["taxonomy_version", "sweep_label", "label_reason"]:
+        out[column] = ""
+    if out.empty or labels.empty:
+        return out[ROW_SUMMARY_COLUMNS]
+    keep = labels[["source_run_dir", "market_move_id", "taxonomy_version", "label", "label_reason"]].copy()
+    keep = keep.rename(columns={"label": "sweep_label"})
+    out = out.drop(columns=["taxonomy_version", "sweep_label", "label_reason"], errors="ignore").merge(
+        keep,
+        on=["source_run_dir", "market_move_id"],
+        how="left",
+        sort=False,
+    )
+    for column in ["taxonomy_version", "sweep_label", "label_reason"]:
+        out[column] = out[column].fillna("")
+    return out[ROW_SUMMARY_COLUMNS]
 
 
 def _normalize_observations(frame: pd.DataFrame) -> pd.DataFrame:
@@ -288,6 +334,20 @@ def _event_counts(event_log_path: Path) -> dict[str, int]:
     return {str(name): int(count) for name, count in counts.items()}
 
 
+def _load_labels(label_path: Path, run_dir: Path) -> pd.DataFrame:
+    if not label_path.exists():
+        return pd.DataFrame(columns=["source_run_dir", "market_move_id", "taxonomy_version", "label", "label_reason"])
+    labels = pd.read_csv(label_path)
+    if labels.empty:
+        return pd.DataFrame(columns=["source_run_dir", "market_move_id", "taxonomy_version", "label", "label_reason"])
+    labels = labels.copy()
+    labels["source_run_dir"] = str(run_dir)
+    for column in ["market_move_id", "taxonomy_version", "label", "label_reason"]:
+        if column not in labels.columns:
+            labels[column] = ""
+    return labels[["source_run_dir", "market_move_id", "taxonomy_version", "label", "label_reason"]]
+
+
 def _group_summary(observations: pd.DataFrame) -> pd.DataFrame:
     observations = _with_score_buckets(observations)
     rows = [_group_row("ALL", "ALL", observations)]
@@ -302,6 +362,7 @@ def _group_summary(observations: pd.DataFrame) -> pd.DataFrame:
             ("market_move_role", "market_move_role"),
             ("market_move_event_count", "market_move_event_count"),
             ("grouping_window_mode", "grouping_window_mode"),
+            ("sweep_label", "sweep_label"),
             ("source_timeframes", "source_timeframes"),
             ("has_h4_source", "has_h4_source"),
             ("has_session_source", "has_session_source"),
@@ -345,11 +406,14 @@ def _markdown_summary(
     group_summary: pd.DataFrame,
     event_counts: dict[str, int],
     warnings: tuple[str, ...],
+    labels: pd.DataFrame,
     run_timestamp: str,
 ) -> str:
     complete = _complete_mask(observations)
     observation_count = len(observations)
     move_stats = _market_move_stats(observations)
+    sweep_label_stats = label_stats(labels)
+    label_counts = sweep_label_stats["label_counts"]
     lines = [
         "# Post-Sweep Observation Research Summary",
         "",
@@ -388,6 +452,7 @@ def _markdown_summary(
         f"- by market_move_role: {_counts_for(observations, 'market_move_role')}",
         f"- by market_move_event_count: {_counts_for(observations, 'market_move_event_count')}",
         f"- by grouping_window_mode: {_counts_for(observations, 'grouping_window_mode')}",
+        f"- by sweep_label: {_counts_for(observations, 'sweep_label')}",
         f"- score instrumentation available: {'yes' if _score_instrumentation_available(observations) else 'no'}",
         f"- by has_h4_source: {_counts_for(observations, 'has_h4_source')}",
         f"- by has_session_source: {_counts_for(observations, 'has_session_source')}",
@@ -410,6 +475,15 @@ def _markdown_summary(
         "## Data Quality Caveats",
         "",
         f"- Degraded rows present: {'yes' if _has_degraded(observations) else 'no'}",
+        "",
+        "## Sweep Label Taxonomy",
+        "",
+        f"- Sweep taxonomy labels available: {'yes' if not labels.empty else 'no'}",
+        f"- Sweep taxonomy label rows: {len(labels)}",
+        f"- Sweep taxonomy label counts: {format_label_counts(label_counts)}",
+        f"- Clean V1 labelable moves: {sweep_label_stats['clean_labelable_count']}",
+        f"- No-label moves: {label_counts[SWEEP_NO_LABEL]}",
+        f"- Invalid samples: {label_counts[SWEEP_INVALID_SAMPLE]}",
     ]
     if observation_count < 30:
         lines.append("- Sample size is below 30 observations. This summary is insufficient for strategy rules or validation.")
