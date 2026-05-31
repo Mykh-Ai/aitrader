@@ -21,6 +21,7 @@ def write_market_summary(
     registry_output=None,
     registry_stats: dict[str, int] | None = None,
     event_stats: dict[str, object] | None = None,
+    observation_stats: dict[str, int] | None = None,
 ) -> None:
     latest_close_value = None if feed.empty else float(feed.iloc[-1]["ClosePrice"])
     latest_close = "" if latest_close_value is None else f"{latest_close_value:.8g}"
@@ -46,6 +47,12 @@ def write_market_summary(
         "unresolved_sweep_by_side": "BUY_SIDE=0, SELL_SIDE=0",
         "unresolved_sweep_by_data_quality": "RAW=0, RECOVERED_DEGRADED=0",
         "crossed_without_sweep_evidence": 0,
+    }
+    observation_stats = observation_stats or {
+        "total": 0,
+        "complete": 0,
+        "incomplete": 0,
+        "window_bars": 30,
     }
     lines = [
         "# Market State Monitor Summary",
@@ -98,6 +105,10 @@ def write_market_summary(
             "- Crossed zones without sufficient sweep evidence: "
             f"{event_stats.get('crossed_without_sweep_evidence', 0)}"
         ),
+        f"- Post-sweep observations: {observation_stats.get('total', 0)}",
+        f"- Complete post-sweep observations: {observation_stats.get('complete', 0)}",
+        f"- Incomplete post-sweep observations: {observation_stats.get('incomplete', 0)}",
+        f"- Observation window bars: {observation_stats.get('window_bars', 30)}",
         "",
         "## Boundary Statement",
         "",
