@@ -11,6 +11,12 @@ from market_monitor.events import (
     build_market_move_groups,
     event_stats,
 )
+from market_monitor.label_taxonomy import (
+    SWEEP_LABEL_SUMMARY_COLUMNS,
+    SWEEP_LABEL_TAXONOMY_COLUMNS,
+    build_sweep_label_frames,
+    label_stats,
+)
 from market_monitor.liquidity_zones import LIQUIDITY_MAP_COLUMNS, build_liquidity_map
 from market_monitor.post_sweep_observation import (
     POST_SWEEP_OBSERVATION_COLUMNS,
@@ -77,6 +83,8 @@ REQUIRED_CSV_SCHEMAS = {
     "event_log.csv": EVENT_LOG_COLUMNS,
     "market_move_groups.csv": MARKET_MOVE_GROUP_COLUMNS,
     "post_sweep_observation.csv": POST_SWEEP_OBSERVATION_COLUMNS,
+    "sweep_label_taxonomy.csv": SWEEP_LABEL_TAXONOMY_COLUMNS,
+    "sweep_label_summary.csv": SWEEP_LABEL_SUMMARY_COLUMNS,
     "liquidity_zone_registry.csv": REGISTRY_COLUMNS,
 }
 
@@ -115,6 +123,10 @@ def write_outputs(
         feed=feed,
         volume_delta_state=volume_delta_state,
     )
+    sweep_label_taxonomy, sweep_label_summary = build_sweep_label_frames(
+        observations=post_sweep_observation,
+        market_move_groups=market_move_groups,
+    )
     market_state_timeline = build_market_state_timeline(feed)
     accumulation_zones = pd.DataFrame(columns=ACCUMULATION_ZONES_COLUMNS)
 
@@ -127,6 +139,8 @@ def write_outputs(
         "event_log.csv": event_log,
         "market_move_groups.csv": market_move_groups,
         "post_sweep_observation.csv": post_sweep_observation,
+        "sweep_label_taxonomy.csv": sweep_label_taxonomy,
+        "sweep_label_summary.csv": sweep_label_summary,
         "liquidity_zone_registry.csv": liquidity_zone_registry,
     }
     for filename, columns in REQUIRED_CSV_SCHEMAS.items():
@@ -151,6 +165,7 @@ def write_outputs(
         registry_stats=registry_stats,
         event_stats=event_stats(event_log),
         observation_stats=observation_stats(post_sweep_observation),
+        label_stats=label_stats(sweep_label_taxonomy),
     )
 
     return frames

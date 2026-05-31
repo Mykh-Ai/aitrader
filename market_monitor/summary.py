@@ -22,6 +22,7 @@ def write_market_summary(
     registry_stats: dict[str, int] | None = None,
     event_stats: dict[str, object] | None = None,
     observation_stats: dict[str, int] | None = None,
+    label_stats: dict[str, object] | None = None,
 ) -> None:
     latest_close_value = None if feed.empty else float(feed.iloc[-1]["ClosePrice"])
     latest_close = "" if latest_close_value is None else f"{latest_close_value:.8g}"
@@ -63,6 +64,13 @@ def write_market_summary(
         "incomplete": 0,
         "window_bars": 30,
     }
+    label_stats = label_stats or {
+        "label_counts": {},
+        "clean_labelable_count": 0,
+        "no_label_count": 0,
+        "invalid_sample_count": 0,
+    }
+    label_counts = label_stats.get("label_counts", {})
     lines = [
         "# Market State Monitor Summary",
         "",
@@ -137,6 +145,11 @@ def write_market_summary(
         f"- Complete post-sweep observations: {observation_stats.get('complete', 0)}",
         f"- Incomplete post-sweep observations: {observation_stats.get('incomplete', 0)}",
         f"- Observation window bars: {observation_stats.get('window_bars', 30)}",
+        "- Sweep taxonomy labels: enabled",
+        f"- Sweep taxonomy label counts: {_format_counts(label_counts)}",
+        f"- Clean V1 labelable moves: {label_stats.get('clean_labelable_count', 0)}",
+        f"- Sweep no-label moves: {label_stats.get('no_label_count', 0)}",
+        f"- Sweep invalid samples: {label_stats.get('invalid_sample_count', 0)}",
         "",
         "## Boundary Statement",
         "",
@@ -186,6 +199,12 @@ def _column_counts(frame: pd.DataFrame, column: str) -> str:
         return "none"
     counts = frame[column].value_counts().sort_index()
     return ", ".join(f"{name}={count}" for name, count in counts.items())
+
+
+def _format_counts(counts: dict[str, int]) -> str:
+    if not counts:
+        return "none"
+    return ", ".join(f"{name}={int(count)}" for name, count in sorted(counts.items()))
 
 
 def _clustered_count(liquidity_map: pd.DataFrame) -> int:

@@ -200,7 +200,7 @@ def _write_feed(path: Path, day: str, *, close_base: float, degraded: bool = Fal
 def test_batch_boundary_statement_is_exact():
     assert BATCH_BOUNDARY_STATEMENT == (
         "This batch research summary is descriptive only. It does not classify "
-        "rejected/accepted sweeps, does not generate trading signals, does not "
+        "trade outcomes, does not generate trading signals, does not "
         "define entries/exits, does not calculate PnL, and does not trigger "
         "Backtester or Executor behavior."
     )

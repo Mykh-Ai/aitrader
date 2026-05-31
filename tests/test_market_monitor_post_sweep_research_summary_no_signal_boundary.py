@@ -23,8 +23,6 @@ FORBIDDEN_COLUMNS = {
     "pnl",
     "win",
     "loss",
-    "rejected",
-    "accepted",
 }
 
 
