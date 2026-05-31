@@ -25,6 +25,10 @@ def write_market_summary(
     sell_zones = _nearest_active_zones(liquidity_map, "SELL_SIDE", latest_close_value)
     touched_count = _status_count(liquidity_map, "TOUCHED")
     invalidated_count = _status_count(liquidity_map, "INVALIDATED")
+    tier_counts = _column_counts(liquidity_map, "confidence_tier")
+    status_counts = _column_counts(liquidity_map, "status")
+    clustered_count = _clustered_count(liquidity_map)
+    top_source_types = _top_source_types(liquidity_map)
     lines = [
         "# Market State Monitor Summary",
         "",
@@ -34,14 +38,18 @@ def write_market_summary(
         f"- Output directory: {output_dir}",
         f"- Latest close price: {latest_close}",
         f"- Data quality summary: {quality_summary}",
+        f"- Number of structure levels: {len(structure_levels)}",
+        f"- Number of liquidity zones: {len(liquidity_map)}",
+        f"- Zones by confidence tier: {tier_counts}",
+        f"- Zones by status: {status_counts}",
+        f"- Number of merged/clustered zones: {clustered_count}",
         f"- Nearest active buy-side liquidity zones: {buy_zones}",
         f"- Nearest active sell-side liquidity zones: {sell_zones}",
         (
             "- Touched/invalidated liquidity zones: "
             f"touched={touched_count}, invalidated={invalidated_count}"
         ),
-        f"- Number of structure levels: {len(structure_levels)}",
-        f"- Number of liquidity zones: {len(liquidity_map)}",
+        f"- Top source types: {top_source_types}",
         f"- Number of events: {len(event_log)}",
         "",
         "## Boundary Statement",
@@ -85,3 +93,29 @@ def _status_count(liquidity_map: pd.DataFrame, status: str) -> int:
     if liquidity_map.empty:
         return 0
     return int((liquidity_map["status"] == status).sum())
+
+
+def _column_counts(frame: pd.DataFrame, column: str) -> str:
+    if frame.empty or column not in frame.columns:
+        return "none"
+    counts = frame[column].value_counts().sort_index()
+    return ", ".join(f"{name}={count}" for name, count in counts.items())
+
+
+def _clustered_count(liquidity_map: pd.DataFrame) -> int:
+    if liquidity_map.empty:
+        return 0
+    source_counts = liquidity_map["source_level_ids"].fillna("").map(
+        lambda value: len([part for part in str(value).split("|") if part])
+    )
+    explicit_cluster = liquidity_map["zone_type"].fillna("").str.startswith("CLUSTERED_")
+    return int(((source_counts > 1) | explicit_cluster).sum())
+
+
+def _top_source_types(liquidity_map: pd.DataFrame) -> str:
+    if liquidity_map.empty:
+        return "none"
+    counts = liquidity_map["zone_type"].value_counts().sort_values(
+        ascending=False, kind="mergesort"
+    )
+    return ", ".join(f"{name}={count}" for name, count in counts.head(5).items())

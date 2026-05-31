@@ -13,8 +13,8 @@ from market_monitor.summary import write_market_summary
 def test_buy_side_zone_below_latest_close_is_invalidated_and_not_summarized(tmp_path: Path):
     levels = pd.DataFrame(
         [
-            _level("level_below", "BUY_SIDE", "SESSION_HIGH", 100.0),
-            _level("level_above", "BUY_SIDE", "SESSION_HIGH", 102.0),
+            _level("level_below", "BUY_SIDE", "SESSION_HIGH", 80.0),
+            _level("level_above", "BUY_SIDE", "SESSION_HIGH", 120.0),
         ]
     )
     zones = build_liquidity_map(levels, latest_close=101.0)
@@ -26,16 +26,16 @@ def test_buy_side_zone_below_latest_close_is_invalidated_and_not_summarized(tmp_
 
     summary = _write_summary(tmp_path, zones, latest_close=101.0)
     assert "level_below" not in summary
-    assert "zone_000001@100" not in summary
-    assert "Nearest active buy-side liquidity zones: zone_000002@102 LOW" in summary
+    assert "zone_000001@80" not in summary
+    assert "Nearest active buy-side liquidity zones: zone_000002@120 LOW" in summary
     assert "Touched/invalidated liquidity zones: touched=0, invalidated=1" in summary
 
 
 def test_sell_side_zone_above_latest_close_is_invalidated_and_not_summarized(tmp_path: Path):
     levels = pd.DataFrame(
         [
-            _level("level_below", "SELL_SIDE", "SESSION_LOW", 99.0),
-            _level("level_above", "SELL_SIDE", "SESSION_LOW", 102.0),
+            _level("level_below", "SELL_SIDE", "SESSION_LOW", 80.0),
+            _level("level_above", "SELL_SIDE", "SESSION_LOW", 122.0),
         ]
     )
     zones = build_liquidity_map(levels, latest_close=101.0)
@@ -47,8 +47,8 @@ def test_sell_side_zone_above_latest_close_is_invalidated_and_not_summarized(tmp
 
     summary = _write_summary(tmp_path, zones, latest_close=101.0)
     assert "level_above" not in summary
-    assert "zone_000002@102" not in summary
-    assert "Nearest active sell-side liquidity zones: zone_000001@99 LOW" in summary
+    assert "zone_000002@122" not in summary
+    assert "Nearest active sell-side liquidity zones: zone_000001@80 LOW" in summary
     assert "Touched/invalidated liquidity zones: touched=0, invalidated=1" in summary
 
 
