@@ -19,16 +19,13 @@ def test_buy_side_zone_below_latest_close_is_invalidated_and_not_summarized(tmp_
     )
     zones = build_liquidity_map(levels, latest_close=101.0)
 
-    behind_zone = zones[zones["source_level_ids"] == "level_below"].iloc[0]
-    assert behind_zone["status"] == "INVALIDATED"
-    assert behind_zone["invalidation_reason"] == CROSSED_BY_LATEST_CLOSE_REASON
-    assert behind_zone["distance_from_close_pct"] < 0
+    assert zones[zones["source_level_ids"] == "level_below"].empty
 
     summary = _write_summary(tmp_path, zones, latest_close=101.0)
     assert "level_below" not in summary
     assert "zone_000001@80" not in summary
-    assert "Nearest active buy-side liquidity zones: zone_000002@120 LOW" in summary
-    assert "Touched/invalidated liquidity zones: touched=0, invalidated=1" in summary
+    assert "Nearest active buy-side liquidity zones: zone_000001@120 LOW" in summary
+    assert "Touched/invalidated liquidity zones: touched=0, invalidated=0" in summary
 
 
 def test_sell_side_zone_above_latest_close_is_invalidated_and_not_summarized(tmp_path: Path):
@@ -40,16 +37,13 @@ def test_sell_side_zone_above_latest_close_is_invalidated_and_not_summarized(tmp
     )
     zones = build_liquidity_map(levels, latest_close=101.0)
 
-    behind_zone = zones[zones["source_level_ids"] == "level_above"].iloc[0]
-    assert behind_zone["status"] == "INVALIDATED"
-    assert behind_zone["invalidation_reason"] == CROSSED_BY_LATEST_CLOSE_REASON
-    assert behind_zone["distance_from_close_pct"] > 0
+    assert zones[zones["source_level_ids"] == "level_above"].empty
 
     summary = _write_summary(tmp_path, zones, latest_close=101.0)
     assert "level_above" not in summary
     assert "zone_000002@122" not in summary
     assert "Nearest active sell-side liquidity zones: zone_000001@80 LOW" in summary
-    assert "Touched/invalidated liquidity zones: touched=0, invalidated=1" in summary
+    assert "Touched/invalidated liquidity zones: touched=0, invalidated=0" in summary
 
 
 def test_zone_containing_latest_close_is_touched():

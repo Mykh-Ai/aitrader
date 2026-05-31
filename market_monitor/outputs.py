@@ -7,6 +7,12 @@ import pandas as pd
 from market_monitor.liquidity_zones import LIQUIDITY_MAP_COLUMNS, build_liquidity_map
 from market_monitor.structure import STRUCTURE_LEVEL_COLUMNS, build_structure_levels
 from market_monitor.summary import write_market_summary
+from market_monitor.zone_registry import (
+    REGISTRY_COLUMNS,
+    build_zone_registry,
+    load_registry,
+    write_registry,
+)
 
 
 MARKET_STATE_TIMELINE_COLUMNS = [
@@ -77,6 +83,7 @@ REQUIRED_CSV_SCHEMAS = {
     "volume_delta_state.csv": VOLUME_DELTA_STATE_COLUMNS,
     "accumulation_zones.csv": ACCUMULATION_ZONES_COLUMNS,
     "event_log.csv": EVENT_LOG_COLUMNS,
+    "liquidity_zone_registry.csv": REGISTRY_COLUMNS,
 }
 
 
@@ -86,12 +93,21 @@ def write_outputs(
     *,
     run_timestamp: str,
     input_files: list[str],
+    registry_in_path: Path | None = None,
+    registry_out_path: Path | None = None,
 ) -> dict[str, pd.DataFrame]:
     output_dir.mkdir(parents=True, exist_ok=True)
     latest_close = None if feed.empty else float(feed.iloc[-1]["ClosePrice"])
+    registry_out_path = registry_out_path or output_dir / "liquidity_zone_registry.csv"
 
     structure_levels = build_structure_levels(feed)
     liquidity_map = build_liquidity_map(structure_levels, latest_close)
+    registry_in = load_registry(registry_in_path)
+    liquidity_zone_registry, registry_stats = build_zone_registry(
+        liquidity_map=liquidity_map,
+        feed=feed,
+        registry_in=registry_in,
+    )
     volume_delta_state = build_volume_delta_state(feed)
     market_state_timeline = build_market_state_timeline(feed)
     accumulation_zones = pd.DataFrame(columns=ACCUMULATION_ZONES_COLUMNS)
@@ -104,11 +120,15 @@ def write_outputs(
         "volume_delta_state.csv": volume_delta_state,
         "accumulation_zones.csv": accumulation_zones,
         "event_log.csv": event_log,
+        "liquidity_zone_registry.csv": liquidity_zone_registry,
     }
     for filename, columns in REQUIRED_CSV_SCHEMAS.items():
         frame = frames[filename].reindex(columns=columns)
-        frame.to_csv(output_dir / filename, index=False)
+        output_path = registry_out_path if filename == "liquidity_zone_registry.csv" else output_dir / filename
+        frame.to_csv(output_path, index=False)
         frames[filename] = frame
+    if registry_out_path != output_dir / "liquidity_zone_registry.csv":
+        write_registry(liquidity_zone_registry, output_dir / "liquidity_zone_registry.csv")
 
     write_market_summary(
         output_dir / "market_summary.md",
@@ -119,6 +139,9 @@ def write_outputs(
         run_timestamp=run_timestamp,
         input_files=input_files,
         output_dir=output_dir,
+        registry_input=registry_in_path,
+        registry_output=registry_out_path,
+        registry_stats=registry_stats,
     )
 
     return frames
