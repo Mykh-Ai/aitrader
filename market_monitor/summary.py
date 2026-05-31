@@ -42,6 +42,10 @@ def write_market_summary(
         "crossed_unclassified": 0,
         "merged": 0,
         "expired": 0,
+        "unresolved_sweep": 0,
+        "unresolved_sweep_by_side": "BUY_SIDE=0, SELL_SIDE=0",
+        "unresolved_sweep_by_data_quality": "RAW=0, RECOVERED_DEGRADED=0",
+        "crossed_without_sweep_evidence": 0,
     }
     lines = [
         "# Market State Monitor Summary",
@@ -81,6 +85,19 @@ def write_market_summary(
         f"- Crossed unclassified zones: {event_stats.get('crossed_unclassified', 0)}",
         f"- Merged zones with events: {event_stats.get('merged', 0)}",
         f"- Expired zones with events: {event_stats.get('expired', 0)}",
+        f"- Unresolved liquidity sweep candidates: {event_stats.get('unresolved_sweep', 0)}",
+        (
+            "- Unresolved sweep candidates by side: "
+            f"{event_stats.get('unresolved_sweep_by_side', 'BUY_SIDE=0, SELL_SIDE=0')}"
+        ),
+        (
+            "- Unresolved sweep candidates by data quality: "
+            f"{event_stats.get('unresolved_sweep_by_data_quality', 'RAW=0, RECOVERED_DEGRADED=0')}"
+        ),
+        (
+            "- Crossed zones without sufficient sweep evidence: "
+            f"{event_stats.get('crossed_without_sweep_evidence', 0)}"
+        ),
         "",
         "## Boundary Statement",
         "",
