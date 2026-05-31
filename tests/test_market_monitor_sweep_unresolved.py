@@ -91,6 +91,33 @@ def test_degraded_data_does_not_use_untrusted_activity_fields_as_evidence():
     assert event_log["event_type"].tolist() == ["LIQUIDITY_ZONE_CROSSED_UNCLASSIFIED"]
 
 
+def test_too_wide_zone_does_not_emit_unresolved_sweep_candidate():
+    event_log = _event_log(
+        side="BUY_SIDE",
+        first_seen_at="2026-05-08T00:00:00Z",
+        event_high=125,
+        event_low=90,
+        volume_zscore=1.6,
+        precision_status="TOO_WIDE",
+    )
+
+    assert event_log["event_type"].tolist() == ["LIQUIDITY_ZONE_CROSSED_UNCLASSIFIED"]
+
+
+def test_low_precision_zone_keeps_precision_status_in_unresolved_evidence():
+    event_log = _event_log(
+        side="BUY_SIDE",
+        first_seen_at="2026-05-08T00:00:00Z",
+        event_high=125,
+        event_low=90,
+        volume_zscore=1.6,
+        precision_status="LOW_PRECISION",
+    )
+
+    unresolved = event_log[event_log["event_type"] == "LIQUIDITY_SWEEP_UNRESOLVED"].iloc[0]
+    assert '"precision_status":"LOW_PRECISION"' in unresolved["evidence_json"]
+
+
 def test_prior_crossed_zone_does_not_emit_unresolved_without_new_current_run_transition():
     previous_registry = pd.DataFrame(
         [_registry_row("BUY_SIDE", "2026-05-07T00:00:00Z", "RAW")]
@@ -124,8 +151,9 @@ def _event_log(
     delta_zscore=0,
     oi_change=0,
     data_quality="RAW",
+    precision_status="PRECISE",
 ):
-    registry = pd.DataFrame([_registry_row(side, first_seen_at, data_quality)])
+    registry = pd.DataFrame([_registry_row(side, first_seen_at, data_quality, precision_status)])
     initial_high = 95 if side == "BUY_SIDE" else 120
     initial_low = 90 if side == "BUY_SIDE" else 115
     feed = pd.DataFrame(
@@ -158,7 +186,7 @@ def _event_log(
     )
 
 
-def _registry_row(side, first_seen_at, data_quality):
+def _registry_row(side, first_seen_at, data_quality, precision_status="PRECISE"):
     return {
         "zone_id": "zone_000001",
         "first_seen_at": first_seen_at,
@@ -184,6 +212,7 @@ def _registry_row(side, first_seen_at, data_quality):
         "merged_into_zone_id": "",
         "data_quality": data_quality,
         "invalidation_reason": "",
+        "precision_status": precision_status,
     }
 
 

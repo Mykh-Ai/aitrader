@@ -5,7 +5,9 @@ from dataclasses import dataclass
 import pandas as pd
 
 from market_monitor.score_instrumentation import (
+    HARD_WIDE_ZONE_WIDTH_PCT,
     SCORE_INSTRUMENTATION_COLUMNS,
+    precision_status_for_width,
     score_instrumentation_fields,
 )
 
@@ -143,7 +145,10 @@ def _merge_zones(
                 cluster = [zone]
                 continue
             current_upper = max(float(item["price_upper"]) for item in cluster)
-            if float(zone["price_lower"]) <= current_upper + merge_tolerance:
+            if (
+                float(zone["price_lower"]) <= current_upper + merge_tolerance
+                and _cluster_width_pct(cluster + [zone]) < HARD_WIDE_ZONE_WIDTH_PCT
+            ):
                 cluster.append(zone)
             else:
                 merged.append(_collapse_cluster(cluster))
@@ -181,6 +186,12 @@ def _collapse_cluster(cluster: list[dict[str, object]]) -> dict[str, object]:
             cluster_member_count=sum(evidence.cluster_member_count for evidence in evidence_items),
         ),
     }
+
+
+def _cluster_width_pct(cluster: list[dict[str, object]]) -> float:
+    lower = min(float(zone["price_lower"]) for zone in cluster)
+    upper = max(float(zone["price_upper"]) for zone in cluster)
+    return _zone_width_pct(lower, upper, (lower + upper) / 2)
 
 
 def _merged_zone_type(side: str, zone_types: list[str]) -> str:
@@ -301,6 +312,7 @@ def _confidence_components(evidence: SourceEvidence, zone_width_pct: float = 0.0
         + data_quality_penalty
     )
     final_score = max(0, min(100, pre_clamp_score))
+    precision_status = precision_status_for_width(zone_width_pct)
     return {
         "base_score": 0,
         "timeframe_score": h4_component + h1_component,
@@ -317,6 +329,8 @@ def _confidence_components(evidence: SourceEvidence, zone_width_pct: float = 0.0
         "cluster_bonus": 0,
         "touch_bonus": touch_bonus,
         "width_penalty": width_penalty,
+        "precision_status": precision_status,
+        "hard_wide_zone_width_pct": HARD_WIDE_ZONE_WIDTH_PCT,
         "carry_forward_decay_or_penalty": None,
         "data_quality_penalty": data_quality_penalty,
         "carry_forward_prior_score": None,

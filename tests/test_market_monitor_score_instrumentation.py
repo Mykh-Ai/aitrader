@@ -14,11 +14,11 @@ def test_liquidity_map_includes_score_instrumentation_columns_and_valid_json():
     zones = build_liquidity_map(
         pd.DataFrame(
             [
-                _level("level_000001", "BUY_SIDE", "H1", "H1_SWING_HIGH", 100.0),
-                _level("level_000002", "BUY_SIDE", "H4", "H4_SWING_HIGH", 100.04),
+                _level("level_000001", "BUY_SIDE", "H1", "H1_SWING_HIGH", 70000.0),
+                _level("level_000002", "BUY_SIDE", "H4", "H4_SWING_HIGH", 70020.0),
             ]
         ),
-        latest_close=90.0,
+        latest_close=65000.0,
     )
 
     assert all(column in zones.columns for column in SCORE_INSTRUMENTATION_COLUMNS)
@@ -34,9 +34,13 @@ def test_liquidity_map_includes_score_instrumentation_columns_and_valid_json():
     assert components["source_diversity_bonus"] == 0
     assert components["raw_source_count_bonus"] == 0
     assert components["source_count_bonus"] == 0
-    assert components["width_penalty"] == -12
+    assert components["width_penalty"] == 0
+    assert components["precision_status"] == "PRECISE"
+    assert components["hard_wide_zone_width_pct"] == 0.5
     assert row["source_level_count"] == 2
+    assert row["source_ref_count"] == 2
     assert row["cluster_member_count"] == 2
+    assert row["precision_status"] == "PRECISE"
     assert bool(row["has_h1_source"]) is True
     assert bool(row["has_h4_source"]) is True
     assert bool(row["has_session_source"]) is False
@@ -215,7 +219,7 @@ def test_zone_width_penalty_buckets_are_visible():
         ),
         latest_close=65000.0,
     ).iloc[0]
-    strong_penalty = build_liquidity_map(
+    blocked_too_wide = build_liquidity_map(
         pd.DataFrame(
             [
                 _level("level_000001", "BUY_SIDE", "H1", "H1_SWING_HIGH", 70000.0),
@@ -227,11 +231,14 @@ def test_zone_width_penalty_buckets_are_visible():
             ]
         ),
         latest_close=65000.0,
-    ).iloc[0]
+    )
 
     assert json.loads(no_penalty["score_components_json"])["width_penalty"] == 0
+    assert no_penalty["precision_status"] == "PRECISE"
     assert json.loads(moderate_penalty["score_components_json"])["width_penalty"] == -6
-    assert json.loads(strong_penalty["score_components_json"])["width_penalty"] == -12
+    assert moderate_penalty["precision_status"] == "LOW_PRECISION"
+    assert all(blocked_too_wide["zone_width_pct"] < 0.50)
+    assert "TOO_WIDE" not in set(blocked_too_wide["precision_status"])
 
 
 def test_equal_and_pdh_pdl_source_flags_are_set_from_level_type_evidence():

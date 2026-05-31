@@ -59,13 +59,15 @@ def test_high_confidence_h4_cluster_is_expiry_exempt():
                 source_timeframes="H1|H4",
                 confidence_score=90,
                 confidence_tier="HIGH",
+                lower=70000,
+                upper=70100,
             )
         ]
     )
 
     registry, _ = build_zone_registry(
         liquidity_map=_liquidity_map([]),
-        feed=_path_feed([90], day="2026-05-16"),
+        feed=_path_feed([65000], day="2026-05-16"),
         registry_in=registry_in,
     )
 
@@ -74,13 +76,13 @@ def test_high_confidence_h4_cluster_is_expiry_exempt():
 
 def test_worst_data_quality_survives_merge():
     registry_in = pd.DataFrame(
-        [_registry_row("zone_000001", data_quality="RECOVERED_DEGRADED")]
+        [_registry_row("zone_000001", lower=70000, upper=70080, data_quality="RECOVERED_DEGRADED")]
     )
-    current = _liquidity_map([_zone("zone_000002", "BUY_SIDE", 105, 115, "RAW")])
+    current = _liquidity_map([_zone("zone_000002", "BUY_SIDE", 70040, 70120, "RAW")])
 
     registry, _ = build_zone_registry(
         liquidity_map=current,
-        feed=_path_feed([90]),
+        feed=_path_feed([65000]),
         registry_in=registry_in,
     )
 
@@ -96,6 +98,8 @@ def _registry_row(
     confidence_score=65,
     confidence_tier="MEDIUM",
     data_quality="RAW",
+    lower=100,
+    upper=110,
 ):
     return {
         "zone_id": zone_id,
@@ -104,9 +108,9 @@ def _registry_row(
         "last_updated_at": "2026-05-07T23:59:00Z",
         "side": "BUY_SIDE",
         "zone_type": zone_type,
-        "price_lower": 100,
-        "price_upper": 110,
-        "price_mid": 105,
+        "price_lower": lower,
+        "price_upper": upper,
+        "price_mid": (lower + upper) / 2,
         "source_level_ids": "level_old",
         "source_timeframes": source_timeframes,
         "status": "ACTIVE",

@@ -6,7 +6,11 @@ import pandas as pd
 
 from market_monitor.liquidity_zones import LIQUIDITY_MAP_COLUMNS
 from market_monitor.score_instrumentation import (
+    HARD_WIDE_ZONE_WIDTH_PCT,
+    PRECISION_LOW,
+    PRECISION_TOO_WIDE,
     SCORE_INSTRUMENTATION_COLUMNS,
+    precision_status_for_width,
     score_instrumentation_fields,
 )
 
@@ -108,6 +112,8 @@ def forward_liquidity_from_registry(
 ) -> pd.DataFrame:
     registry = _normalize_registry(registry)
     active = registry[registry["status"] == "ACTIVE"].copy()
+    if "precision_status" in active.columns:
+        active = active[active["precision_status"] != PRECISION_TOO_WIDE]
     if latest_close is not None:
         close = float(latest_close)
         active = active[
@@ -204,7 +210,10 @@ def _merge_registry_candidates(candidates: pd.DataFrame) -> tuple[pd.DataFrame, 
                 continue
             tolerance = _merge_tolerance(cluster + [row])
             current_upper = max(float(item["price_upper"]) for item in cluster)
-            if float(row["price_lower"]) <= current_upper + tolerance:
+            if (
+                float(row["price_lower"]) <= current_upper + tolerance
+                and _registry_cluster_width_pct(cluster + [row]) < HARD_WIDE_ZONE_WIDTH_PCT
+            ):
                 cluster.append(row)
             else:
                 active, merged = _collapse_registry_cluster(cluster)
@@ -288,6 +297,12 @@ def _collapse_registry_cluster(
     return active, merged
 
 
+def _registry_cluster_width_pct(rows: list[dict[str, object]]) -> float:
+    lower = min(float(row["price_lower"]) for row in rows)
+    upper = max(float(row["price_upper"]) for row in rows)
+    return _zone_width_pct(lower, upper, (lower + upper) / 2)
+
+
 def _merge_target(cluster: list[dict[str, object]]) -> dict[str, object]:
     return sorted(cluster, key=lambda row: (str(row["first_seen_at"]), str(row["zone_id"])))[0]
 
@@ -369,6 +384,9 @@ def _expiry_exempt(row: dict[str, object]) -> bool:
     zone_type = str(row["zone_type"])
     source_timeframes = set(str(row["source_timeframes"]).split("|"))
     confidence_score = int(float(row["confidence_score"]))
+    precision_status = _row_precision_status(row)
+    if precision_status in {PRECISION_LOW, PRECISION_TOO_WIDE}:
+        return False
     if row["confidence_tier"] == "HIGH" and "H4" in source_timeframes:
         return True
     if "PDH" in zone_type or "PDL" in zone_type:
@@ -397,6 +415,7 @@ def _normalize_registry(registry: pd.DataFrame | None) -> pd.DataFrame:
         "cross_count",
         "active_days",
         "source_level_count",
+        "source_ref_count",
         "cluster_member_count",
         "zone_width",
         "zone_width_pct",
@@ -405,6 +424,23 @@ def _normalize_registry(registry: pd.DataFrame | None) -> pd.DataFrame:
     text_columns = [column for column in REGISTRY_COLUMNS if column not in frame.select_dtypes("number").columns]
     for column in text_columns:
         frame[column] = frame[column].fillna("").astype(str)
+    if "precision_status" in frame.columns:
+        blank_precision = frame["precision_status"].astype(str).str.len().eq(0)
+        frame.loc[blank_precision, "precision_status"] = frame.loc[blank_precision].apply(
+            lambda row: precision_status_for_width(
+                _zone_width_pct(
+                    float(row["price_lower"]),
+                    float(row["price_upper"]),
+                    float(row["price_mid"]),
+                )
+            ),
+            axis=1,
+        )
+    if "source_ref_count" in frame.columns and "source_level_count" in frame.columns:
+        missing_ref_count = pd.to_numeric(frame["source_ref_count"], errors="coerce").fillna(0).eq(0)
+        frame.loc[missing_ref_count, "source_ref_count"] = frame.loc[
+            missing_ref_count, "source_level_count"
+        ]
     return frame[REGISTRY_COLUMNS]
 
 
@@ -472,7 +508,7 @@ def _merged_confidence_components(
         else 0
     )
     width_penalty = _width_penalty(
-        _zone_width_pct(
+        zone_width_pct := _zone_width_pct(
             min(float(row["price_lower"]) for row in rows),
             max(float(row["price_upper"]) for row in rows),
             (
@@ -501,6 +537,7 @@ def _merged_confidence_components(
         + data_quality_penalty
     )
     final_score = max(0, min(100, pre_clamp_score))
+    precision_status = precision_status_for_width(zone_width_pct)
     return {
         "base_score": 0,
         "timeframe_score": h4_component,
@@ -516,6 +553,8 @@ def _merged_confidence_components(
         "cluster_bonus": 0,
         "touch_bonus": None,
         "width_penalty": width_penalty,
+        "precision_status": precision_status,
+        "hard_wide_zone_width_pct": HARD_WIDE_ZONE_WIDTH_PCT,
         "data_quality_penalty": data_quality_penalty,
         "carry_forward_decay_or_penalty": carry_forward_decay_or_penalty,
         "carry_forward_prior_score": prior_score,
@@ -570,6 +609,19 @@ def _width_penalty(zone_width_pct: float) -> int:
     if zone_width_pct >= 0.25:
         return -6
     return 0
+
+
+def _row_precision_status(row: dict[str, object]) -> str:
+    precision_status = str(row.get("precision_status", "") or "")
+    if precision_status:
+        return precision_status
+    return precision_status_for_width(
+        _zone_width_pct(
+            float(row.get("price_lower", 0) or 0),
+            float(row.get("price_upper", 0) or 0),
+            float(row.get("price_mid", 0) or 0),
+        )
+    )
 
 
 def _zone_width_pct(price_lower: float, price_upper: float, price_mid: float) -> float:

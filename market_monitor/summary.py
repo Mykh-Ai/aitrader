@@ -31,6 +31,7 @@ def write_market_summary(
     touched_count = _status_count(liquidity_map, "TOUCHED")
     invalidated_count = _status_count(liquidity_map, "INVALIDATED")
     tier_counts = _column_counts(liquidity_map, "confidence_tier")
+    precision_counts = _column_counts(liquidity_map, "precision_status")
     status_counts = _column_counts(liquidity_map, "status")
     clustered_count = _clustered_count(liquidity_map)
     top_source_types = _top_source_types(liquidity_map)
@@ -76,6 +77,7 @@ def write_market_summary(
         f"- Number of structure levels: {len(structure_levels)}",
         f"- Number of liquidity zones: {len(liquidity_map)}",
         f"- Zones by confidence tier: {tier_counts}",
+        f"- Zones by precision status: {precision_counts}",
         f"- Zones by status: {status_counts}",
         f"- Number of merged/clustered zones: {clustered_count}",
         f"- Nearest active buy-side liquidity zones: {buy_zones}",
