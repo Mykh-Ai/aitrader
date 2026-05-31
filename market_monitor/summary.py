@@ -46,10 +46,14 @@ def write_market_summary(
         "merged": 0,
         "expired": 0,
         "unresolved_sweep": 0,
-        "unresolved_sweep_by_side": "BUY_SIDE=0, SELL_SIDE=0",
-        "unresolved_sweep_by_data_quality": "RAW=0, RECOVERED_DEGRADED=0",
-        "crossed_without_sweep_evidence": 0,
-    }
+            "unresolved_sweep_by_side": "BUY_SIDE=0, SELL_SIDE=0",
+            "unresolved_sweep_by_data_quality": "RAW=0, RECOVERED_DEGRADED=0",
+            "crossed_without_sweep_evidence": 0,
+            "grouped_market_move_count": 0,
+            "multi_event_market_move_count": 0,
+            "avg_unresolved_events_per_market_move": "0",
+            "max_unresolved_events_per_market_move": 0,
+        }
     observation_stats = observation_stats or {
         "total": 0,
         "complete": 0,
@@ -112,6 +116,16 @@ def write_market_summary(
         (
             "- Crossed zones without sufficient sweep evidence: "
             f"{event_stats.get('crossed_without_sweep_evidence', 0)}"
+        ),
+        f"- Grouped unresolved market moves: {event_stats.get('grouped_market_move_count', 0)}",
+        f"- Multi-event market moves: {event_stats.get('multi_event_market_move_count', 0)}",
+        (
+            "- Average unresolved events per market move: "
+            f"{event_stats.get('avg_unresolved_events_per_market_move', '0')}"
+        ),
+        (
+            "- Max unresolved events per market move: "
+            f"{event_stats.get('max_unresolved_events_per_market_move', 0)}"
         ),
         f"- Post-sweep observations: {observation_stats.get('total', 0)}",
         f"- Complete post-sweep observations: {observation_stats.get('complete', 0)}",

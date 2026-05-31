@@ -52,6 +52,8 @@ def test_runs_multiple_days_carries_registry_and_writes_batch_artifacts(tmp_path
 
     assert (output_dir / "daily" / "2026-05-07" / "market_summary.md").exists()
     assert (output_dir / "daily" / "2026-05-08" / "market_summary.md").exists()
+    assert (output_dir / "daily" / "2026-05-07" / "market_move_groups.csv").exists()
+    assert (output_dir / "daily" / "2026-05-08" / "market_move_groups.csv").exists()
     assert (output_dir / "batch_manifest.csv").exists()
     assert (output_dir / "batch_summary.md").exists()
     assert (output_dir / "research_summary" / "post_sweep_research_summary.md").exists()
@@ -64,6 +66,9 @@ def test_runs_multiple_days_carries_registry_and_writes_batch_artifacts(tmp_path
     assert manifest.loc[0, "registry_out"] == "daily/2026-05-07/liquidity_zone_registry.csv"
     assert manifest.loc[1, "registry_in"] == "daily/2026-05-07/liquidity_zone_registry.csv"
     assert manifest.loc[1, "registry_out"] == "daily/2026-05-08/liquidity_zone_registry.csv"
+    summary = (output_dir / "batch_summary.md").read_text(encoding="utf-8")
+    assert "- Grouped unresolved market moves:" in summary
+    assert "- Multi-event market moves:" in summary
     assert result.daily_output_dirs == (
         output_dir / "daily" / "2026-05-07",
         output_dir / "daily" / "2026-05-08",

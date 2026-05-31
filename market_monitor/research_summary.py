@@ -14,6 +14,9 @@ ROW_SUMMARY_COLUMNS = [
     "observation_id",
     "source_event_id",
     "source_event_timestamp",
+    "market_move_id",
+    "market_move_role",
+    "market_move_event_count",
     "zone_id",
     "side",
     "zone_type",
@@ -173,7 +176,13 @@ def _combined_observations(loaded: list[dict[str, object]]) -> pd.DataFrame:
         return pd.DataFrame(columns=ROW_SUMMARY_COLUMNS)
     out = pd.concat(frames, ignore_index=True)
     out = out.sort_values(
-        ["source_run_dir", "source_event_timestamp", "zone_id", "observation_id"],
+        [
+            "source_run_dir",
+            "source_event_timestamp",
+            "market_move_id",
+            "zone_id",
+            "observation_id",
+        ],
         kind="mergesort",
     ).reset_index(drop=True)
     return out
@@ -202,6 +211,9 @@ def _enrich_from_event_log(observations: pd.DataFrame, event_log_path: Path) -> 
     observations["confidence_tier"] = ""
     observations["source_timeframes"] = ""
     observations["confidence_score"] = ""
+    observations["market_move_id"] = observations.get("market_move_id", "")
+    observations["market_move_role"] = observations.get("market_move_role", "")
+    observations["market_move_event_count"] = observations.get("market_move_event_count", "")
     for column in SCORE_INSTRUMENTATION_COLUMNS:
         observations[column] = observations.get(column, "")
     if not event_log_path.exists():
@@ -216,6 +228,19 @@ def _enrich_from_event_log(observations: pd.DataFrame, event_log_path: Path) -> 
         except json.JSONDecodeError:
             evidence = {}
         evidence_by_event[str(row["event_id"])] = evidence
+    events_by_id = {
+        str(row["event_id"]): row.to_dict()
+        for _, row in event_log.iterrows()
+    }
+    observations["market_move_id"] = observations["source_event_id"].map(
+        lambda event_id: str(events_by_id.get(str(event_id), {}).get("market_move_id", ""))
+    )
+    observations["market_move_role"] = observations["source_event_id"].map(
+        lambda event_id: str(events_by_id.get(str(event_id), {}).get("market_move_role", ""))
+    )
+    observations["market_move_event_count"] = observations["source_event_id"].map(
+        lambda event_id: events_by_id.get(str(event_id), {}).get("market_move_event_count", "")
+    )
     observations["confidence_tier"] = observations["source_event_id"].map(
         lambda event_id: str(evidence_by_event.get(str(event_id), {}).get("confidence_tier", ""))
     )
@@ -253,6 +278,8 @@ def _group_summary(observations: pd.DataFrame) -> pd.DataFrame:
             ("zone_type", "zone_type"),
             ("confidence_tier", "confidence_tier"),
             ("precision_status", "precision_status"),
+            ("market_move_role", "market_move_role"),
+            ("market_move_event_count", "market_move_event_count"),
             ("source_timeframes", "source_timeframes"),
             ("has_h4_source", "has_h4_source"),
             ("has_session_source", "has_session_source"),
@@ -300,6 +327,7 @@ def _markdown_summary(
 ) -> str:
     complete = _complete_mask(observations)
     observation_count = len(observations)
+    move_stats = _market_move_stats(observations)
     lines = [
         "# Post-Sweep Observation Research Summary",
         "",
@@ -315,6 +343,16 @@ def _markdown_summary(
         "",
         f"- Event counts by type: {_format_counts(event_counts)}",
         f"- Unresolved sweep count: {event_counts.get('LIQUIDITY_SWEEP_UNRESOLVED', 0)}",
+        f"- Grouped unresolved market moves: {move_stats['grouped_market_move_count']}",
+        f"- Multi-event market moves: {move_stats['multi_event_market_move_count']}",
+        (
+            "- Average unresolved rows per market move: "
+            f"{_fmt(move_stats['avg_unresolved_events_per_market_move'])}"
+        ),
+        (
+            "- Max unresolved rows per market move: "
+            f"{move_stats['max_unresolved_events_per_market_move']}"
+        ),
         "",
         "## Observation Overview",
         "",
@@ -322,6 +360,8 @@ def _markdown_summary(
         f"- by data_quality: {_counts_for(observations, 'data_quality')}",
         f"- by observation_complete: {_counts_for(observations, 'observation_complete')}",
         f"- by confidence_tier: {_counts_for(observations, 'confidence_tier')}",
+        f"- by market_move_role: {_counts_for(observations, 'market_move_role')}",
+        f"- by market_move_event_count: {_counts_for(observations, 'market_move_event_count')}",
         f"- score instrumentation available: {'yes' if _score_instrumentation_available(observations) else 'no'}",
         f"- by has_h4_source: {_counts_for(observations, 'has_h4_source')}",
         f"- by has_session_source: {_counts_for(observations, 'has_session_source')}",
@@ -396,6 +436,7 @@ def _numeric_columns() -> list[str]:
         "post_max_volume_zscore",
         "post_max_abs_delta_zscore",
         "confidence_score",
+        "market_move_event_count",
         "source_level_count",
         "source_ref_count",
         "cluster_member_count",
@@ -481,6 +522,31 @@ def _format_counts(counts: dict[str, int]) -> str:
 
 def _has_degraded(frame: pd.DataFrame) -> bool:
     return not frame.empty and bool((frame["data_quality"] == "RECOVERED_DEGRADED").any())
+
+
+def _market_move_stats(observations: pd.DataFrame) -> dict[str, object]:
+    if observations.empty or "market_move_id" not in observations.columns:
+        return {
+            "grouped_market_move_count": 0,
+            "multi_event_market_move_count": 0,
+            "avg_unresolved_events_per_market_move": 0.0,
+            "max_unresolved_events_per_market_move": 0,
+        }
+    grouped = observations[observations["market_move_id"].fillna("").astype(str) != ""]
+    if grouped.empty:
+        return {
+            "grouped_market_move_count": 0,
+            "multi_event_market_move_count": 0,
+            "avg_unresolved_events_per_market_move": 0.0,
+            "max_unresolved_events_per_market_move": 0,
+        }
+    counts = grouped.groupby("market_move_id", sort=True).size()
+    return {
+        "grouped_market_move_count": int(len(counts)),
+        "multi_event_market_move_count": int((counts > 1).sum()),
+        "avg_unresolved_events_per_market_move": float(counts.mean()),
+        "max_unresolved_events_per_market_move": int(counts.max()),
+    }
 
 
 def _fmt(value) -> str:

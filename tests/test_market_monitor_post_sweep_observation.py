@@ -55,6 +55,9 @@ def test_buy_side_unresolved_event_creates_complete_observation_after_event_cand
     row = observation.iloc[0]
     assert row["observation_id"] == "observation_000001"
     assert row["source_event_id"] == "event_000002"
+    assert row["market_move_id"] == "move_20260508_000100_BUY_SIDE_000001"
+    assert row["market_move_role"] == "PRIMARY"
+    assert row["market_move_event_count"] == 1
     assert row["observation_start_timestamp"] == "2026-05-08T00:02:00Z"
     assert row["observation_bars_expected"] == 30
     assert row["observation_bars_available"] == 30
@@ -93,6 +96,9 @@ def _event_row(side):
         "delta_zscore": 2,
         "oi_change": 1,
         "reaction_status": "UNRESOLVED",
+        "market_move_id": "move_20260508_000100_BUY_SIDE_000001",
+        "market_move_role": "PRIMARY",
+        "market_move_event_count": 1,
         "evidence_json": (
             '{"data_quality":"RAW","event_class":"LIQUIDITY_SWEEP_UNRESOLVED",'
             '"price_lower":100,"price_mid":105,"price_upper":110,'

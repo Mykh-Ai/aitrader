@@ -13,6 +13,9 @@ POST_SWEEP_OBSERVATION_COLUMNS = [
     "observation_id",
     "source_event_id",
     "source_event_timestamp",
+    "market_move_id",
+    "market_move_role",
+    "market_move_event_count",
     "zone_id",
     "side",
     "zone_type",
@@ -69,9 +72,16 @@ def build_post_sweep_observations(
     ].copy()
     if unresolved.empty:
         return pd.DataFrame(columns=POST_SWEEP_OBSERVATION_COLUMNS)
+    for column, default in [
+        ("market_move_id", ""),
+        ("market_move_role", "NONE"),
+        ("market_move_event_count", 0),
+    ]:
+        if column not in unresolved.columns:
+            unresolved[column] = default
 
     unresolved = unresolved.sort_values(
-        ["event_timestamp", "zone_id", "event_id"], kind="mergesort"
+        ["event_timestamp", "market_move_id", "zone_id", "event_id"], kind="mergesort"
     )
     frame = feed.sort_values("Timestamp", kind="mergesort").reset_index(drop=True)
     context = _context_frame(volume_delta_state)
@@ -140,6 +150,9 @@ def _observation_row(
         "observation_id": "",
         "source_event_id": event["event_id"],
         "source_event_timestamp": event["event_timestamp"],
+        "market_move_id": str(event.get("market_move_id", "")),
+        "market_move_role": str(event.get("market_move_role", "NONE")),
+        "market_move_event_count": int(float(event.get("market_move_event_count", 0) or 0)),
         "zone_id": event["zone_id"],
         "side": side,
         "zone_type": evidence["zone_type"],
@@ -169,6 +182,9 @@ def _observation_row(
             "first_return_inside_at": row["first_return_inside_at"],
             "max_excursion_beyond_zone": float(row["max_excursion_beyond_zone"]),
             "max_return_inside_zone": float(row["max_return_inside_zone"]),
+            "market_move_event_count": int(row["market_move_event_count"]),
+            "market_move_id": str(row["market_move_id"]),
+            "market_move_role": str(row["market_move_role"]),
             "observation_bars_available": int(available),
             "observation_bars_expected": POST_SWEEP_OBSERVATION_BARS,
             "observation_class": "POST_SWEEP_OBSERVATION",

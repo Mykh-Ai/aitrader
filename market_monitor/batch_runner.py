@@ -29,6 +29,10 @@ MANIFEST_COLUMNS = [
     "registry_zones_count",
     "event_count",
     "unresolved_sweep_count",
+    "grouped_market_move_count",
+    "multi_event_market_move_count",
+    "avg_unresolved_events_per_market_move",
+    "max_unresolved_events_per_market_move",
     "post_sweep_observation_count",
     "complete_observation_count",
     "incomplete_observation_count",
@@ -308,8 +312,15 @@ def _processed_manifest_row(
     batch_root: Path,
 ) -> dict[str, object]:
     event_log = frames["event_log.csv"]
+    market_move_groups = frames["market_move_groups.csv"]
     observations = frames["post_sweep_observation.csv"]
     complete = _complete_observation_count(observations)
+    unresolved_sweep_count = (
+        int((event_log["event_type"] == "LIQUIDITY_SWEEP_UNRESOLVED").sum())
+        if not event_log.empty
+        else 0
+    )
+    grouped_move_count = len(market_move_groups)
     return _manifest_row(
         day,
         feed_file,
@@ -324,11 +335,15 @@ def _processed_manifest_row(
         liquidity_zones_count=len(frames["liquidity_map.csv"]),
         registry_zones_count=len(frames["liquidity_zone_registry.csv"]),
         event_count=len(event_log),
-        unresolved_sweep_count=int(
-            (event_log["event_type"] == "LIQUIDITY_SWEEP_UNRESOLVED").sum()
-        )
-        if not event_log.empty
-        else 0,
+        unresolved_sweep_count=unresolved_sweep_count,
+        grouped_market_move_count=grouped_move_count,
+        multi_event_market_move_count=_multi_event_move_count(market_move_groups),
+        avg_unresolved_events_per_market_move=(
+            f"{unresolved_sweep_count / grouped_move_count:.6g}"
+            if grouped_move_count
+            else "0"
+        ),
+        max_unresolved_events_per_market_move=_max_market_move_event_count(market_move_groups),
         post_sweep_observation_count=len(observations),
         complete_observation_count=complete,
         incomplete_observation_count=len(observations) - complete,
@@ -351,6 +366,10 @@ def _manifest_row(
     registry_zones_count: int | str = "",
     event_count: int | str = "",
     unresolved_sweep_count: int | str = "",
+    grouped_market_move_count: int | str = "",
+    multi_event_market_move_count: int | str = "",
+    avg_unresolved_events_per_market_move: float | str = "",
+    max_unresolved_events_per_market_move: int | str = "",
     post_sweep_observation_count: int | str = "",
     complete_observation_count: int | str = "",
     incomplete_observation_count: int | str = "",
@@ -370,6 +389,10 @@ def _manifest_row(
         "registry_zones_count": registry_zones_count,
         "event_count": event_count,
         "unresolved_sweep_count": unresolved_sweep_count,
+        "grouped_market_move_count": grouped_market_move_count,
+        "multi_event_market_move_count": multi_event_market_move_count,
+        "avg_unresolved_events_per_market_move": avg_unresolved_events_per_market_move,
+        "max_unresolved_events_per_market_move": max_unresolved_events_per_market_move,
         "post_sweep_observation_count": post_sweep_observation_count,
         "complete_observation_count": complete_observation_count,
         "incomplete_observation_count": incomplete_observation_count,
@@ -434,6 +457,8 @@ def _write_batch_summary(
     rows_processed = _sum_column(processed_rows, "input_rows")
     final_registry_zones = _last_numeric(processed_rows, "registry_zones_count")
     score_instrumentation = _score_instrumentation_available(research_result)
+    unresolved_total = _sum_column(processed_rows, "unresolved_sweep_count")
+    grouped_move_total = _sum_column(processed_rows, "grouped_market_move_count")
     lines = [
         "# Market Monitor Batch Research Summary",
         "",
@@ -464,7 +489,22 @@ def _write_batch_summary(
         f"- Total liquidity zones: {_sum_column(processed_rows, 'liquidity_zones_count')}",
         f"- Final registry zones: {final_registry_zones}",
         f"- Total lifecycle events: {_sum_column(processed_rows, 'event_count')}",
-        f"- Unresolved sweep candidates: {_sum_column(processed_rows, 'unresolved_sweep_count')}",
+        f"- Unresolved sweep candidates: {unresolved_total}",
+        f"- Grouped unresolved market moves: {grouped_move_total}",
+        (
+            "- Multi-event market moves: "
+            f"{_sum_column(processed_rows, 'multi_event_market_move_count')}"
+        ),
+        (
+            "- Average unresolved events per market move: "
+            f"{(unresolved_total / grouped_move_total):.6g}"
+            if grouped_move_total
+            else "- Average unresolved events per market move: 0"
+        ),
+        (
+            "- Max unresolved events per market move: "
+            f"{_max_column(processed_rows, 'max_unresolved_events_per_market_move')}"
+        ),
         f"- Post-sweep observations: {_sum_column(processed_rows, 'post_sweep_observation_count')}",
         f"- Complete observations: {_sum_column(processed_rows, 'complete_observation_count')}",
         f"- Incomplete observations: {_sum_column(processed_rows, 'incomplete_observation_count')}",
@@ -527,6 +567,25 @@ def _sum_column(frame: pd.DataFrame, column: str) -> int:
     if frame.empty or column not in frame.columns:
         return 0
     return int(pd.to_numeric(frame[column], errors="coerce").fillna(0).sum())
+
+
+def _max_column(frame: pd.DataFrame, column: str) -> int:
+    if frame.empty or column not in frame.columns:
+        return 0
+    values = pd.to_numeric(frame[column], errors="coerce").dropna()
+    if values.empty:
+        return 0
+    return int(values.max())
+
+
+def _multi_event_move_count(market_move_groups: pd.DataFrame) -> int:
+    if market_move_groups.empty or "event_count" not in market_move_groups.columns:
+        return 0
+    return int(pd.to_numeric(market_move_groups["event_count"], errors="coerce").fillna(0).gt(1).sum())
+
+
+def _max_market_move_event_count(market_move_groups: pd.DataFrame) -> int:
+    return _max_column(market_move_groups, "event_count")
 
 
 def _last_numeric(frame: pd.DataFrame, column: str) -> int:
