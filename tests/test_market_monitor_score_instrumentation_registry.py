@@ -9,20 +9,23 @@ from market_monitor.zone_registry import REGISTRY_COLUMNS, build_zone_registry
 
 def test_registry_includes_score_instrumentation_columns():
     liquidity_map = build_liquidity_map(
-        pd.DataFrame([_level("level_000001", "BUY_SIDE", "H4", "H4_SWING_HIGH", 100.0)]),
-        latest_close=90.0,
+        pd.DataFrame([_level("level_000001", "BUY_SIDE", "H4", "H4_SWING_HIGH", 70000.0)]),
+        latest_close=65000.0,
     )
 
     registry, _ = build_zone_registry(
         liquidity_map=liquidity_map,
-        feed=_feed("2026-05-07", [90, 91]),
+        feed=_feed("2026-05-07", [65000, 65001]),
     )
 
     assert all(column in REGISTRY_COLUMNS for column in SCORE_INSTRUMENTATION_COLUMNS)
     assert all(column in registry.columns for column in SCORE_INSTRUMENTATION_COLUMNS)
     components = json.loads(registry.iloc[0]["score_components_json"])
     assert components["final_confidence_score"] == int(registry.iloc[0]["confidence_score"])
+    assert components["precision_status"] == registry.iloc[0]["precision_status"]
+    assert registry.iloc[0]["precision_status"] == "PRECISE"
     assert registry.iloc[0]["source_level_count"] == 1
+    assert registry.iloc[0]["source_ref_count"] == 1
     assert registry.iloc[0]["zone_width"] == (
         registry.iloc[0]["price_upper"] - registry.iloc[0]["price_lower"]
     )

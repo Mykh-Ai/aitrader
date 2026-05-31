@@ -4,7 +4,7 @@ import json
 
 import pandas as pd
 
-from market_monitor.score_instrumentation import SCORE_INSTRUMENTATION_COLUMNS
+from market_monitor.score_instrumentation import PRECISION_TOO_WIDE, SCORE_INSTRUMENTATION_COLUMNS
 
 
 APPROACH_THRESHOLD_FRACTION = 0.001
@@ -213,6 +213,8 @@ def _unresolved_sweep_event(
     event_timestamp = pd.Timestamp(candle["Timestamp"])
     first_seen_at = pd.Timestamp(zone["first_seen_at"])
     if first_seen_at >= event_timestamp:
+        return None
+    if str(zone.get("precision_status", "")) == PRECISION_TOO_WIDE:
         return None
 
     if _is_repeated_prior_cross_without_new_transition(

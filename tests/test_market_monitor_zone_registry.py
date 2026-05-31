@@ -4,7 +4,11 @@ import pandas as pd
 
 from market_monitor.outputs import REQUIRED_CSV_SCHEMAS
 from market_monitor.run_market_monitor import main
-from market_monitor.zone_registry import REGISTRY_COLUMNS, build_zone_registry
+from market_monitor.zone_registry import (
+    REGISTRY_COLUMNS,
+    build_zone_registry,
+    forward_liquidity_from_registry,
+)
 
 
 def test_registry_file_is_written_every_run(tmp_path: Path):
@@ -62,6 +66,28 @@ def test_no_sweep_or_trading_statuses_are_produced():
     assert "signal" not in registry.columns
     assert "order" not in registry.columns
     assert "position" not in registry.columns
+
+
+def test_too_wide_registry_zone_is_not_emitted_as_forward_liquidity():
+    registry = pd.DataFrame(
+        [
+            {
+                **_zone("zone_000001", "BUY_SIDE", 70000, 70550),
+                "first_seen_at": "2026-05-07T00:00:00Z",
+                "precision_status": "TOO_WIDE",
+            },
+            {
+                **_zone("zone_000002", "BUY_SIDE", 71000, 71070),
+                "first_seen_at": "2026-05-07T00:00:00Z",
+                "precision_status": "PRECISE",
+            },
+        ]
+    )
+
+    forward = forward_liquidity_from_registry(registry, latest_close=65000)
+
+    assert forward["zone_id"].tolist() == ["zone_000002"]
+    assert "precision_status" in forward.columns
 
 
 def _write_feed(tmp_path: Path, filename: str, close: float) -> Path:

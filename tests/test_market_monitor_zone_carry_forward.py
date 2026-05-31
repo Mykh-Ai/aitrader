@@ -42,12 +42,12 @@ def test_invalidated_expired_and_merged_zones_are_not_carried_as_active():
 
 
 def test_carried_plus_new_compatible_zone_preserves_carried_id_and_marks_merged_away():
-    registry_in = pd.DataFrame([_registry_row("zone_000010", "ACTIVE", lower=100, upper=110)])
-    current = _liquidity_map([_zone("zone_000001", "BUY_SIDE", 105, 115)])
+    registry_in = pd.DataFrame([_registry_row("zone_000010", "ACTIVE", lower=70000, upper=70080)])
+    current = _liquidity_map([_zone("zone_000001", "BUY_SIDE", 70040, 70120)])
 
     registry_out, _ = build_zone_registry(
         liquidity_map=current,
-        feed=_path_feed("2026-05-08", [90, 95]),
+        feed=_path_feed("2026-05-08", [65000, 65001]),
         registry_in=registry_in,
     )
 
@@ -58,22 +58,108 @@ def test_carried_plus_new_compatible_zone_preserves_carried_id_and_marks_merged_
     assert active["source_level_ids"] == "level_000001|level_old"
 
 
-def _registry_row(zone_id, status, lower=100, upper=110):
+def test_registry_carry_forward_does_not_widen_zone_above_hard_precision_cap():
+    registry_in = pd.DataFrame(
+        [_registry_row("zone_000010", "ACTIVE", lower=70000, upper=70300)]
+    )
+    current = _liquidity_map([_zone("zone_000001", "BUY_SIDE", 70320, 70400)])
+
+    registry_out, _ = build_zone_registry(
+        liquidity_map=current,
+        feed=_path_feed("2026-05-08", [65000, 65001]),
+        registry_in=registry_in,
+    )
+
+    active = registry_out[registry_out["status"] == "ACTIVE"]
+    assert len(active) == 2
+    assert all(active["zone_width_pct"] < 0.50)
+    assert not (registry_out["status"] == "MERGED").any()
+
+
+def test_wide_high_h4_carried_zone_is_not_expiry_exempt_when_stale():
+    registry_in = pd.DataFrame(
+        [
+            _registry_row(
+                "zone_000010",
+                "ACTIVE",
+                lower=70000,
+                upper=70550,
+                first_seen_at="2026-05-01T00:00:00Z",
+                source_timeframes="H4",
+                zone_type="CLUSTERED_BUY_SIDE_ZONE",
+                confidence_score=88,
+                confidence_tier="HIGH",
+            )
+        ]
+    )
+
+    registry_out, _ = build_zone_registry(
+        liquidity_map=_liquidity_map([]),
+        feed=_path_feed("2026-05-10", [65000, 65001]),
+        registry_in=registry_in,
+    )
+
+    row = registry_out.iloc[0]
+    assert row["precision_status"] == "TOO_WIDE"
+    assert row["status"] == "EXPIRED"
+    assert row["invalidation_reason"] == "MAX_ZONE_AGE_DAYS_EXCEEDED"
+
+
+def test_stale_low_precision_h4_cluster_is_not_expiry_exempt_without_compact_evidence():
+    registry_in = pd.DataFrame(
+        [
+            _registry_row(
+                "zone_000010",
+                "ACTIVE",
+                lower=70000,
+                upper=70300,
+                first_seen_at="2026-05-01T00:00:00Z",
+                source_timeframes="H1|H4",
+                zone_type="CLUSTERED_BUY_SIDE_ZONE",
+                confidence_score=90,
+                confidence_tier="HIGH",
+            )
+        ]
+    )
+
+    registry_out, _ = build_zone_registry(
+        liquidity_map=_liquidity_map([]),
+        feed=_path_feed("2026-05-10", [65000, 65001]),
+        registry_in=registry_in,
+    )
+
+    row = registry_out.iloc[0]
+    assert row["precision_status"] == "LOW_PRECISION"
+    assert row["status"] == "EXPIRED"
+    assert row["invalidation_reason"] == "MAX_ZONE_AGE_DAYS_EXCEEDED"
+
+
+def _registry_row(
+    zone_id,
+    status,
+    lower=100,
+    upper=110,
+    first_seen_at="2026-05-07T00:00:00Z",
+    source_timeframes="H1",
+    zone_type="H1_SWING_HIGH_ZONE",
+    confidence_score=65,
+    confidence_tier="MEDIUM",
+):
     return {
         "zone_id": zone_id,
-        "first_seen_at": "2026-05-07T00:00:00Z",
+        "first_seen_at": first_seen_at,
         "last_seen_at": "2026-05-07T23:59:00Z",
         "last_updated_at": "2026-05-07T23:59:00Z",
         "side": "BUY_SIDE",
-        "zone_type": "H1_SWING_HIGH_ZONE",
+        "zone_type": zone_type,
         "price_lower": lower,
         "price_upper": upper,
         "price_mid": (lower + upper) / 2,
         "source_level_ids": "level_old",
-        "source_timeframes": "H1",
+        "source_timeframes": source_timeframes,
         "status": status,
-        "confidence_score": 65,
-        "confidence_tier": "MEDIUM",
+        "confidence_score": confidence_score,
+        "confidence_tier": confidence_tier,
         "age_bars": 1440,
         "age_days": 0,
         "touch_count": 0,
