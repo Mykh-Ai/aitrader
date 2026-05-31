@@ -193,11 +193,14 @@ def _merged_zone_type(side: str, zone_types: list[str]) -> str:
 
 def _finalize_zone(zone: dict[str, object], latest_close: float | None) -> dict[str, object]:
     evidence: SourceEvidence = zone["evidence"]  # type: ignore[assignment]
-    confidence_score = _confidence_score(evidence)
+    zone_width_pct = _zone_width_pct(
+        float(zone["price_lower"]), float(zone["price_upper"]), float(zone["price_mid"])
+    )
+    confidence_score = _confidence_score(evidence, zone_width_pct)
     confidence_tier = _confidence_tier(confidence_score)
     source_level_ids = "|".join(evidence.level_ids)
     source_timeframes = "|".join(evidence.timeframes)
-    components = _confidence_components(evidence)
+    components = _confidence_components(evidence, zone_width_pct)
     instrumentation = score_instrumentation_fields(
         source_level_ids=source_level_ids,
         source_timeframes=source_timeframes,
@@ -259,49 +262,62 @@ def _passes_pruning(row: dict[str, object]) -> bool:
     return len([source_id for source_id in source_ids if source_id]) >= 2 and zone_type.startswith("EQUAL_")
 
 
-def _confidence_score(evidence: SourceEvidence) -> int:
-    components = _confidence_components(evidence)
+def _confidence_score(evidence: SourceEvidence, zone_width_pct: float = 0.0) -> int:
+    components = _confidence_components(evidence, zone_width_pct)
     return int(components["final_confidence_score"])
 
 
-def _confidence_components(evidence: SourceEvidence) -> dict[str, object]:
+def _confidence_components(evidence: SourceEvidence, zone_width_pct: float = 0.0) -> dict[str, object]:
     level_types = set(evidence.level_types)
     timeframes = set(evidence.timeframes)
-    h4_component = 55 if "H4" in timeframes else 0
-    h1_component = 38 if "H1" in timeframes else 0
-    pdh_pdl_component = 55 if level_types & {"PDH", "PDL"} else 0
-    high_low_component = (
-        25
-        if any(level_type.endswith("_HIGH") or level_type.endswith("_LOW") for level_type in level_types)
-        else 0
+    source_families = _source_families(timeframes, level_types)
+    h4_component = 40 if "H4" in timeframes else 0
+    h1_component = 24 if "H1" in timeframes else 0
+    session_component = _session_component(timeframes)
+    pdh_pdl_component = 45 if level_types & {"PDH", "PDL"} else 0
+    high_low_component = 0
+    equal_level_component = 4 if level_types & {"EQUAL_HIGHS", "EQUAL_LOWS"} else 0
+    source_diversity_bonus = min(max(len(source_families) - 2, 0) * 4, 12)
+    raw_source_count_bonus = _raw_source_count_bonus(
+        source_count=len(evidence.level_ids),
+        source_family_count=len(source_families),
+        has_equal_level=bool(level_types & {"EQUAL_HIGHS", "EQUAL_LOWS"}),
     )
-    equal_level_component = 15 if level_types & {"EQUAL_HIGHS", "EQUAL_LOWS"} else 0
-    source_count_bonus = min(max(len(evidence.level_ids) - 1, 0) * 8, 24)
-    touch_bonus = min(evidence.touch_count, 4) * 2
+    source_count_bonus = raw_source_count_bonus
+    touch_bonus = min(evidence.touch_count, 3)
+    width_penalty = _width_penalty(zone_width_pct, len(evidence.level_ids))
     data_quality_penalty = -15 if evidence.data_quality != "RAW" else 0
     pre_clamp_score = (
         h4_component
         + h1_component
+        + session_component
         + pdh_pdl_component
         + high_low_component
         + equal_level_component
-        + source_count_bonus
+        + source_diversity_bonus
+        + raw_source_count_bonus
         + touch_bonus
+        + width_penalty
         + data_quality_penalty
     )
     final_score = max(0, min(100, pre_clamp_score))
     return {
         "base_score": 0,
         "timeframe_score": h4_component + h1_component,
+        "timeframe_component_total": h4_component + h1_component + session_component,
         "h1_component": h1_component,
         "h4_component": h4_component,
-        "session_component": None,
+        "session_component": session_component,
         "high_low_component": high_low_component,
         "pdh_pdl_component": pdh_pdl_component,
         "equal_level_component": equal_level_component,
+        "source_diversity_bonus": source_diversity_bonus,
+        "raw_source_count_bonus": raw_source_count_bonus,
         "source_count_bonus": source_count_bonus,
         "cluster_bonus": 0,
         "touch_bonus": touch_bonus,
+        "width_penalty": width_penalty,
+        "carry_forward_decay_or_penalty": None,
         "data_quality_penalty": data_quality_penalty,
         "carry_forward_prior_score": None,
         "pre_clamp_score": pre_clamp_score,
@@ -310,12 +326,57 @@ def _confidence_components(evidence: SourceEvidence) -> dict[str, object]:
         "source_level_count": len(evidence.level_ids),
         "cluster_member_count": evidence.cluster_member_count,
         "source_timeframes": "|".join(sorted(timeframes)),
+        "source_families": "|".join(sorted(source_families)),
         "level_types": "|".join(sorted(level_types)),
         "instrumentation_limitations": (
-            "session_component is not separable from generic high_low_component "
-            "without changing the current scoring formula"
+            "confidence_score is structural-only; post-event observation metrics are not used"
         ),
     }
+
+
+def _source_families(timeframes: set[str], level_types: set[str]) -> set[str]:
+    families: set[str] = set()
+    for timeframe in ["H4", "H1", "SESSION"]:
+        if timeframe in timeframes:
+            families.add(timeframe)
+    if level_types & {"PDH", "PDL"}:
+        families.add("PDH_PDL")
+    if level_types & {"EQUAL_HIGHS", "EQUAL_LOWS"}:
+        families.add("EQUAL_LEVEL")
+    return families
+
+
+def _session_component(timeframes: set[str]) -> int:
+    if "SESSION" not in timeframes:
+        return 0
+    if timeframes == {"SESSION"}:
+        return 24
+    return 6
+
+
+def _raw_source_count_bonus(
+    *, source_count: int, source_family_count: int, has_equal_level: bool
+) -> int:
+    if has_equal_level:
+        return 0
+    excess_sources = max(source_count - max(source_family_count, 1), 0)
+    return min(excess_sources * 2, 6)
+
+
+def _width_penalty(zone_width_pct: float, source_count: int = 1) -> int:
+    if source_count <= 1:
+        return 0
+    if zone_width_pct >= 0.50:
+        return -12
+    if zone_width_pct >= 0.25:
+        return -6
+    return 0
+
+
+def _zone_width_pct(price_lower: float, price_upper: float, price_mid: float) -> float:
+    if price_mid <= 0:
+        return 0.0
+    return (price_upper - price_lower) / price_mid * 100.0
 
 
 def _confidence_tier(score: int) -> str:

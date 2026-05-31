@@ -453,49 +453,129 @@ def _merged_confidence_components(
     rows: list[dict[str, object]], source_timeframes: str, source_zone_types: list[str]
 ) -> dict[str, object]:
     prior_score = max(int(float(row["confidence_score"])) for row in rows)
+    bounded_prior_score = min(prior_score, 88)
     source_count = len(_pipe_union(row["source_level_ids"] for row in rows).split("|"))
-    source_count_bonus = min(max(source_count - 1, 0) * 4, 16)
-    h4_component = 8 if "H4" in source_timeframes else 0
+    max_known_source_count = max(
+        len([part for part in str(row["source_level_ids"]).split("|") if part])
+        for row in rows
+    )
+    fresh_source_count = max(source_count - max_known_source_count, 0)
+    source_families = _registry_source_families(source_timeframes, source_zone_types)
+    source_diversity_bonus = min(max(len(source_families) - 1, 0) * 2, 6)
+    fresh_source_bonus = min(fresh_source_count * 3, 6)
+    raw_source_count_bonus = fresh_source_bonus
+    source_count_bonus = fresh_source_bonus
+    h4_component = 2 if "H4" in source_timeframes and fresh_source_count > 0 else 0
     pdh_pdl_component = (
-        8
+        4
         if any("PDH" in zone_type or "PDL" in zone_type for zone_type in source_zone_types)
         else 0
+    )
+    width_penalty = _width_penalty(
+        _zone_width_pct(
+            min(float(row["price_lower"]) for row in rows),
+            max(float(row["price_upper"]) for row in rows),
+            (
+                min(float(row["price_lower"]) for row in rows)
+                + max(float(row["price_upper"]) for row in rows)
+            )
+            / 2,
+        )
+    )
+    carry_forward_decay_or_penalty = _carry_forward_decay_or_penalty(
+        rows=rows,
+        fresh_source_count=fresh_source_count,
+        source_families=source_families,
     )
     data_quality_penalty = (
         -5 if _quality_values(row["data_quality"] for row in rows) != "RAW" else 0
     )
     pre_clamp_score = (
-        prior_score + source_count_bonus + h4_component + pdh_pdl_component + data_quality_penalty
+        bounded_prior_score
+        + source_diversity_bonus
+        + fresh_source_bonus
+        + h4_component
+        + pdh_pdl_component
+        + width_penalty
+        + carry_forward_decay_or_penalty
+        + data_quality_penalty
     )
     final_score = max(0, min(100, pre_clamp_score))
     return {
         "base_score": 0,
         "timeframe_score": h4_component,
+        "timeframe_component_total": h4_component,
         "h1_component": None,
         "h4_component": h4_component,
         "session_component": None,
         "pdh_pdl_component": pdh_pdl_component,
         "equal_level_component": None,
+        "source_diversity_bonus": source_diversity_bonus,
+        "raw_source_count_bonus": raw_source_count_bonus,
         "source_count_bonus": source_count_bonus,
         "cluster_bonus": 0,
         "touch_bonus": None,
+        "width_penalty": width_penalty,
         "data_quality_penalty": data_quality_penalty,
+        "carry_forward_decay_or_penalty": carry_forward_decay_or_penalty,
         "carry_forward_prior_score": prior_score,
+        "bounded_prior_score": bounded_prior_score,
+        "fresh_source_count": fresh_source_count,
         "pre_clamp_score": pre_clamp_score,
         "final_confidence_score": final_score,
         "confidence_tier": _confidence_tier(final_score),
         "source_level_count": source_count,
         "cluster_member_count": len(rows),
         "source_timeframes": source_timeframes,
+        "source_families": "|".join(sorted(source_families)),
         "source_zone_types": "|".join(source_zone_types),
         "merged_from_zone_ids": sorted(str(row["zone_id"]) for row in rows),
         "registry_status_before": "|".join(sorted({str(row["status"]) for row in rows})),
         "registry_status_after": "post_merge_pre_lifecycle",
         "instrumentation_limitations": (
-            "registry merge starts from prior max confidence_score; original initial "
-            "score components are not separable from carried rows"
+            "registry merge uses bounded prior confidence and fresh-source bonuses only; "
+            "post-event observation metrics are not used"
         ),
     }
+
+
+def _registry_source_families(source_timeframes: str, source_zone_types: list[str]) -> set[str]:
+    timeframes = {part for part in str(source_timeframes).split("|") if part}
+    zone_type_text = "|".join(source_zone_types)
+    families: set[str] = set()
+    for timeframe in ["H4", "H1", "SESSION"]:
+        if timeframe in timeframes:
+            families.add(timeframe)
+    if "PDH" in zone_type_text or "PDL" in zone_type_text:
+        families.add("PDH_PDL")
+    if "EQUAL_HIGHS" in zone_type_text or "EQUAL_LOWS" in zone_type_text:
+        families.add("EQUAL_LEVEL")
+    return families
+
+
+def _carry_forward_decay_or_penalty(
+    *, rows: list[dict[str, object]], fresh_source_count: int, source_families: set[str]
+) -> int:
+    max_active_days = max(int(float(row.get("active_days", 1) or 1)) for row in rows)
+    if fresh_source_count > 0:
+        return 0
+    decay = max(max_active_days - 3, 0) * 2
+    cap = 6 if source_families & {"H4", "PDH_PDL"} else 10
+    return -min(decay, cap)
+
+
+def _width_penalty(zone_width_pct: float) -> int:
+    if zone_width_pct >= 0.50:
+        return -12
+    if zone_width_pct >= 0.25:
+        return -6
+    return 0
+
+
+def _zone_width_pct(price_lower: float, price_upper: float, price_mid: float) -> float:
+    if price_mid <= 0:
+        return 0.0
+    return (price_upper - price_lower) / price_mid * 100.0
 
 
 def _instrumentation_from_row(row) -> dict[str, object]:

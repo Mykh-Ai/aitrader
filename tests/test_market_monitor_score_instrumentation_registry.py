@@ -28,35 +28,80 @@ def test_registry_includes_score_instrumentation_columns():
     )
 
 
-def test_registry_merge_instrumentation_exposes_prior_score_without_changing_score():
+def test_registry_merge_instrumentation_exposes_prior_score_and_disciplined_fresh_bonus():
     prior = build_liquidity_map(
-        pd.DataFrame([_level("level_000001", "BUY_SIDE", "H4", "H4_SWING_HIGH", 100.0)]),
-        latest_close=90.0,
+        pd.DataFrame([_level("level_000001", "BUY_SIDE", "H4", "H4_SWING_HIGH", 70000.0)]),
+        latest_close=65000.0,
     )
     registry_in, _ = build_zone_registry(
         liquidity_map=prior,
-        feed=_feed("2026-05-07", [90, 91]),
+        feed=_feed("2026-05-07", [65000, 65001]),
     )
     current = build_liquidity_map(
-        pd.DataFrame([_level("level_000002", "BUY_SIDE", "H1", "H1_SWING_HIGH", 100.04)]),
-        latest_close=90.0,
+        pd.DataFrame([_level("level_000002", "BUY_SIDE", "H1", "H1_SWING_HIGH", 70020.0)]),
+        latest_close=65000.0,
     )
 
     registry_out, _ = build_zone_registry(
         liquidity_map=current,
-        feed=_feed("2026-05-08", [90, 91]),
+        feed=_feed("2026-05-08", [65000, 65001]),
         registry_in=registry_in,
     )
 
     active = registry_out[registry_out["status"] != "MERGED"].iloc[0]
     components = json.loads(active["score_components_json"])
-    assert components["carry_forward_prior_score"] == 82
-    assert components["source_count_bonus"] == 4
-    assert components["h4_component"] == 8
+    assert components["carry_forward_prior_score"] == 41
+    assert components["bounded_prior_score"] == 41
+    assert components["fresh_source_count"] == 1
+    assert components["source_count_bonus"] == 3
+    assert components["raw_source_count_bonus"] == 3
+    assert components["source_diversity_bonus"] == 2
+    assert components["h4_component"] == 2
+    assert components["width_penalty"] == 0
     assert components["final_confidence_score"] == int(active["confidence_score"])
-    assert active["confidence_score"] == 94
-    assert active["confidence_tier"] == "HIGH"
+    assert active["confidence_score"] == 48
+    assert active["confidence_tier"] == "MEDIUM"
     assert active["source_level_count"] == 2
+
+
+def test_registry_merge_does_not_repeatedly_inflate_already_known_sources():
+    first_day = build_liquidity_map(
+        pd.DataFrame(
+            [
+                _level("level_000001", "BUY_SIDE", "H1", "H1_SWING_HIGH", 70000.0),
+                _level("level_000002", "BUY_SIDE", "H4", "H4_SWING_HIGH", 70020.0),
+            ]
+        ),
+        latest_close=65000.0,
+    )
+    registry_in, _ = build_zone_registry(
+        liquidity_map=first_day,
+        feed=_feed("2026-05-07", [65000, 65001]),
+    )
+    repeated = build_liquidity_map(
+        pd.DataFrame(
+            [
+                _level("level_000001", "BUY_SIDE", "H1", "H1_SWING_HIGH", 70000.0),
+                _level("level_000002", "BUY_SIDE", "H4", "H4_SWING_HIGH", 70020.0),
+            ]
+        ),
+        latest_close=65000.0,
+    )
+
+    registry_out, _ = build_zone_registry(
+        liquidity_map=repeated,
+        feed=_feed("2026-05-08", [65000, 65001]),
+        registry_in=registry_in,
+    )
+
+    active = registry_out[registry_out["status"] != "MERGED"].iloc[0]
+    components = json.loads(active["score_components_json"])
+    assert components["carry_forward_prior_score"] == 66
+    assert components["fresh_source_count"] == 0
+    assert components["source_count_bonus"] == 0
+    assert components["raw_source_count_bonus"] == 0
+    assert components["final_confidence_score"] == int(active["confidence_score"])
+    assert active["confidence_score"] < 70
 
 
 def _level(level_id, side, timeframe, level_type, price):
