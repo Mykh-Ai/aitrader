@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from market_monitor.events import EVENT_LOG_COLUMNS, build_event_log, event_stats
 from market_monitor.liquidity_zones import LIQUIDITY_MAP_COLUMNS, build_liquidity_map
 from market_monitor.structure import STRUCTURE_LEVEL_COLUMNS, build_structure_levels
 from market_monitor.summary import write_market_summary
@@ -56,26 +57,6 @@ ACCUMULATION_ZONES_COLUMNS = [
     "data_quality",
 ]
 
-EVENT_LOG_COLUMNS = [
-    "event_id",
-    "event_timestamp",
-    "event_type",
-    "zone_id",
-    "side",
-    "price_before",
-    "event_high",
-    "event_low",
-    "event_close",
-    "excursion_abs",
-    "excursion_atr",
-    "volume_zscore",
-    "delta_zscore",
-    "oi_change",
-    "reaction_status",
-    "evidence_json",
-    "data_quality",
-]
-
 REQUIRED_CSV_SCHEMAS = {
     "market_state_timeline.csv": MARKET_STATE_TIMELINE_COLUMNS,
     "liquidity_map.csv": LIQUIDITY_MAP_COLUMNS,
@@ -103,15 +84,20 @@ def write_outputs(
     structure_levels = build_structure_levels(feed)
     liquidity_map = build_liquidity_map(structure_levels, latest_close)
     registry_in = load_registry(registry_in_path)
+    volume_delta_state = build_volume_delta_state(feed)
     liquidity_zone_registry, registry_stats = build_zone_registry(
         liquidity_map=liquidity_map,
         feed=feed,
         registry_in=registry_in,
     )
-    volume_delta_state = build_volume_delta_state(feed)
+    event_log = build_event_log(
+        registry=liquidity_zone_registry,
+        feed=feed,
+        volume_delta_state=volume_delta_state,
+        previous_registry=registry_in,
+    )
     market_state_timeline = build_market_state_timeline(feed)
     accumulation_zones = pd.DataFrame(columns=ACCUMULATION_ZONES_COLUMNS)
-    event_log = pd.DataFrame(columns=EVENT_LOG_COLUMNS)
 
     frames = {
         "market_state_timeline.csv": market_state_timeline,
@@ -142,6 +128,7 @@ def write_outputs(
         registry_input=registry_in_path,
         registry_output=registry_out_path,
         registry_stats=registry_stats,
+        event_stats=event_stats(event_log),
     )
 
     return frames
