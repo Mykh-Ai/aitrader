@@ -69,6 +69,8 @@ def test_research_summary_markdown_has_boundary_and_small_sample_warnings(tmp_pa
     outside_boundary = markdown.replace(BOUNDARY_STATEMENT, "")
     assert "rejected/accepted" not in outside_boundary.lower()
     assert "pnl" not in outside_boundary.lower()
+    assert "buy" not in outside_boundary.lower()
+    assert "sell" not in outside_boundary.lower()
 
 
 def _observation_row():
