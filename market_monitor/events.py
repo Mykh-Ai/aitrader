@@ -13,6 +13,7 @@ SWEEP_MIN_EXCURSION_FRACTION = 0.0002
 SWEEP_MIN_EXCURSION_USD = 10.0
 SWEEP_ACTIVITY_ZSCORE_THRESHOLD = 1.5
 MARKET_MOVE_GROUP_WINDOW_MINUTES = 2
+GROUPING_WINDOW_MODE = "ANCHORED_FIXED_WINDOW"
 
 EVENT_LOG_COLUMNS = [
     "event_id",
@@ -33,16 +34,27 @@ EVENT_LOG_COLUMNS = [
     "market_move_id",
     "market_move_role",
     "market_move_event_count",
+    "group_start_timestamp",
+    "group_end_timestamp",
+    "group_span_minutes",
+    "grouping_window_mode",
     "evidence_json",
     "data_quality",
 ]
 
 MARKET_MOVE_GROUP_COLUMNS = [
     "market_move_id",
+    "group_start_timestamp",
+    "group_end_timestamp",
+    "group_span_minutes",
+    "grouping_window_minutes",
+    "grouping_window_mode",
     "event_timestamp",
     "side",
     "primary_event_id",
     "primary_zone_id",
+    "primary_selection_reason",
+    "primary_selection_components_json",
     "event_count",
     "zone_ids",
     "event_ids",
@@ -127,6 +139,10 @@ def assign_market_move_groups(event_log: pd.DataFrame) -> pd.DataFrame:
     out["market_move_id"] = ""
     out["market_move_role"] = "NONE"
     out["market_move_event_count"] = 0
+    out["group_start_timestamp"] = ""
+    out["group_end_timestamp"] = ""
+    out["group_span_minutes"] = ""
+    out["grouping_window_mode"] = ""
     unresolved = out[out["event_type"] == "LIQUIDITY_SWEEP_UNRESOLVED"].copy()
     if unresolved.empty:
         return out[EVENT_LOG_COLUMNS]
@@ -136,18 +152,20 @@ def assign_market_move_groups(event_log: pd.DataFrame) -> pd.DataFrame:
         ["side", "event_timestamp", "zone_id", "event_id"], kind="mergesort"
     ).groupby("side", sort=True):
         current: list[int] = []
-        previous_ts: pd.Timestamp | None = None
+        group_start_ts: pd.Timestamp | None = None
         for idx, row in side_frame.iterrows():
             event_ts = pd.Timestamp(row["event_timestamp"])
             if (
                 current
-                and previous_ts is not None
-                and event_ts - previous_ts > pd.Timedelta(minutes=MARKET_MOVE_GROUP_WINDOW_MINUTES)
+                and group_start_ts is not None
+                and event_ts - group_start_ts > pd.Timedelta(minutes=MARKET_MOVE_GROUP_WINDOW_MINUTES)
             ):
                 groups.append(current)
                 current = []
+                group_start_ts = None
+            if not current:
+                group_start_ts = event_ts
             current.append(idx)
-            previous_ts = event_ts
         if current:
             groups.append(current)
 
@@ -161,12 +179,18 @@ def assign_market_move_groups(event_log: pd.DataFrame) -> pd.DataFrame:
     for group_number, idxs in enumerate(groups, start=1):
         group = out.loc[idxs].copy()
         first_ts = pd.Timestamp(group["event_timestamp"].map(pd.Timestamp).min())
+        last_ts = pd.Timestamp(group["event_timestamp"].map(pd.Timestamp).max())
+        span_minutes = _span_minutes(first_ts, last_ts)
         side = str(group.iloc[0]["side"])
         move_id = _market_move_id(first_ts, side, group_number)
         primary_idx = _primary_event_index(group)
         out.loc[idxs, "market_move_id"] = move_id
         out.loc[idxs, "market_move_event_count"] = len(idxs)
         out.loc[idxs, "market_move_role"] = "SECONDARY"
+        out.loc[idxs, "group_start_timestamp"] = _format_ts(first_ts)
+        out.loc[idxs, "group_end_timestamp"] = _format_ts(last_ts)
+        out.loc[idxs, "group_span_minutes"] = span_minutes
+        out.loc[idxs, "grouping_window_mode"] = GROUPING_WINDOW_MODE
         out.loc[primary_idx, "market_move_role"] = "PRIMARY"
     return out[EVENT_LOG_COLUMNS]
 
@@ -209,6 +233,9 @@ def event_stats(event_log: pd.DataFrame) -> dict[str, object]:
             "multi_event_market_move_count": 0,
             "avg_unresolved_events_per_market_move": "0",
             "max_unresolved_events_per_market_move": 0,
+            "max_group_span_minutes": "0",
+            "groups_over_configured_window": 0,
+            "grouping_window_mode": GROUPING_WINDOW_MODE,
         }
     counts = event_log["event_type"].value_counts().sort_index()
     unresolved = event_log[event_log["event_type"] == "LIQUIDITY_SWEEP_UNRESOLVED"]
@@ -679,6 +706,9 @@ def _market_move_stats(unresolved: pd.DataFrame) -> dict[str, object]:
             "multi_event_market_move_count": 0,
             "avg_unresolved_events_per_market_move": "0",
             "max_unresolved_events_per_market_move": 0,
+            "max_group_span_minutes": "0",
+            "groups_over_configured_window": 0,
+            "grouping_window_mode": GROUPING_WINDOW_MODE,
         }
     moves = unresolved[unresolved["market_move_id"].fillna("").astype(str) != ""]
     if moves.empty:
@@ -687,13 +717,25 @@ def _market_move_stats(unresolved: pd.DataFrame) -> dict[str, object]:
             "multi_event_market_move_count": 0,
             "avg_unresolved_events_per_market_move": "0",
             "max_unresolved_events_per_market_move": 0,
+            "max_group_span_minutes": "0",
+            "groups_over_configured_window": 0,
+            "grouping_window_mode": GROUPING_WINDOW_MODE,
         }
     counts = moves.groupby("market_move_id", sort=True).size()
+    spans = (
+        pd.to_numeric(moves.get("group_span_minutes", ""), errors="coerce")
+        .groupby(moves["market_move_id"])
+        .max()
+    )
+    max_span = 0.0 if spans.empty else float(spans.max())
     return {
         "grouped_market_move_count": int(len(counts)),
         "multi_event_market_move_count": int((counts > 1).sum()),
         "avg_unresolved_events_per_market_move": f"{float(counts.mean()):.6g}",
         "max_unresolved_events_per_market_move": int(counts.max()),
+        "max_group_span_minutes": f"{max_span:.6g}",
+        "groups_over_configured_window": int((spans > MARKET_MOVE_GROUP_WINDOW_MINUTES).sum()),
+        "grouping_window_mode": GROUPING_WINDOW_MODE,
     }
 
 
@@ -701,6 +743,9 @@ def _market_move_group_row(group: pd.DataFrame) -> dict[str, object]:
     group = group.sort_values(["event_timestamp", "zone_id", "event_id"], kind="mergesort")
     primary = group[group["market_move_role"] == "PRIMARY"]
     primary_row = primary.iloc[0] if not primary.empty else group.iloc[0]
+    group_start_ts = pd.Timestamp(group["event_timestamp"].map(pd.Timestamp).min())
+    group_end_ts = pd.Timestamp(group["event_timestamp"].map(pd.Timestamp).max())
+    group_span_minutes = _span_minutes(group_start_ts, group_end_ts)
     evidence = [_event_evidence(row) for _, row in group.iterrows()]
     lowers = [_float_or_none(item.get("price_lower", "")) for item in evidence]
     uppers = [_float_or_none(item.get("price_upper", "")) for item in evidence]
@@ -711,12 +756,20 @@ def _market_move_group_row(group: pd.DataFrame) -> dict[str, object]:
     precision_statuses = _pipe_unique(str(item.get("precision_status", "")) for item in evidence)
     confidence_tiers = _pipe_unique(str(item.get("confidence_tier", "")) for item in evidence)
     data_quality = _pipe_unique(str(value) for value in group["data_quality"])
+    selection_reason, selection_components = _primary_selection_diagnostics(group, primary_row.name)
     row = {
         "market_move_id": str(primary_row["market_move_id"]),
-        "event_timestamp": _format_ts(pd.Timestamp(group["event_timestamp"].map(pd.Timestamp).min())),
+        "group_start_timestamp": _format_ts(group_start_ts),
+        "group_end_timestamp": _format_ts(group_end_ts),
+        "group_span_minutes": group_span_minutes,
+        "grouping_window_minutes": MARKET_MOVE_GROUP_WINDOW_MINUTES,
+        "grouping_window_mode": GROUPING_WINDOW_MODE,
+        "event_timestamp": _format_ts(group_start_ts),
         "side": str(primary_row["side"]),
         "primary_event_id": str(primary_row["event_id"]),
         "primary_zone_id": str(primary_row["zone_id"]),
+        "primary_selection_reason": selection_reason,
+        "primary_selection_components_json": _json(selection_components),
         "event_count": len(group),
         "zone_ids": "|".join(str(value) for value in group["zone_id"]),
         "event_ids": "|".join(str(value) for value in group["event_id"]),
@@ -735,10 +788,15 @@ def _market_move_group_row(group: pd.DataFrame) -> dict[str, object]:
         {
             "event_count": int(row["event_count"]),
             "event_ids": str(row["event_ids"]),
-            "group_window_minutes": MARKET_MOVE_GROUP_WINDOW_MINUTES,
-            "grouping_rule": "same_side_within_2_minutes",
+            "group_end_timestamp": str(row["group_end_timestamp"]),
+            "group_span_minutes": float(row["group_span_minutes"]),
+            "group_start_timestamp": str(row["group_start_timestamp"]),
+            "grouping_rule": "same_side_within_anchored_2_minute_window",
+            "grouping_window_minutes": MARKET_MOVE_GROUP_WINDOW_MINUTES,
+            "grouping_window_mode": GROUPING_WINDOW_MODE,
             "market_move_id": str(row["market_move_id"]),
             "primary_event_id": str(row["primary_event_id"]),
+            "primary_selection_reason": str(row["primary_selection_reason"]),
             "primary_zone_id": str(row["primary_zone_id"]),
             "zone_ids": str(row["zone_ids"]),
         }
@@ -764,6 +822,49 @@ def _primary_event_index(group: pd.DataFrame) -> int:
         kind="mergesort",
     )
     return int(scored.index[0])
+
+
+def _primary_selection_diagnostics(group: pd.DataFrame, primary_idx: int) -> tuple[str, dict[str, object]]:
+    scored = group.copy()
+    scored["_confidence_score"] = scored.apply(_event_confidence_score, axis=1)
+    scored["_zone_width_pct"] = scored.apply(_event_zone_width_pct, axis=1)
+    selected = scored.loc[primary_idx]
+    reason = "highest_confidence_score"
+    tie_breakers: list[str] = []
+
+    confidence_peers = scored[scored["_confidence_score"] == selected["_confidence_score"]]
+    if len(confidence_peers) > 1:
+        tie_breakers.append("highest_excursion_abs")
+        excursion_peers = confidence_peers[
+            pd.to_numeric(confidence_peers["excursion_abs"], errors="coerce")
+            == float(selected["excursion_abs"])
+        ]
+        reason = "highest_excursion_abs_tiebreak"
+        if len(excursion_peers) > 1:
+            tie_breakers.append("narrowest_zone")
+            width_peers = excursion_peers[
+                excursion_peers["_zone_width_pct"] == selected["_zone_width_pct"]
+            ]
+            reason = "narrowest_zone_tiebreak"
+            if len(width_peers) > 1:
+                tie_breakers.append("zone_id")
+                zone_peers = width_peers[
+                    width_peers["zone_id"].astype(str) == str(selected["zone_id"])
+                ]
+                reason = "zone_id_tiebreak"
+                if len(zone_peers) > 1:
+                    tie_breakers.append("event_id")
+                    reason = "event_id_tiebreak"
+
+    components = {
+        "selected_confidence_score": float(selected["_confidence_score"]),
+        "selected_event_id": str(selected["event_id"]),
+        "selected_excursion_abs": float(selected["excursion_abs"]),
+        "selected_zone_id": str(selected["zone_id"]),
+        "selected_zone_width_pct": float(selected["_zone_width_pct"]),
+        "tie_breakers_used": tie_breakers,
+    }
+    return reason, components
 
 
 def _event_confidence_score(row: pd.Series) -> float:
@@ -821,6 +922,10 @@ def _numeric_abs_max(frame: pd.DataFrame, column: str) -> float:
 
 def _numeric_sum(frame: pd.DataFrame, column: str) -> float:
     return float(pd.to_numeric(frame[column], errors="coerce").fillna(0).sum())
+
+
+def _span_minutes(start: pd.Timestamp, end: pd.Timestamp) -> float:
+    return float((end - start).total_seconds() / 60)
 
 
 def _pipe_unique(values) -> str:

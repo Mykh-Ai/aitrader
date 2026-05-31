@@ -69,6 +69,8 @@ def test_runs_multiple_days_carries_registry_and_writes_batch_artifacts(tmp_path
     summary = (output_dir / "batch_summary.md").read_text(encoding="utf-8")
     assert "- Grouped unresolved market moves:" in summary
     assert "- Multi-event market moves:" in summary
+    assert "- Max group span minutes:" in summary
+    assert "- Groups over configured window:" in summary
     assert result.daily_output_dirs == (
         output_dir / "daily" / "2026-05-07",
         output_dir / "daily" / "2026-05-08",

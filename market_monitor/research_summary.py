@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from market_monitor.events import GROUPING_WINDOW_MODE, MARKET_MOVE_GROUP_WINDOW_MINUTES
 from market_monitor.score_instrumentation import SCORE_INSTRUMENTATION_COLUMNS
 
 
@@ -17,6 +18,10 @@ ROW_SUMMARY_COLUMNS = [
     "market_move_id",
     "market_move_role",
     "market_move_event_count",
+    "group_start_timestamp",
+    "group_end_timestamp",
+    "group_span_minutes",
+    "grouping_window_mode",
     "zone_id",
     "side",
     "zone_type",
@@ -214,6 +219,10 @@ def _enrich_from_event_log(observations: pd.DataFrame, event_log_path: Path) -> 
     observations["market_move_id"] = observations.get("market_move_id", "")
     observations["market_move_role"] = observations.get("market_move_role", "")
     observations["market_move_event_count"] = observations.get("market_move_event_count", "")
+    observations["group_start_timestamp"] = observations.get("group_start_timestamp", "")
+    observations["group_end_timestamp"] = observations.get("group_end_timestamp", "")
+    observations["group_span_minutes"] = observations.get("group_span_minutes", "")
+    observations["grouping_window_mode"] = observations.get("grouping_window_mode", "")
     for column in SCORE_INSTRUMENTATION_COLUMNS:
         observations[column] = observations.get(column, "")
     if not event_log_path.exists():
@@ -240,6 +249,18 @@ def _enrich_from_event_log(observations: pd.DataFrame, event_log_path: Path) -> 
     )
     observations["market_move_event_count"] = observations["source_event_id"].map(
         lambda event_id: events_by_id.get(str(event_id), {}).get("market_move_event_count", "")
+    )
+    observations["group_start_timestamp"] = observations["source_event_id"].map(
+        lambda event_id: str(events_by_id.get(str(event_id), {}).get("group_start_timestamp", ""))
+    )
+    observations["group_end_timestamp"] = observations["source_event_id"].map(
+        lambda event_id: str(events_by_id.get(str(event_id), {}).get("group_end_timestamp", ""))
+    )
+    observations["group_span_minutes"] = observations["source_event_id"].map(
+        lambda event_id: events_by_id.get(str(event_id), {}).get("group_span_minutes", "")
+    )
+    observations["grouping_window_mode"] = observations["source_event_id"].map(
+        lambda event_id: str(events_by_id.get(str(event_id), {}).get("grouping_window_mode", ""))
     )
     observations["confidence_tier"] = observations["source_event_id"].map(
         lambda event_id: str(evidence_by_event.get(str(event_id), {}).get("confidence_tier", ""))
@@ -280,6 +301,7 @@ def _group_summary(observations: pd.DataFrame) -> pd.DataFrame:
             ("precision_status", "precision_status"),
             ("market_move_role", "market_move_role"),
             ("market_move_event_count", "market_move_event_count"),
+            ("grouping_window_mode", "grouping_window_mode"),
             ("source_timeframes", "source_timeframes"),
             ("has_h4_source", "has_h4_source"),
             ("has_session_source", "has_session_source"),
@@ -353,6 +375,9 @@ def _markdown_summary(
             "- Max unresolved rows per market move: "
             f"{move_stats['max_unresolved_events_per_market_move']}"
         ),
+        f"- Max group span minutes: {_fmt(move_stats['max_group_span_minutes'])}",
+        f"- Groups over configured window: {move_stats['groups_over_configured_window']}",
+        f"- Grouping window mode: {move_stats['grouping_window_mode']}",
         "",
         "## Observation Overview",
         "",
@@ -362,6 +387,7 @@ def _markdown_summary(
         f"- by confidence_tier: {_counts_for(observations, 'confidence_tier')}",
         f"- by market_move_role: {_counts_for(observations, 'market_move_role')}",
         f"- by market_move_event_count: {_counts_for(observations, 'market_move_event_count')}",
+        f"- by grouping_window_mode: {_counts_for(observations, 'grouping_window_mode')}",
         f"- score instrumentation available: {'yes' if _score_instrumentation_available(observations) else 'no'}",
         f"- by has_h4_source: {_counts_for(observations, 'has_h4_source')}",
         f"- by has_session_source: {_counts_for(observations, 'has_session_source')}",
@@ -437,6 +463,7 @@ def _numeric_columns() -> list[str]:
         "post_max_abs_delta_zscore",
         "confidence_score",
         "market_move_event_count",
+        "group_span_minutes",
         "source_level_count",
         "source_ref_count",
         "cluster_member_count",
@@ -531,6 +558,9 @@ def _market_move_stats(observations: pd.DataFrame) -> dict[str, object]:
             "multi_event_market_move_count": 0,
             "avg_unresolved_events_per_market_move": 0.0,
             "max_unresolved_events_per_market_move": 0,
+            "max_group_span_minutes": 0.0,
+            "groups_over_configured_window": 0,
+            "grouping_window_mode": GROUPING_WINDOW_MODE,
         }
     grouped = observations[observations["market_move_id"].fillna("").astype(str) != ""]
     if grouped.empty:
@@ -539,13 +569,26 @@ def _market_move_stats(observations: pd.DataFrame) -> dict[str, object]:
             "multi_event_market_move_count": 0,
             "avg_unresolved_events_per_market_move": 0.0,
             "max_unresolved_events_per_market_move": 0,
+            "max_group_span_minutes": 0.0,
+            "groups_over_configured_window": 0,
+            "grouping_window_mode": GROUPING_WINDOW_MODE,
         }
     counts = grouped.groupby("market_move_id", sort=True).size()
+    spans = (
+        pd.to_numeric(grouped.get("group_span_minutes", ""), errors="coerce")
+        .groupby(grouped["market_move_id"])
+        .max()
+    )
+    max_span = 0.0 if spans.empty else float(spans.max())
+    modes = _counts_for(grouped.drop_duplicates("market_move_id"), "grouping_window_mode")
     return {
         "grouped_market_move_count": int(len(counts)),
         "multi_event_market_move_count": int((counts > 1).sum()),
         "avg_unresolved_events_per_market_move": float(counts.mean()),
         "max_unresolved_events_per_market_move": int(counts.max()),
+        "max_group_span_minutes": max_span,
+        "groups_over_configured_window": int((spans > MARKET_MOVE_GROUP_WINDOW_MINUTES).sum()),
+        "grouping_window_mode": modes if modes != "none" else GROUPING_WINDOW_MODE,
     }
 
 
