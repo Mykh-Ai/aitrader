@@ -4,6 +4,8 @@ import json
 
 import pandas as pd
 
+from market_monitor.score_instrumentation import SCORE_INSTRUMENTATION_COLUMNS
+
 
 APPROACH_THRESHOLD_FRACTION = 0.001
 APPROACH_THRESHOLD_MIN_USD = 20.0
@@ -264,6 +266,7 @@ def _unresolved_sweep_event(
         "volume_zscore": float(ctx["volume_zscore"]),
         "zone_id": str(zone["zone_id"]),
         "zone_type": str(zone["zone_type"]),
+        **_score_instrumentation_evidence(zone),
     }
     return {
         "event_id": "",
@@ -425,6 +428,7 @@ def _base_evidence(
         "volume_zscore": float(context["volume_zscore"]),
         "zone_id": str(zone["zone_id"]),
         "zone_type": str(zone["zone_type"]),
+        **_score_instrumentation_evidence(zone),
     }
 
 
@@ -568,3 +572,11 @@ def _format_ts(value) -> str:
 
 def _json(payload: dict[str, object]) -> str:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+
+def _score_instrumentation_evidence(zone: dict[str, object]) -> dict[str, object]:
+    return {
+        column: zone.get(column, "")
+        for column in SCORE_INSTRUMENTATION_COLUMNS
+        if column in zone
+    }

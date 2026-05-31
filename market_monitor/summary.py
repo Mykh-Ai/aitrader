@@ -34,6 +34,7 @@ def write_market_summary(
     status_counts = _column_counts(liquidity_map, "status")
     clustered_count = _clustered_count(liquidity_map)
     top_source_types = _top_source_types(liquidity_map)
+    score_stats = _score_instrumentation_stats(liquidity_map)
     registry_stats = registry_stats or {}
     event_stats = event_stats or {
         "total": len(event_log),
@@ -84,6 +85,11 @@ def write_market_summary(
             f"touched={touched_count}, invalidated={invalidated_count}"
         ),
         f"- Top source types: {top_source_types}",
+        f"- Score instrumentation: {score_stats['enabled']}",
+        f"- Zones with score_components_json: {score_stats['with_components']}",
+        f"- Zones with H4 source: {score_stats['with_h4']}",
+        f"- Zones with session source: {score_stats['with_session']}",
+        f"- Zones with equal-level source: {score_stats['with_equal']}",
         f"- Number of events: {len(event_log)}",
         f"- Number of lifecycle events: {event_stats.get('total', 0)}",
         f"- Events by type: {event_stats.get('by_type', 'none')}",
@@ -177,3 +183,29 @@ def _top_source_types(liquidity_map: pd.DataFrame) -> str:
         ascending=False, kind="mergesort"
     )
     return ", ".join(f"{name}={count}" for name, count in counts.head(5).items())
+
+
+def _score_instrumentation_stats(liquidity_map: pd.DataFrame) -> dict[str, object]:
+    if liquidity_map.empty or "score_components_json" not in liquidity_map.columns:
+        return {
+            "enabled": "no",
+            "with_components": 0,
+            "with_h4": 0,
+            "with_session": 0,
+            "with_equal": 0,
+        }
+    return {
+        "enabled": "yes",
+        "with_components": int(
+            liquidity_map["score_components_json"].fillna("").astype(str).str.len().gt(0).sum()
+        ),
+        "with_h4": _truthy_count(liquidity_map, "has_h4_source"),
+        "with_session": _truthy_count(liquidity_map, "has_session_source"),
+        "with_equal": _truthy_count(liquidity_map, "has_equal_level_source"),
+    }
+
+
+def _truthy_count(frame: pd.DataFrame, column: str) -> int:
+    if column not in frame.columns:
+        return 0
+    return int(frame[column].astype(str).str.lower().isin({"true", "1"}).sum())

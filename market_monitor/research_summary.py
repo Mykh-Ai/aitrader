@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from market_monitor.score_instrumentation import SCORE_INSTRUMENTATION_COLUMNS
+
 
 ROW_SUMMARY_COLUMNS = [
     "source_run_dir",
@@ -18,6 +20,10 @@ ROW_SUMMARY_COLUMNS = [
     "zone_price_lower",
     "zone_price_upper",
     "zone_price_mid",
+    "confidence_score",
+    "confidence_tier",
+    "source_timeframes",
+    *SCORE_INSTRUMENTATION_COLUMNS,
     "observation_bars_expected",
     "observation_bars_available",
     "observation_complete",
@@ -151,7 +157,7 @@ def _load_run_dir(path: Path) -> dict[str, object]:
         observations = _enrich_from_event_log(observations, path / "event_log.csv")
         observations = _normalize_observations(observations)
     else:
-        observations = pd.DataFrame(columns=ROW_SUMMARY_COLUMNS + ["confidence_tier", "source_timeframes"])
+        observations = pd.DataFrame(columns=ROW_SUMMARY_COLUMNS)
 
     event_counts = _event_counts(path / "event_log.csv")
     return {
@@ -164,7 +170,7 @@ def _load_run_dir(path: Path) -> dict[str, object]:
 def _combined_observations(loaded: list[dict[str, object]]) -> pd.DataFrame:
     frames = [item["observations"] for item in loaded if not item["observations"].empty]
     if not frames:
-        return pd.DataFrame(columns=ROW_SUMMARY_COLUMNS + ["confidence_tier", "source_timeframes"])
+        return pd.DataFrame(columns=ROW_SUMMARY_COLUMNS)
     out = pd.concat(frames, ignore_index=True)
     out = out.sort_values(
         ["source_run_dir", "source_event_timestamp", "zone_id", "observation_id"],
@@ -188,17 +194,16 @@ def _normalize_observations(frame: pd.DataFrame) -> pd.DataFrame:
             out[column] = ""
     for column in _numeric_columns():
         out[column] = pd.to_numeric(out[column], errors="coerce")
-    if "confidence_tier" not in out.columns:
-        out["confidence_tier"] = ""
-    if "source_timeframes" not in out.columns:
-        out["source_timeframes"] = ""
-    return out[ROW_SUMMARY_COLUMNS + ["confidence_tier", "source_timeframes"]]
+    return out[ROW_SUMMARY_COLUMNS]
 
 
 def _enrich_from_event_log(observations: pd.DataFrame, event_log_path: Path) -> pd.DataFrame:
     observations = observations.copy()
     observations["confidence_tier"] = ""
     observations["source_timeframes"] = ""
+    observations["confidence_score"] = ""
+    for column in SCORE_INSTRUMENTATION_COLUMNS:
+        observations[column] = observations.get(column, "")
     if not event_log_path.exists():
         return observations
     event_log = pd.read_csv(event_log_path)
@@ -217,6 +222,13 @@ def _enrich_from_event_log(observations: pd.DataFrame, event_log_path: Path) -> 
     observations["source_timeframes"] = observations["source_event_id"].map(
         lambda event_id: str(evidence_by_event.get(str(event_id), {}).get("source_timeframes", ""))
     )
+    observations["confidence_score"] = observations["source_event_id"].map(
+        lambda event_id: evidence_by_event.get(str(event_id), {}).get("confidence_score", "")
+    )
+    for column in SCORE_INSTRUMENTATION_COLUMNS:
+        observations[column] = observations["source_event_id"].map(
+            lambda event_id, column=column: evidence_by_event.get(str(event_id), {}).get(column, "")
+        )
     return observations
 
 
@@ -231,6 +243,7 @@ def _event_counts(event_log_path: Path) -> dict[str, int]:
 
 
 def _group_summary(observations: pd.DataFrame) -> pd.DataFrame:
+    observations = _with_score_buckets(observations)
     rows = [_group_row("ALL", "ALL", observations)]
     if not observations.empty:
         for column, group_type in [
@@ -240,6 +253,10 @@ def _group_summary(observations: pd.DataFrame) -> pd.DataFrame:
             ("zone_type", "zone_type"),
             ("confidence_tier", "confidence_tier"),
             ("source_timeframes", "source_timeframes"),
+            ("has_h4_source", "has_h4_source"),
+            ("has_session_source", "has_session_source"),
+            ("source_level_count_bucket", "source_level_count_bucket"),
+            ("zone_width_pct_bucket", "zone_width_pct_bucket"),
         ]:
             if column in observations.columns:
                 for value, group in observations.groupby(column, sort=True, dropna=False):
@@ -304,6 +321,11 @@ def _markdown_summary(
         f"- by data_quality: {_counts_for(observations, 'data_quality')}",
         f"- by observation_complete: {_counts_for(observations, 'observation_complete')}",
         f"- by confidence_tier: {_counts_for(observations, 'confidence_tier')}",
+        f"- score instrumentation available: {'yes' if _score_instrumentation_available(observations) else 'no'}",
+        f"- by has_h4_source: {_counts_for(observations, 'has_h4_source')}",
+        f"- by has_session_source: {_counts_for(observations, 'has_session_source')}",
+        f"- by source_level_count_bucket: {_counts_for(_with_score_buckets(observations), 'source_level_count_bucket')}",
+        f"- by zone_width_pct_bucket: {_counts_for(_with_score_buckets(observations), 'zone_width_pct_bucket')}",
         "",
         "## Descriptive Metrics",
         "",
@@ -372,7 +394,57 @@ def _numeric_columns() -> list[str]:
         "post_oi_change",
         "post_max_volume_zscore",
         "post_max_abs_delta_zscore",
+        "confidence_score",
+        "source_level_count",
+        "cluster_member_count",
+        "zone_width",
+        "zone_width_pct",
     ]
+
+
+def _with_score_buckets(frame: pd.DataFrame) -> pd.DataFrame:
+    out = frame.copy()
+    if out.empty:
+        for column in ["source_level_count_bucket", "zone_width_pct_bucket"]:
+            out[column] = ""
+        return out
+    source_counts = pd.to_numeric(out.get("source_level_count", ""), errors="coerce")
+    zone_width_pct = pd.to_numeric(out.get("zone_width_pct", ""), errors="coerce")
+    out["source_level_count_bucket"] = source_counts.map(_source_count_bucket)
+    out["zone_width_pct_bucket"] = zone_width_pct.map(_zone_width_pct_bucket)
+    return out
+
+
+def _source_count_bucket(value) -> str:
+    if pd.isna(value):
+        return "unknown"
+    value = int(value)
+    if value <= 1:
+        return "1"
+    if value == 2:
+        return "2"
+    if value <= 5:
+        return "3-5"
+    return "6+"
+
+
+def _zone_width_pct_bucket(value) -> str:
+    if pd.isna(value):
+        return "unknown"
+    value = float(value)
+    if value < 0.10:
+        return "<0.10"
+    if value < 0.25:
+        return "0.10-0.25"
+    if value < 0.50:
+        return "0.25-0.50"
+    return ">=0.50"
+
+
+def _score_instrumentation_available(frame: pd.DataFrame) -> bool:
+    return not frame.empty and "score_components_json" in frame.columns and bool(
+        frame["score_components_json"].fillna("").astype(str).str.len().gt(0).any()
+    )
 
 
 def _mean(frame: pd.DataFrame, column: str):
