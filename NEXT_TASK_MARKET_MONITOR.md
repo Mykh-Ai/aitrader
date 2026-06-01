@@ -1,8 +1,14 @@
-# NEXT TASK: SHI_RESET_02_BUILD_MARKET_STATE_MONITOR_SKELETON
+# NEXT TASK: SHI_RESET_32_VISIBLE_LIQUIDITY_STRUCTURE_MONITOR_V1
+
+## Status
+
+This is the next intended research-infrastructure direction after governance alignment is accepted.
+
+Do not implement it as part of the governance cleanup task.
 
 ## Goal
 
-Build the first skeleton of the Shi Market State Monitor.
+Design and implement a Visible Liquidity Structure Monitor for Market Monitor research outputs.
 
 This is not a strategy search task.
 
@@ -10,24 +16,16 @@ This is not a Backtester task.
 
 This is not live trading.
 
-## Required Package
-
-Create:
-
-`market_monitor/`
-
-The package must be separate from old Analyzer v1 setup logic.
-
 ## Scope
 
-The skeleton must:
+The next accepted direction is research-only visibility into liquidity structure:
 
-- read the protected raw feed format;
-- build `structure_levels.csv`;
-- build `liquidity_map.csv`;
-- build `event_log.csv`;
-- generate `market_summary.md`;
-- include tests.
+- visual overlays;
+- consumed/chopped-through level lifecycle;
+- pattern-derived liquidity structures;
+- missed-case explanation;
+- no trading signals;
+- no Backtester.
 
 ## Hard Boundaries
 
@@ -39,31 +37,15 @@ Do not:
 - open Phase 4;
 - reuse old candidate thresholds as strategy logic;
 - tune failed-break/reclaim parameters;
-- write orders or exchange logic.
+- write orders or exchange logic;
+- infer short/long actions from `SWEEP_REJECTED` or `SWEEP_ACCEPTED`;
+- calculate PnL.
 
-## Minimum Expected Outputs
+## Expected Direction
 
-For a run over one or more daily feed files, write:
+Future implementation should explain what price did around known structure and liquidity zones, including why a case was or was not emitted as an unresolved sweep candidate.
 
-- `market_state_timeline.csv`
-- `liquidity_map.csv`
-- `structure_levels.csv`
-- `volume_delta_state.csv`
-- `accumulation_zones.csv`
-- `event_log.csv`
-- `market_summary.md`
-
-Initial versions may contain partial scaffolding, but schemas must be explicit and deterministic.
-
-## First Tests
-
-Add tests that prove:
-
-- raw feed is read without mutation;
-- output schemas exist;
-- output rows are deterministic for the same input;
-- no trading signal/order/position fields are produced;
-- future labels are not required for event generation.
+It must remain descriptive research infrastructure. It must not create entries, exits, signals, position sizing, PnL, Backtester verdicts, Executor actions, or live-readiness claims.
 
 ## Reference Spec
 
