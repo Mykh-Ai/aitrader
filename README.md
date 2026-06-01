@@ -2,19 +2,33 @@
 
 ## Project status
 
-RESET AFTER FAILED ANALYZER V1 BRANCH
+RESET AFTER FAILED ANALYZER V1 BRANCH / RESEARCH INFRASTRUCTURE ONLY
 
 ## Active goal
 
-BTC Market State Monitor design.
+BTC Market State Monitor research infrastructure.
 
-The current active work is design-only reset/research infrastructure. This repository is not an active strategy project, not an execution bot, and not in Phase 4.
+AiTrader is currently research infrastructure only. Market Monitor exists as a research-only module for describing BTC market structure and liquidity behavior. This repository is not an active strategy project, not an execution bot, and not in Phase 4.
 
 Active candidates = NONE.
 
 Replay candidates = NONE.
 
 Holdout candidates = NONE.
+
+Backtester = LEGACY / AUDIT REQUIRED / BLOCKED FOR MARKET MONITOR USE.
+
+Executor/live = FORBIDDEN.
+
+## Current Market Monitor pipeline
+
+Current research pipeline:
+
+`feed -> market_monitor -> structure levels -> liquidity zones -> registry -> event_log -> unresolved sweep candidates -> post-sweep observations -> labels -> label quality reports`
+
+Market Monitor outputs research artifacts only. It does not produce trading signals, entries, exits, positions, PnL, Backtester verdicts, Executor actions, or live instructions.
+
+Labels are descriptive research labels only. `SWEEP_REJECTED` does not mean short. `SWEEP_ACCEPTED` does not mean long. No trading action is implied by any label.
 
 ## Archived
 
@@ -56,7 +70,8 @@ The archive zip is intentionally not tracked because repository `.gitignore` ign
 | `binance_aggregator_shi.py` | KEEP / CORE DATA LINEAGE |
 | `tests/` | KEEP / EXECUTABLE CONTRACT CHECKS |
 | `analyzer/` | LEGACY / FAILED AS STRATEGY ANALYZER / NOT ACTIVE |
-| `backtester/` | LEGACY / POSSIBLY REUSABLE VALIDATION HARNESS / AUDIT REQUIRED |
+| `backtester/` | LEGACY / POSSIBLY REUSABLE VALIDATION HARNESS / AUDIT REQUIRED / BLOCKED |
+| `market_monitor/` | ACTIVE RESEARCH INFRASTRUCTURE / NOT A STRATEGY |
 | `research/` | RESET BOUNDARY ONLY / NO ACTIVE CANDIDATES |
 
 ## Canonical local test command
@@ -71,19 +86,19 @@ Pre-cleanup baseline recorded for the old full tree: `501 passed, 11 warnings`.
 
 Active-tree reset baseline after physically removing archived research-script tests: `464 passed, 11 warnings`.
 
-## Current reset documents
+## Current active documents
 
+- `README.md`
+- `AGENTS.md`
 - `STAGE_1_FAILED_RESEARCH_SUMMARY.md`
-- `docs/LEGACY_CODE_AUDIT_TODO.md`
-- `docs/FEED_CONTRACT_AND_SCHEMA_NOTES.md`
 - `docs/SHI_MARKET_STATE_MONITOR_V1_SPEC.md`
-- `research/archive_note.md`
-- `research/canonical/PROJECT_STATE_CURRENT.md`
-- `research/canonical/SHI_RESET_2026_05_ANALYZER_V1_VERDICT.md`
-- `research/canonical/ARCHIVE_MANIFEST_FAILED_ANALYZER_V1.csv`
+- `docs/FEED_CONTRACT_AND_SCHEMA_NOTES.md`
+- `docs/LEGACY_CODE_AUDIT_TODO.md`
+- `docs/ACTIVE_DOCS.md`
+- `NEXT_TASK_MARKET_MONITOR.md`
 
 ## Hard boundary
 
-No live. No Executor. No Phase 4. No active trading strategy.
+No live. No Executor. No Phase 4. No active trading strategy. No Backtester replay campaigns. No trading candidates.
 
-Market State Monitor implementation starts only after governance cleanup is accepted.
+New Market Monitor feature work must remain explicitly scoped as research infrastructure and must keep the governance/source-of-truth documents aligned.

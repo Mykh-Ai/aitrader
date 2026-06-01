@@ -16,7 +16,13 @@ Backtester = LEGACY / AUDIT REQUIRED / NOT ACTIVE.
 
 Old Sprint 02-10 research branch = archived / not active.
 
-Active direction = BTC Market State Monitor design, but implementation has not started.
+Active direction = BTC Market State Monitor research infrastructure.
+
+Market Monitor research infrastructure exists and is active as a research-only module.
+
+It produces structure/liquidity artifacts, zone registry/carry-forward outputs, event logs, unresolved sweep candidates, post-sweep observations, descriptive sweep labels, label quality reports, research summaries, and batch research outputs.
+
+It does not produce trading signals, entries, exits, positions, PnL, Backtester verdicts, Executor actions, orders, or live instructions.
 
 No Phase 4. No Executor. No live. No old Analyzer v1 workflow. No old failed-break/reclaim research. No old backtester replay campaigns. No old candidates.
 
@@ -25,12 +31,13 @@ No Phase 4. No Executor. No live. No old Analyzer v1 workflow. No old failed-bre
 Use these as current authority, in this order:
 
 1. `README.md`
-2. `STAGE_1_FAILED_RESEARCH_SUMMARY.md`
-3. `docs/SHI_MARKET_STATE_MONITOR_V1_SPEC.md`
-4. `docs/FEED_CONTRACT_AND_SCHEMA_NOTES.md`
-5. `docs/LEGACY_CODE_AUDIT_TODO.md`
-6. `docs/ACTIVE_DOCS.md`
-7. `NEXT_TASK_MARKET_MONITOR.md`
+2. `AGENTS.md`
+3. `STAGE_1_FAILED_RESEARCH_SUMMARY.md`
+4. `docs/SHI_MARKET_STATE_MONITOR_V1_SPEC.md`
+5. `docs/FEED_CONTRACT_AND_SCHEMA_NOTES.md`
+6. `docs/LEGACY_CODE_AUDIT_TODO.md`
+7. `docs/ACTIVE_DOCS.md`
+8. `NEXT_TASK_MARKET_MONITOR.md`
 
 Archived historical docs are not active implementation plans.
 
@@ -69,7 +76,7 @@ Do not:
 - restore old research scripts;
 - restore old research prompts;
 - write a new Analyzer;
-- write Market Monitor implementation before governance cleanup is accepted.
+- add new Market Monitor feature work unless governance/source-of-truth docs remain aligned and the task is explicitly scoped as research infrastructure.
 
 ## 5. Module Boundaries
 

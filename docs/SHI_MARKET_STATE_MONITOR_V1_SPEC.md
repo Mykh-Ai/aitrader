@@ -1,6 +1,6 @@
 # Shi Market State Monitor v1 Spec
 
-Status: design specification
+Status: accepted research-infrastructure specification
 Date: 2026-05-17
 
 ## Purpose
@@ -8,6 +8,34 @@ Date: 2026-05-17
 Shi must observe the market as state, not search for one setup pattern.
 
 Market State Monitor v1 replaces the closed Analyzer v1 setup-detector path as the next research architecture. It is not a trading system and does not produce orders or live signals.
+
+## Current Repository Status
+
+Market Monitor research infrastructure has been implemented beyond the original skeleton. Current accepted research layers include:
+
+- normalized feed adapter;
+- structure levels;
+- liquidity zones;
+- zone registry and carry-forward;
+- event log;
+- unresolved sweep candidates;
+- post-sweep observation;
+- market-move grouping;
+- score instrumentation and confidence scoring;
+- zone precision instrumentation;
+- sweep label taxonomy;
+- label quality report;
+- batch research outputs.
+
+These layers are descriptive research infrastructure only. They do not define strategy candidates, entries, exits, positions, PnL, Backtester verdicts, Executor actions, or live-readiness.
+
+Known gaps:
+
+- visual overlay is not yet accepted into the active governance baseline;
+- consumed/chopped-through level lifecycle is not yet implemented as accepted active work;
+- pattern-derived liquidity structures are not yet implemented as accepted active work;
+- global source references are still limited;
+- Backtester remains blocked for Market Monitor use.
 
 ## Hard Boundary
 
@@ -169,14 +197,13 @@ Only market state monitoring.
 
 ## Implementation Direction
 
-The next task must build a package skeleton, not optimize a strategy.
+The original package skeleton has already been built and extended as research infrastructure. New work must continue to be explicitly scoped as Market Monitor research infrastructure, not strategy optimization.
 
-The first implementation should prioritize:
+The next intended research-infrastructure direction is visible liquidity structure monitoring:
 
-- stable input loading;
-- deterministic timestamp handling;
-- basic structure level extraction;
-- liquidity map scaffolding;
-- event log schema;
-- market summary generation;
-- tests for schema, determinism, and no-signal boundaries.
+- visual overlays;
+- consumed/chopped-through level lifecycle;
+- pattern-derived liquidity structures;
+- missed-case explanation.
+
+This next direction must not produce trading signals, entries, exits, PnL, Backtester outputs, Executor actions, or live-readiness claims.
