@@ -79,6 +79,14 @@ Do not:
 
 Do not modify feed data or recovered feed data unless the user explicitly asks for a feed/data-lineage task.
 
+When the user asks to update or refresh `feed/`, treat it as a server data-lineage sync task first, not as a local REST backfill:
+
+- Find the live SHI aggregator on the server before generating any replacement rows.
+- Use the deployment/ops context outside this repository to identify the server host, process environment, and host-side feed mount. Do not hardcode server IPs, SSH targets, tokens, or private mount details in this file.
+- Copy authoritative enriched CSV files from the server-side live SHI feed into local `feed/YYYY-MM-DD.csv` when they exist.
+- Preserve server rows exactly, including missing minutes or nonzero `LiqBuyQty` / `LiqSellQty`; do not synthesize or overwrite those rows during sync.
+- Use Binance REST backfill only if the server enriched feed is missing for the requested dates, and explicitly report that the result is REST-derived rather than live-feed-derived. REST backfill must not claim historical liquidation coverage unless a real liquidation source was available.
+
 ### analyzer/
 
 Legacy only. Read `analyzer/README.md` before touching anything under `analyzer/`.
