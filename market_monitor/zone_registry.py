@@ -120,6 +120,18 @@ LOCAL_CONTEXT_ACTIVE_FORWARD_ROLES = {
     "LOCAL_NOISY_ZONE",
     "SESSION_CHOPPED",
 }
+M15_ACTIVE_FORWARD_ROLES = {
+    "M15_MINIMUM_STRUCTURE",
+    "M15_REACTION_ZONE",
+    "M15_STRUCTURE_SWEEP",
+    "M15_CONSUMED",
+}
+M15_LIFECYCLE_STATUSES = {
+    "M15_ACTIVE",
+    "M15_SWEPT",
+    "M15_CLOSE_THROUGH",
+    "M15_ACCEPTED",
+}
 
 
 def load_registry(path: str | Path | None) -> pd.DataFrame:
@@ -381,6 +393,7 @@ def _merge_registry_candidates(candidates: pd.DataFrame) -> tuple[pd.DataFrame, 
             current_upper = max(float(item["price_upper"]) for item in cluster)
             if (
                 float(row["price_lower"]) <= current_upper + tolerance
+                and _registry_merge_sources_compatible(cluster, row)
                 and _registry_cluster_width_pct(cluster + [row]) < HARD_WIDE_ZONE_WIDTH_PCT
             ):
                 cluster.append(row)
@@ -521,6 +534,16 @@ def _merge_target(cluster: list[dict[str, object]]) -> dict[str, object]:
     return sorted(cluster, key=lambda row: (str(row["first_seen_at"]), str(row["zone_id"])))[0]
 
 
+def _registry_merge_sources_compatible(
+    cluster: list[dict[str, object]], row: dict[str, object]
+) -> bool:
+    row_is_m15 = _has_m15_source(row)
+    cluster_has_m15 = any(_has_m15_source(item) for item in cluster)
+    if row_is_m15 or cluster_has_m15:
+        return row_is_m15 and all(_has_m15_source(item) for item in cluster)
+    return True
+
+
 def _update_lifecycle(registry: pd.DataFrame, feed: pd.DataFrame) -> pd.DataFrame:
     registry = _normalize_registry(registry)
     if registry.empty or feed.empty:
@@ -613,7 +636,7 @@ def _consumption_fields(row: dict[str, object], feed: pd.DataFrame) -> dict[str,
             "accepted_below_at": row.get("accepted_below_at", "") or "",
             "structural_zone_mode": row.get("structural_zone_mode", "") or _structural_zone_mode_from_row(row),
             "zone_behavior_state": row.get("zone_behavior_state", "NONE") or "NONE",
-            "htf_lifecycle_status": row.get("htf_lifecycle_status", "") or "LOCAL_ONLY",
+            "htf_lifecycle_status": row.get("htf_lifecycle_status", "") or _lifecycle_status_from_row(row),
             "m1_interaction_count": int(float(row.get("m1_interaction_count", 0) or 0)),
             "htf_sweep_count": int(float(row.get("htf_sweep_count", 0) or 0)),
             "htf_close_through_count": int(float(row.get("htf_close_through_count", 0) or 0)),
@@ -798,12 +821,18 @@ def _consumption_fields(row: dict[str, object], feed: pd.DataFrame) -> dict[str,
         "accepted_below_at": accepted_below_at,
         "structural_zone_mode": structural_zone_mode,
         "zone_behavior_state": zone_behavior_state,
-        "htf_lifecycle_status": _htf_lifecycle_status(
+        "htf_lifecycle_status": _lifecycle_status_from_values(
+            row=row,
             has_htf=has_htf,
             htf_sweep_count=htf_sweep_count,
             htf_close_through_count=htf_close_through_count,
             htf_acceptance_count=htf_acceptance_count,
             history_context_incomplete=history_context_incomplete,
+            first_sweep_at=first_sweep_at,
+            close_above_count=close_above_count,
+            close_below_count=close_below_count,
+            accepted_above_at=accepted_above_at,
+            accepted_below_at=accepted_below_at,
         ),
         "m1_interaction_count": m1_interaction_count,
         "htf_sweep_count": htf_sweep_count,
@@ -1138,6 +1167,8 @@ def _is_active_forward(row: dict[str, object] | pd.Series) -> bool:
     role = str(row.get("active_forward_role", "") or "FRESH_LIQUIDITY")
     if role in {"AUDIT_ONLY", "INACTIVE"} | LOCAL_CONTEXT_ACTIVE_FORWARD_ROLES:
         return False
+    if role == "FRESH_LIQUIDITY" and _has_m15_source(row):
+        return False
     if role == "FRESH_LIQUIDITY" and local_session_context_role(row):
         return False
     status = str(row.get("status", ""))
@@ -1277,13 +1308,7 @@ def _normalize_registry(registry: pd.DataFrame | None) -> pd.DataFrame:
     )
     blank_htf_status = frame["htf_lifecycle_status"].astype(str).str.len().eq(0)
     frame.loc[blank_htf_status, "htf_lifecycle_status"] = frame.loc[blank_htf_status].apply(
-        lambda row: _htf_lifecycle_status(
-            has_htf=_has_htf_source(row),
-            htf_sweep_count=int(float(row.get("htf_sweep_count", 0) or 0)),
-            htf_close_through_count=int(float(row.get("htf_close_through_count", 0) or 0)),
-            htf_acceptance_count=int(float(row.get("htf_acceptance_count", 0) or 0)),
-            history_context_incomplete=_bool_value(row.get("history_context_incomplete", False)),
-        ),
+        _lifecycle_status_from_row,
         axis=1,
     )
     blank_history_start = frame["history_context_start"].astype(str).str.len().eq(0)
@@ -1479,7 +1504,7 @@ def _registry_source_families(source_timeframes: str, source_zone_types: list[st
     timeframes = {part for part in str(source_timeframes).split("|") if part}
     zone_type_text = "|".join(source_zone_types)
     families: set[str] = set()
-    for timeframe in ["H4", "H1", "SESSION"]:
+    for timeframe in ["H4", "H1", "M15", "SESSION"]:
         if timeframe in timeframes:
             families.add(timeframe)
     if "PDH" in zone_type_text or "PDL" in zone_type_text:
@@ -1619,6 +1644,11 @@ def _merged_active_forward_role(rows: list[dict[str, object]]) -> str:
             if role in roles:
                 return role
         return "FRESH_LIQUIDITY"
+    if any(_has_m15_source(row) for row in rows):
+        for role in ["M15_CONSUMED", "M15_REACTION_ZONE", "M15_STRUCTURE_SWEEP", "M15_MINIMUM_STRUCTURE"]:
+            if role in roles:
+                return role
+        return "M15_MINIMUM_STRUCTURE"
     for role in [
         "INACTIVE",
         "AUDIT_ONLY",
@@ -1645,6 +1675,8 @@ def _active_forward_role(row: dict[str, object] | pd.Series) -> str:
     local_context_role = local_session_context_role(row)
     if local_context_role:
         return local_context_role
+    if _has_m15_source(row):
+        return _m15_active_forward_role(row)
     state = str(row.get("zone_behavior_state", "") or "NONE")
     if state in {"DISTRIBUTION_CANDIDATE", "FAILED_ACCEPTANCE"}:
         return "DISTRIBUTION_ZONE"
@@ -1663,6 +1695,28 @@ def _has_htf_source(row: dict[str, object] | pd.Series) -> bool:
     if str(row.get("source_timeframe_primary", "") or "") in {"H1", "H4"}:
         return True
     return bool({"H1", "H4"} & {part for part in str(row.get("source_timeframes", "") or "").split("|") if part})
+
+
+def _has_m15_source(row: dict[str, object] | pd.Series) -> bool:
+    if _has_htf_source(row):
+        return False
+    primary = str(row.get("source_timeframe_primary", "") or "")
+    source_timeframes = {
+        part for part in str(row.get("source_timeframes", "") or "").split("|") if part
+    }
+    zone_type = str(row.get("zone_type", "") or "")
+    return primary == "M15" or "M15" in source_timeframes or zone_type.startswith("M15_")
+
+
+def _m15_active_forward_role(row: dict[str, object] | pd.Series) -> str:
+    if str(row.get("consumption_status", "")) in INACTIVE_CONSUMPTION_STATUSES:
+        return "M15_CONSUMED"
+    state = str(row.get("zone_behavior_state", "") or "NONE")
+    if state in {"REJECTION_FROM_ZONE", "DRIFT_AWAY_FROM_ZONE", "DISTRIBUTION_CANDIDATE", "FAILED_ACCEPTANCE"}:
+        return "M15_REACTION_ZONE"
+    if str(row.get("first_sweep_at", "") or "") or str(row.get("consumption_status", "")) == "SWEPT_ONCE":
+        return "M15_STRUCTURE_SWEEP"
+    return "M15_MINIMUM_STRUCTURE"
 
 
 def local_session_context_role(row: dict[str, object] | pd.Series) -> str:
@@ -1694,6 +1748,8 @@ def local_session_context_role(row: dict[str, object] | pd.Series) -> str:
 
 def _is_local_session_context_source(row: dict[str, object] | pd.Series) -> bool:
     if _has_htf_source(row):
+        return False
+    if _has_m15_source(row):
         return False
     primary = _source_timeframe_primary_from_row(row)
     source_timeframes = {
@@ -1748,14 +1804,14 @@ def _source_timeframe_primary_from_row(row: dict[str, object] | pd.Series) -> st
     if existing:
         return existing
     timeframes = {part for part in str(row.get("source_timeframes", "") or "").split("|") if part}
-    for timeframe in ["H4", "H1", "SESSION", "PATTERN", "D1", "CLUSTER", "M15"]:
+    for timeframe in ["H4", "H1", "M15", "SESSION", "PATTERN", "D1", "CLUSTER"]:
         if timeframe in timeframes:
             return timeframe
     return sorted(timeframes)[0] if timeframes else ""
 
 
 def _merged_source_timeframe_primary(rows: list[dict[str, object]], source_timeframes: str) -> str:
-    for timeframe in ["H4", "H1", "SESSION", "PATTERN", "D1", "CLUSTER", "M15"]:
+    for timeframe in ["H4", "H1", "M15", "SESSION", "PATTERN", "D1", "CLUSTER"]:
         if any(_source_timeframe_primary_from_row(row) == timeframe for row in rows):
             return timeframe
         if timeframe in {part for part in source_timeframes.split("|") if part}:
@@ -1807,6 +1863,78 @@ def _htf_lifecycle_status(
     return "HTF_ACTIVE"
 
 
+def _lifecycle_status_from_row(row: dict[str, object] | pd.Series) -> str:
+    return _lifecycle_status_from_values(
+        row=row,
+        has_htf=_has_htf_source(row),
+        htf_sweep_count=int(float(row.get("htf_sweep_count", 0) or 0)),
+        htf_close_through_count=int(float(row.get("htf_close_through_count", 0) or 0)),
+        htf_acceptance_count=int(float(row.get("htf_acceptance_count", 0) or 0)),
+        history_context_incomplete=_bool_value(row.get("history_context_incomplete", False)),
+        first_sweep_at=str(row.get("first_sweep_at", "") or ""),
+        close_above_count=int(float(row.get("close_above_count", 0) or 0)),
+        close_below_count=int(float(row.get("close_below_count", 0) or 0)),
+        accepted_above_at=str(row.get("accepted_above_at", "") or ""),
+        accepted_below_at=str(row.get("accepted_below_at", "") or ""),
+    )
+
+
+def _lifecycle_status_from_values(
+    *,
+    row: dict[str, object] | pd.Series,
+    has_htf: bool,
+    htf_sweep_count: int,
+    htf_close_through_count: int,
+    htf_acceptance_count: int,
+    history_context_incomplete: bool,
+    first_sweep_at: str,
+    close_above_count: int,
+    close_below_count: int,
+    accepted_above_at: str,
+    accepted_below_at: str,
+) -> str:
+    if _has_m15_source(row):
+        return _m15_lifecycle_status(
+            row=row,
+            first_sweep_at=first_sweep_at,
+            close_above_count=close_above_count,
+            close_below_count=close_below_count,
+            accepted_above_at=accepted_above_at,
+            accepted_below_at=accepted_below_at,
+        )
+    return _htf_lifecycle_status(
+        has_htf=has_htf,
+        htf_sweep_count=htf_sweep_count,
+        htf_close_through_count=htf_close_through_count,
+        htf_acceptance_count=htf_acceptance_count,
+        history_context_incomplete=history_context_incomplete,
+    )
+
+
+def _m15_lifecycle_status(
+    *,
+    row: dict[str, object] | pd.Series,
+    first_sweep_at: str,
+    close_above_count: int,
+    close_below_count: int,
+    accepted_above_at: str,
+    accepted_below_at: str,
+) -> str:
+    if str(row.get("side", "")) == "BUY_SIDE":
+        close_through_count = close_above_count
+        accepted_at = accepted_above_at
+    else:
+        close_through_count = close_below_count
+        accepted_at = accepted_below_at
+    if accepted_at:
+        return "M15_ACCEPTED"
+    if close_through_count > 0:
+        return "M15_CLOSE_THROUGH"
+    if first_sweep_at:
+        return "M15_SWEPT"
+    return "M15_ACTIVE"
+
+
 def _merged_htf_lifecycle_status(rows: list[dict[str, object]]) -> str:
     values = [str(row.get("htf_lifecycle_status", "") or "") for row in rows]
     for status in [
@@ -1815,6 +1943,14 @@ def _merged_htf_lifecycle_status(rows: list[dict[str, object]]) -> str:
         "HTF_SWEPT",
         "HTF_HISTORY_INCOMPLETE",
         "HTF_ACTIVE",
+    ]:
+        if status in values:
+            return status
+    for status in [
+        "M15_ACCEPTED",
+        "M15_CLOSE_THROUGH",
+        "M15_SWEPT",
+        "M15_ACTIVE",
     ]:
         if status in values:
             return status
@@ -1845,6 +1981,8 @@ def _sweep_importance_class_from_values(
         return "HTF_STRUCTURAL_SWEEP" if swept else "HTF_STRUCTURAL_LEVEL"
     if primary == "H1":
         return "HTF_STRUCTURAL_SWEEP" if swept else "HTF_STRUCTURAL_LEVEL"
+    if primary == "M15" or _has_m15_source(row):
+        return "M15_STRUCTURE_SWEEP" if swept else "M15_MINIMUM_STRUCTURE_LEVEL"
     if primary == "SESSION":
         return "LOCAL_SESSION_SWEEP" if swept else "LOCAL_SESSION_ZONE"
     if structural_zone_mode == "PATTERN_DERIVED_ZONE" or primary == "PATTERN":
@@ -1857,6 +1995,8 @@ def _merged_sweep_importance_class(rows: list[dict[str, object]]) -> str:
     for value in [
         "HTF_STRUCTURAL_SWEEP",
         "HTF_STRUCTURAL_LEVEL",
+        "M15_STRUCTURE_SWEEP",
+        "M15_MINIMUM_STRUCTURE_LEVEL",
         "LOCAL_SESSION_SWEEP",
         "LOCAL_SESSION_ZONE",
         "MICRO_SWEEP",

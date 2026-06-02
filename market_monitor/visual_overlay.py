@@ -248,6 +248,7 @@ def _build_missed_case(data: _VisualData, options: VisualOverlayOptions) -> tupl
     consumed_or_chopped = _category_zones(all_near, consumption={"CONSUMED", "CHOPPED_THROUGH"})
     expired_or_merged = _category_zones(all_near, status={"EXPIRED", "MERGED"})
     htf_structural_levels = _htf_structural_levels(all_near)
+    m15_structure_zones = _m15_structure_zones(all_near)
     local_session_zones = _local_session_zones(all_near)
     m1_local_zones = _m1_local_zones(all_near)
     h4_65500_audit = _h4_65500_audit(
@@ -258,7 +259,10 @@ def _build_missed_case(data: _VisualData, options: VisualOverlayOptions) -> tupl
     )
     broad_reaction_zones = _broad_reaction_zones(all_near)
     display_zones = _dedupe_zones(
-        pd.concat([active_zones, broad_reaction_zones, htf_structural_levels], ignore_index=True)
+        pd.concat(
+            [active_zones, broad_reaction_zones, htf_structural_levels, m15_structure_zones],
+            ignore_index=True,
+        )
     )
     crossed = _crossed_zones_at(display_zones, price_row)
     gate_rows = [_missed_gate_row(zone, price_row, data.volume_delta, data.event_log) for _, zone in crossed.iterrows()]
@@ -284,6 +288,7 @@ def _build_missed_case(data: _VisualData, options: VisualOverlayOptions) -> tupl
         consumed_or_chopped=consumed_or_chopped,
         expired_or_merged=expired_or_merged,
         htf_structural_levels=htf_structural_levels,
+        m15_structure_zones=m15_structure_zones,
         local_session_zones=local_session_zones,
         m1_local_zones=m1_local_zones,
         h4_65500_audit=h4_65500_audit,
@@ -762,6 +767,7 @@ def _missed_markdown(
     consumed_or_chopped: pd.DataFrame,
     expired_or_merged: pd.DataFrame,
     htf_structural_levels: pd.DataFrame,
+    m15_structure_zones: pd.DataFrame,
     local_session_zones: pd.DataFrame,
     m1_local_zones: pd.DataFrame,
     h4_65500_audit: str,
@@ -798,6 +804,9 @@ def _missed_markdown(
             "",
             "## HTF_STRUCTURAL_LEVELS",
             _markdown_zone_list(htf_structural_levels),
+            "",
+            "## M15_MINIMUM_STRUCTURE",
+            _markdown_zone_list(m15_structure_zones),
             "",
             "## LOCAL_SESSION_ZONES",
             _markdown_zone_list(local_session_zones),
@@ -1016,6 +1025,12 @@ def _htf_structural_levels(zones: pd.DataFrame) -> pd.DataFrame:
     return zones[zones.apply(_is_htf_zone, axis=1)].copy()
 
 
+def _m15_structure_zones(zones: pd.DataFrame) -> pd.DataFrame:
+    if zones.empty:
+        return zones.copy()
+    return zones[zones.apply(_is_m15_zone, axis=1)].copy()
+
+
 def _local_session_zones(zones: pd.DataFrame) -> pd.DataFrame:
     if zones.empty:
         return zones.copy()
@@ -1026,7 +1041,11 @@ def _local_session_zones(zones: pd.DataFrame) -> pd.DataFrame:
 def _m1_local_zones(zones: pd.DataFrame) -> pd.DataFrame:
     if zones.empty:
         return zones.copy()
-    mask = ~zones.apply(_is_htf_zone, axis=1) & ~zones.apply(_is_local_session_zone, axis=1)
+    mask = (
+        ~zones.apply(_is_htf_zone, axis=1)
+        & ~zones.apply(_is_m15_zone, axis=1)
+        & ~zones.apply(_is_local_session_zone, axis=1)
+    )
     return zones[mask].copy()
 
 
@@ -1456,6 +1475,16 @@ def _structure_note(zone: pd.Series) -> str:
             f"htf_close_through_count={_display(zone.get('htf_close_through_count', ''))}; "
             f"htf_acceptance_count={_display(zone.get('htf_acceptance_count', ''))}."
         )
+    if _is_m15_zone(zone):
+        return (
+            "M15 minimum structure level: "
+            f"primary={_display(zone.get('source_timeframe_primary', ''))}; "
+            f"source={_display(zone.get('source_timeframes', ''))}; "
+            f"lifecycle={_display(zone.get('htf_lifecycle_status', ''))}; "
+            f"first_sweep_at={_display(zone.get('first_sweep_at', ''))}; "
+            f"resweep_count={_display(zone.get('resweep_count', ''))}; "
+            f"active_forward_role={_display(zone.get('active_forward_role', ''))}."
+        )
     if _is_broad_zone(zone):
         return (
             "Broad structural liquidity zone: "
@@ -1474,6 +1503,8 @@ def _structure_note(zone: pd.Series) -> str:
 def _weak_local_badge(zone: pd.Series) -> str:
     if _is_htf_zone(zone):
         return "HTF_STRUCTURAL_LEVEL. M1 touches are context only. "
+    if _is_m15_zone(zone):
+        return "M15_MINIMUM_STRUCTURE. M1 touches are context only. "
     if str(zone.get("sweep_importance_class", "") or "") == "MICRO_SWEEP":
         return "MICRO_SWEEP. M1/local context only, not a structural sweep. "
     sources = set(str(zone.get("source_timeframes", "")).split("|"))
@@ -1558,6 +1589,8 @@ def _zone_color(zone: pd.Series) -> str:
         return "#9ca3af"
     if _is_htf_zone(zone):
         return "#b91c1c"
+    if _is_m15_zone(zone):
+        return "#0891b2"
     if str(zone.get("zone_behavior_state", "")) in {"DISTRIBUTION_CANDIDATE", "FAILED_ACCEPTANCE"}:
         return "#be123c"
     if str(zone.get("zone_behavior_state", "")) in {"REJECTION_FROM_ZONE", "DRIFT_AWAY_FROM_ZONE"}:
@@ -1582,6 +1615,8 @@ def _zone_dash(zone: pd.Series) -> str:
         return "2 5"
     if _is_htf_zone(zone):
         return "1 0"
+    if _is_m15_zone(zone):
+        return "3 2"
     if str(zone.get("status", "")) == "EXPIRED" or str(zone.get("precision_status", "")) == "LOW_PRECISION":
         return "6 4"
     return "4 3"
@@ -1616,8 +1651,29 @@ def _is_htf_zone(zone: pd.Series) -> bool:
     )
 
 
+def _is_m15_zone(zone: pd.Series) -> bool:
+    if _is_htf_zone(zone):
+        return False
+    primary = _clean_text(zone.get("source_timeframe_primary", ""))
+    source_timeframes = {part for part in _clean_text(zone.get("source_timeframes", "")).split("|") if part}
+    sweep_class = _clean_text(zone.get("sweep_importance_class", ""))
+    role = _clean_text(zone.get("active_forward_role", ""))
+    lifecycle = _clean_text(zone.get("htf_lifecycle_status", ""))
+    zone_type = _clean_text(zone.get("zone_type", ""))
+    return (
+        primary == "M15"
+        or "M15" in source_timeframes
+        or sweep_class.startswith("M15_")
+        or role.startswith("M15_")
+        or lifecycle.startswith("M15_")
+        or zone_type.startswith("M15_")
+    )
+
+
 def _is_local_session_zone(zone: pd.Series) -> bool:
     if _is_htf_zone(zone):
+        return False
+    if _is_m15_zone(zone):
         return False
     primary = _clean_text(zone.get("source_timeframe_primary", ""))
     source_timeframes = {part for part in _clean_text(zone.get("source_timeframes", "")).split("|") if part}
