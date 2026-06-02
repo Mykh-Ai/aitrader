@@ -86,6 +86,16 @@ Do not:
 
 Do not modify feed data or recovered feed data unless the user explicitly asks for a feed/data-lineage task.
 
+For read-only Market Monitor diagnostics, replays, visual overlays, and research summaries, select input data by lineage quality before running the monitor:
+
+- The known aggregator outage / contamination window is `2026-04-23 17:05:00 UTC -> 2026-05-06 22:51:00 UTC`.
+- For day-level diagnostic replays that include this known outage window, use `feed_recovered/YYYY-MM-DD.csv` for `2026-04-23` through `2026-05-06` when those recovered files exist. Do not use the flat zero-volume placeholder rows from `feed/` as market evidence for those dates.
+- For minute-precise tooling, `feed/` is usable before `2026-04-23 17:05:00 UTC` and after `2026-05-06 22:51:00 UTC`; rows inside the known outage window must come from `feed_recovered/` when available.
+- Use recovered rows without copying them into or overwriting `feed/`.
+- Mark the selected recovered rows/artifacts as `RECOVERED_DEGRADED` and explicitly report that the source was recovered.
+- Treat price/OHLCV/trades/buy/sell from `feed_recovered/` as usable with caveats, but treat OI/funding/liquidation conclusions from the recovered window as lower-confidence unless a real source is verified.
+- If both `feed/` and `feed_recovered/` are invalid or missing for a requested diagnostic day, report the missing/invalid data instead of synthesizing rows or forcing a market-state conclusion.
+
 When the user asks to update or refresh `feed/`, treat it as a server data-lineage sync task first, not as a local REST backfill:
 
 - Find the live SHI aggregator on the server before generating any replacement rows.

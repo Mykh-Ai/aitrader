@@ -50,4 +50,18 @@ Primary contamination window:
 
 OI/Funding/Liquidations during the recovered gap must be treated carefully. Do not make funding/liquidation-based conclusions from recovered rows unless explicitly marked degraded/unsupported.
 
+## Diagnostic replay source selection
+
+For read-only Market Monitor diagnostics, replays, visual overlays, and research summaries, do not blindly prefer `feed/` during the known recovery/contamination window:
+
+`2026-04-23 17:05:00 UTC -> 2026-05-06 22:51:00 UTC`
+
+For day-level diagnostic replays that include this window, use `feed_recovered/YYYY-MM-DD.csv` for `2026-04-23` through `2026-05-06` when those recovered files exist. Do not use the flat zero-volume placeholder rows from `feed/` as market evidence for those dates.
+
+For minute-precise tooling, `feed/` is usable before `2026-04-23 17:05:00 UTC` and after `2026-05-06 22:51:00 UTC`; rows inside the known outage window must come from `feed_recovered/` when available.
+
+Do not copy recovered rows into `feed/` and do not overwrite primary feed evidence.
+
+Every artifact that uses recovered rows must mark the source as `RECOVERED_DEGRADED` and state the caveat in the report. If recovered data is also missing or invalid, report the data gap instead of synthesizing rows or forcing a phase/liquidity conclusion.
+
 Future Market State Monitor work must use an adaptor/contract layer, not ad-hoc column assumptions.
