@@ -82,6 +82,8 @@ ZONE_TYPE_BY_LEVEL = {
     "EUROPE_LOW": "EUROPE_LOW_ZONE",
     "US_HIGH": "US_HIGH_ZONE",
     "US_LOW": "US_LOW_ZONE",
+    "M15_SWING_HIGH": "M15_SWING_HIGH_ZONE",
+    "M15_SWING_LOW": "M15_SWING_LOW_ZONE",
     "H1_SWING_HIGH": "H1_SWING_HIGH_ZONE",
     "H1_SWING_LOW": "H1_SWING_LOW_ZONE",
     "H4_SWING_HIGH": "H4_SWING_HIGH_ZONE",
@@ -209,6 +211,7 @@ def _merge_zones(
             current_upper = max(float(item["price_upper"]) for item in cluster)
             if (
                 float(zone["price_lower"]) <= current_upper + merge_tolerance
+                and _merge_sources_compatible(cluster, zone)
                 and _cluster_width_pct(cluster + [zone]) < HARD_WIDE_ZONE_WIDTH_PCT
             ):
                 cluster.append(zone)
@@ -282,6 +285,21 @@ def _cluster_width_pct(cluster: list[dict[str, object]]) -> float:
     return _zone_width_pct(lower, upper, (lower + upper) / 2)
 
 
+def _merge_sources_compatible(
+    cluster: list[dict[str, object]], zone: dict[str, object]
+) -> bool:
+    zone_is_m15 = _preliminary_zone_has_m15_source(zone)
+    cluster_has_m15 = any(_preliminary_zone_has_m15_source(item) for item in cluster)
+    if zone_is_m15 or cluster_has_m15:
+        return zone_is_m15 and all(_preliminary_zone_has_m15_source(item) for item in cluster)
+    return True
+
+
+def _preliminary_zone_has_m15_source(zone: dict[str, object]) -> bool:
+    evidence = zone.get("evidence")
+    return isinstance(evidence, SourceEvidence) and "M15" in evidence.timeframes
+
+
 def _merged_zone_type(side: str, zone_types: list[str]) -> str:
     if len(zone_types) == 1:
         return zone_types[0]
@@ -312,6 +330,7 @@ def _finalize_zone(zone: dict[str, object], latest_close: float | None) -> dict[
     source_level_ids = "|".join(evidence.level_ids)
     source_timeframes = "|".join(evidence.timeframes)
     source_timeframe_primary = _source_timeframe_primary(evidence.timeframes)
+    has_m15 = source_timeframe_primary == "M15" or "M15" in evidence.timeframes
     has_htf = bool(evidence.htf_level_type) or source_timeframe_primary in {"H1", "H4"}
     components = _confidence_components(evidence, zone_width_pct)
     instrumentation = score_instrumentation_fields(
@@ -369,8 +388,10 @@ def _finalize_zone(zone: dict[str, object], latest_close: float | None) -> dict[
             str(zone["zone_type"]), evidence, zone_width_pct
         ),
         "zone_behavior_state": "NONE",
-        "active_forward_role": "FRESH_LIQUIDITY",
-        "htf_lifecycle_status": "HTF_ACTIVE" if has_htf else "LOCAL_ONLY",
+        "active_forward_role": "M15_MINIMUM_STRUCTURE" if has_m15 and not has_htf else "FRESH_LIQUIDITY",
+        "htf_lifecycle_status": (
+            "HTF_ACTIVE" if has_htf else "M15_ACTIVE" if has_m15 else "LOCAL_ONLY"
+        ),
         "m1_interaction_count": 0,
         "htf_sweep_count": 0,
         "htf_close_through_count": 0,
@@ -417,6 +438,8 @@ def _passes_pruning(row: dict[str, object]) -> bool:
     zone_type = str(row["zone_type"])
     if "H4" in source_timeframes:
         return True
+    if "M15" in source_timeframes:
+        return True
     if zone_type in {"PDH_ZONE", "PDL_ZONE", "EQUAL_HIGHS_ZONE", "EQUAL_LOWS_ZONE"}:
         return True
     if "DOUBLE_TOP" in zone_type or "DOUBLE_BOTTOM" in zone_type or "HNS_" in zone_type:
@@ -449,7 +472,7 @@ def _structural_zone_mode(
 
 def _source_timeframe_primary(timeframes: tuple[str, ...]) -> str:
     available = set(timeframes)
-    for timeframe in ["H4", "H1", "PATTERN", "CLUSTER", "SESSION"]:
+    for timeframe in ["H4", "H1", "M15", "PATTERN", "CLUSTER", "SESSION"]:
         if timeframe in available:
             return timeframe
     return sorted(available)[0] if available else ""
@@ -466,6 +489,8 @@ def _sweep_importance_class(
     swept = bool(first_sweep_at) or htf_sweep_count > 0
     if has_htf or source_timeframe_primary in {"H1", "H4"}:
         return "HTF_STRUCTURAL_SWEEP" if swept else "HTF_STRUCTURAL_LEVEL"
+    if source_timeframe_primary == "M15":
+        return "M15_STRUCTURE_SWEEP" if swept else "M15_MINIMUM_STRUCTURE_LEVEL"
     if source_timeframe_primary == "SESSION":
         return "LOCAL_SESSION_SWEEP" if swept else "LOCAL_SESSION_ZONE"
     if structural_zone_mode == "PATTERN_DERIVED_ZONE" or source_timeframe_primary == "PATTERN":
@@ -479,6 +504,7 @@ def _confidence_components(evidence: SourceEvidence, zone_width_pct: float = 0.0
     source_families = _source_families(timeframes, level_types)
     h4_component = 40 if "H4" in timeframes else 0
     h1_component = 24 if "H1" in timeframes else 0
+    m15_component = 18 if "M15" in timeframes else 0
     session_component = _session_component(timeframes)
     pdh_pdl_component = 45 if level_types & {"PDH", "PDL"} else 0
     high_low_component = 0
@@ -508,6 +534,7 @@ def _confidence_components(evidence: SourceEvidence, zone_width_pct: float = 0.0
     pre_clamp_score = (
         h4_component
         + h1_component
+        + m15_component
         + session_component
         + pdh_pdl_component
         + high_low_component
@@ -523,8 +550,9 @@ def _confidence_components(evidence: SourceEvidence, zone_width_pct: float = 0.0
     precision_status = precision_status_for_width(zone_width_pct)
     return {
         "base_score": 0,
-        "timeframe_score": h4_component + h1_component,
-        "timeframe_component_total": h4_component + h1_component + session_component,
+        "timeframe_score": h4_component + h1_component + m15_component,
+        "timeframe_component_total": h4_component + h1_component + m15_component + session_component,
+        "m15_component": m15_component,
         "h1_component": h1_component,
         "h4_component": h4_component,
         "session_component": session_component,
@@ -559,7 +587,7 @@ def _confidence_components(evidence: SourceEvidence, zone_width_pct: float = 0.0
 
 def _source_families(timeframes: set[str], level_types: set[str]) -> set[str]:
     families: set[str] = set()
-    for timeframe in ["H4", "H1", "SESSION"]:
+    for timeframe in ["H4", "H1", "M15", "SESSION"]:
         if timeframe in timeframes:
             families.add(timeframe)
     if level_types & {"PDH", "PDL"}:

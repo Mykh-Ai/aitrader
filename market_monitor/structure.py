@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 
 
+M15_SWING_LEFT_RIGHT = 2
 H1_SWING_LEFT_RIGHT = 2
 H4_SWING_LEFT_RIGHT = 1
 EQUAL_LEVEL_TOLERANCE_BPS = 5
@@ -44,6 +45,7 @@ def build_structure_levels(feed: pd.DataFrame) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
     rows.extend(_daily_reference_levels(frame))
     rows.extend(_finalized_session_levels(frame))
+    rows.extend(_confirmed_swing_levels(frame, "M15", M15_SWING_LEFT_RIGHT))
     rows.extend(_confirmed_swing_levels(frame, "H1", H1_SWING_LEFT_RIGHT))
     rows.extend(_confirmed_swing_levels(frame, "H4", H4_SWING_LEFT_RIGHT))
 
@@ -64,7 +66,8 @@ def build_structure_levels(feed: pd.DataFrame) -> pd.DataFrame:
 
 
 def aggregate_timeframe(feed: pd.DataFrame, timeframe: str) -> pd.DataFrame:
-    if timeframe not in {"H1", "H4"}:
+    rules = {"M15": "15min", "H1": "h", "H4": "4h"}
+    if timeframe not in rules:
         raise ValueError(f"Unsupported timeframe: {timeframe}")
     columns = [
         "Timestamp",
@@ -85,7 +88,7 @@ def aggregate_timeframe(feed: pd.DataFrame, timeframe: str) -> pd.DataFrame:
     if feed.empty:
         return pd.DataFrame(columns=columns)
 
-    rule = "h" if timeframe == "H1" else "4h"
+    rule = rules[timeframe]
     frame = feed.sort_values("Timestamp", kind="mergesort").copy()
     frame["bar_timestamp"] = frame["Timestamp"].dt.floor(rule)
     bars = (
@@ -260,7 +263,7 @@ def _confirmed_swing_levels(
                     source_start=current["source_start"],
                     source_end=current["source_end"],
                     touch_count=1,
-                    strength_score=75 if timeframe == "H4" else 65,
+                    strength_score=_swing_strength_score(timeframe),
                     data_quality=current["DataQuality"],
                 )
             )
@@ -282,11 +285,21 @@ def _confirmed_swing_levels(
                     source_start=current["source_start"],
                     source_end=current["source_end"],
                     touch_count=1,
-                    strength_score=75 if timeframe == "H4" else 65,
+                    strength_score=_swing_strength_score(timeframe),
                     data_quality=current["DataQuality"],
                 )
             )
     return rows
+
+
+def _swing_strength_score(timeframe: str) -> int:
+    if timeframe == "H4":
+        return 75
+    if timeframe == "H1":
+        return 65
+    if timeframe == "M15":
+        return 50
+    return 45
 
 
 def _equal_level_rows(levels: pd.DataFrame) -> pd.DataFrame:
