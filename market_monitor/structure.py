@@ -18,8 +18,13 @@ STRUCTURE_LEVEL_COLUMNS = [
     "level_timestamp",
     "timeframe",
     "level_type",
+    "source_timeframe_primary",
     "side",
     "price",
+    "htf_level_type",
+    "htf_origin_timestamp",
+    "htf_origin_price",
+    "htf_confirmation_timestamp",
     "source_start",
     "source_end",
     "touch_count",
@@ -49,6 +54,11 @@ def build_structure_levels(feed: pd.DataFrame) -> pd.DataFrame:
             equal_levels, start_index=len(levels) + 1
         )
         levels = pd.concat([levels, equal_levels], ignore_index=True)
+        levels = _sort_levels(levels)
+    pattern_levels = _pattern_structure_level_rows(levels)
+    if not pattern_levels.empty:
+        pattern_levels = _assign_level_ids(pattern_levels, start_index=len(levels) + 1)
+        levels = pd.concat([levels, pattern_levels], ignore_index=True)
         levels = _sort_levels(levels)
     return levels
 
@@ -358,6 +368,32 @@ def _equal_cluster_to_rows(
     ]
 
 
+def _pattern_structure_level_rows(levels: pd.DataFrame) -> pd.DataFrame:
+    if levels.empty:
+        return pd.DataFrame(columns=STRUCTURE_LEVEL_COLUMNS)
+    rows: list[dict[str, object]] = []
+    for _, level in levels[levels["level_type"].isin({"EQUAL_HIGHS", "EQUAL_LOWS"})].iterrows():
+        level_type = "DOUBLE_TOP_HIGH" if level["level_type"] == "EQUAL_HIGHS" else "DOUBLE_BOTTOM_LOW"
+        source_ids = str(level.get("source_level_ids", "") or level.get("level_id", ""))
+        rows.append(
+            _level_row(
+                created_at=level["created_at"],
+                level_timestamp=level["level_timestamp"],
+                timeframe="PATTERN",
+                level_type=level_type,
+                side=level["side"],
+                price=level["price"],
+                source_start=level["source_start"],
+                source_end=level["source_end"],
+                touch_count=int(level["touch_count"]),
+                strength_score=min(100, int(level["strength_score"]) + 5),
+                data_quality=level["data_quality"],
+                source_level_ids=source_ids,
+            )
+        )
+    return pd.DataFrame(rows, columns=STRUCTURE_LEVEL_COLUMNS)
+
+
 def _assign_level_ids(levels: pd.DataFrame, start_index: int = 1) -> pd.DataFrame:
     levels = levels.reindex(columns=STRUCTURE_LEVEL_COLUMNS)
     if levels.empty:
@@ -392,14 +428,20 @@ def _level_row(
     status: str = "ACTIVE",
     source_level_ids: str = "",
 ) -> dict[str, object]:
+    is_htf_structural = timeframe in {"H1", "H4"}
     return {
         "level_id": "",
         "created_at": _format_ts(created_at),
         "level_timestamp": _format_ts(level_timestamp),
         "timeframe": timeframe,
         "level_type": level_type,
+        "source_timeframe_primary": timeframe,
         "side": side,
         "price": float(price),
+        "htf_level_type": level_type if is_htf_structural else "",
+        "htf_origin_timestamp": _format_ts(level_timestamp) if is_htf_structural else "",
+        "htf_origin_price": float(price) if is_htf_structural else "",
+        "htf_confirmation_timestamp": _format_ts(created_at) if is_htf_structural else "",
         "source_start": _format_ts(source_start),
         "source_end": _format_ts(source_end),
         "touch_count": int(touch_count),

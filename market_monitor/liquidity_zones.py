@@ -23,7 +23,46 @@ LIQUIDITY_MAP_COLUMNS = [
     "price_mid",
     "source_level_ids",
     "source_timeframes",
+    "source_timeframe_primary",
+    "htf_level_type",
+    "htf_origin_timestamp",
+    "htf_origin_price",
+    "htf_confirmation_timestamp",
     "status",
+    "consumption_status",
+    "active_forward",
+    "cross_through_count",
+    "close_above_count",
+    "close_below_count",
+    "alternating_close_count",
+    "bars_inside_zone_lifetime",
+    "last_clean_reaction_at",
+    "consumed_at",
+    "consumption_reason",
+    "zone_outer_lower",
+    "zone_outer_upper",
+    "zone_core_lower",
+    "zone_core_upper",
+    "zone_origin_start",
+    "zone_origin_end",
+    "first_sweep_at",
+    "resweep_count",
+    "failed_acceptance_count",
+    "rejection_without_sweep_count",
+    "drift_away_confirmed_at",
+    "accepted_above_at",
+    "accepted_below_at",
+    "structural_zone_mode",
+    "zone_behavior_state",
+    "active_forward_role",
+    "htf_lifecycle_status",
+    "m1_interaction_count",
+    "htf_sweep_count",
+    "htf_close_through_count",
+    "htf_acceptance_count",
+    "history_context_start",
+    "history_context_incomplete",
+    "sweep_importance_class",
     "confidence_score",
     "confidence_tier",
     "touch_count",
@@ -49,6 +88,16 @@ ZONE_TYPE_BY_LEVEL = {
     "H4_SWING_LOW": "H4_SWING_LOW_ZONE",
     "EQUAL_HIGHS": "EQUAL_HIGHS_ZONE",
     "EQUAL_LOWS": "EQUAL_LOWS_ZONE",
+    "DOUBLE_TOP_HIGH": "DOUBLE_TOP_LIQUIDITY_ZONE",
+    "DOUBLE_BOTTOM_LOW": "DOUBLE_BOTTOM_LIQUIDITY_ZONE",
+    "HNS_LEFT_SHOULDER": "HNS_SHOULDER_LIQUIDITY_ZONE",
+    "HNS_HEAD": "HNS_HEAD_LIQUIDITY_ZONE",
+    "HNS_RIGHT_SHOULDER": "HNS_SHOULDER_LIQUIDITY_ZONE",
+    "HNS_NECKLINE": "HNS_NECKLINE_ZONE",
+    "INVERSE_HNS_LEFT_SHOULDER": "INVERSE_HNS_SHOULDER_LIQUIDITY_ZONE",
+    "INVERSE_HNS_HEAD": "INVERSE_HNS_HEAD_LIQUIDITY_ZONE",
+    "INVERSE_HNS_RIGHT_SHOULDER": "INVERSE_HNS_SHOULDER_LIQUIDITY_ZONE",
+    "INVERSE_HNS_NECKLINE": "INVERSE_HNS_NECKLINE_ZONE",
     # Backward-compatible aliases for Sprint 1 tests and ad hoc callers.
     "SESSION_HIGH": "ASIA_HIGH_ZONE",
     "SESSION_LOW": "ASIA_LOW_ZONE",
@@ -66,6 +115,12 @@ class SourceEvidence:
     data_quality: str
     touch_count: int
     cluster_member_count: int = 1
+    htf_level_type: str = ""
+    htf_origin_timestamp: str = ""
+    htf_origin_price: float = 0.0
+    htf_confirmation_timestamp: str = ""
+    htf_source_start: str = ""
+    htf_history_context_incomplete: bool = False
 
 
 def build_liquidity_map(levels: pd.DataFrame, latest_close: float | None) -> pd.DataFrame:
@@ -113,6 +168,13 @@ def _preliminary_zones(
             data_quality=str(level["data_quality"]),
             touch_count=int(level["touch_count"]),
             cluster_member_count=1,
+            htf_level_type=str(level.get("htf_level_type", "") or ""),
+            htf_origin_timestamp=str(level.get("htf_origin_timestamp", "") or ""),
+            htf_origin_price=_float_or_zero(level.get("htf_origin_price", 0)),
+            htf_confirmation_timestamp=str(level.get("htf_confirmation_timestamp", "") or ""),
+            htf_source_start=str(level.get("source_start", "") or "")
+            if str(level.get("timeframe", "")) in {"H1", "H4"}
+            else "",
         )
         zones.append(
             {
@@ -169,6 +231,7 @@ def _collapse_cluster(cluster: list[dict[str, object]]) -> dict[str, object]:
     zone_types = sorted({str(zone["zone_type"]) for zone in cluster})
     side = str(cluster[0]["side"])
     zone_type = _merged_zone_type(side, zone_types)
+    htf_evidence = _primary_htf_evidence(evidence_items, (lower + upper) / 2)
     return {
         "created_at": max(str(zone["created_at"]) for zone in cluster),
         "last_updated_at": max(str(zone["last_updated_at"]) for zone in cluster),
@@ -184,8 +247,33 @@ def _collapse_cluster(cluster: list[dict[str, object]]) -> dict[str, object]:
             data_quality=data_quality,
             touch_count=sum(evidence.touch_count for evidence in evidence_items),
             cluster_member_count=sum(evidence.cluster_member_count for evidence in evidence_items),
+            htf_level_type=htf_evidence.htf_level_type if htf_evidence else "",
+            htf_origin_timestamp=htf_evidence.htf_origin_timestamp if htf_evidence else "",
+            htf_origin_price=htf_evidence.htf_origin_price if htf_evidence else 0.0,
+            htf_confirmation_timestamp=htf_evidence.htf_confirmation_timestamp if htf_evidence else "",
+            htf_source_start=htf_evidence.htf_source_start if htf_evidence else "",
+            htf_history_context_incomplete=(
+                htf_evidence.htf_history_context_incomplete if htf_evidence else False
+            ),
         ),
     }
+
+
+def _primary_htf_evidence(
+    evidence_items: list[SourceEvidence], reference_mid: float
+) -> SourceEvidence | None:
+    htf_items = [item for item in evidence_items if item.htf_level_type]
+    if not htf_items:
+        return None
+    return sorted(
+        htf_items,
+        key=lambda item: (
+            0 if "H4" in item.timeframes else 1,
+            abs(float(item.htf_origin_price or 0.0) - reference_mid),
+            str(item.htf_confirmation_timestamp),
+            str(item.htf_origin_timestamp),
+        ),
+    )[0]
 
 
 def _cluster_width_pct(cluster: list[dict[str, object]]) -> float:
@@ -197,6 +285,18 @@ def _cluster_width_pct(cluster: list[dict[str, object]]) -> float:
 def _merged_zone_type(side: str, zone_types: list[str]) -> str:
     if len(zone_types) == 1:
         return zone_types[0]
+    for pattern_zone_type in [
+        "DOUBLE_TOP_LIQUIDITY_ZONE",
+        "DOUBLE_BOTTOM_LIQUIDITY_ZONE",
+        "HNS_HEAD_LIQUIDITY_ZONE",
+        "HNS_SHOULDER_LIQUIDITY_ZONE",
+        "HNS_NECKLINE_ZONE",
+        "INVERSE_HNS_HEAD_LIQUIDITY_ZONE",
+        "INVERSE_HNS_SHOULDER_LIQUIDITY_ZONE",
+        "INVERSE_HNS_NECKLINE_ZONE",
+    ]:
+        if pattern_zone_type in zone_types:
+            return pattern_zone_type
     if side == "BUY_SIDE":
         return "CLUSTERED_BUY_SIDE_ZONE"
     return "CLUSTERED_SELL_SIDE_ZONE"
@@ -211,6 +311,8 @@ def _finalize_zone(zone: dict[str, object], latest_close: float | None) -> dict[
     confidence_tier = _confidence_tier(confidence_score)
     source_level_ids = "|".join(evidence.level_ids)
     source_timeframes = "|".join(evidence.timeframes)
+    source_timeframe_primary = _source_timeframe_primary(evidence.timeframes)
+    has_htf = bool(evidence.htf_level_type) or source_timeframe_primary in {"H1", "H4"}
     components = _confidence_components(evidence, zone_width_pct)
     instrumentation = score_instrumentation_fields(
         source_level_ids=source_level_ids,
@@ -234,7 +336,56 @@ def _finalize_zone(zone: dict[str, object], latest_close: float | None) -> dict[
         "price_mid": zone["price_mid"],
         "source_level_ids": source_level_ids,
         "source_timeframes": source_timeframes,
+        "source_timeframe_primary": source_timeframe_primary,
+        "htf_level_type": evidence.htf_level_type,
+        "htf_origin_timestamp": evidence.htf_origin_timestamp,
+        "htf_origin_price": evidence.htf_origin_price if has_htf else "",
+        "htf_confirmation_timestamp": evidence.htf_confirmation_timestamp,
         "status": "ACTIVE",
+        "consumption_status": "FRESH",
+        "active_forward": True,
+        "cross_through_count": 0,
+        "close_above_count": 0,
+        "close_below_count": 0,
+        "alternating_close_count": 0,
+        "bars_inside_zone_lifetime": 0,
+        "last_clean_reaction_at": "",
+        "consumed_at": "",
+        "consumption_reason": "",
+        "zone_outer_lower": zone["price_lower"],
+        "zone_outer_upper": zone["price_upper"],
+        "zone_core_lower": zone["price_lower"],
+        "zone_core_upper": zone["price_upper"],
+        "zone_origin_start": zone["created_at"],
+        "zone_origin_end": zone["created_at"],
+        "first_sweep_at": "",
+        "resweep_count": 0,
+        "failed_acceptance_count": 0,
+        "rejection_without_sweep_count": 0,
+        "drift_away_confirmed_at": "",
+        "accepted_above_at": "",
+        "accepted_below_at": "",
+        "structural_zone_mode": _structural_zone_mode(
+            str(zone["zone_type"]), evidence, zone_width_pct
+        ),
+        "zone_behavior_state": "NONE",
+        "active_forward_role": "FRESH_LIQUIDITY",
+        "htf_lifecycle_status": "HTF_ACTIVE" if has_htf else "LOCAL_ONLY",
+        "m1_interaction_count": 0,
+        "htf_sweep_count": 0,
+        "htf_close_through_count": 0,
+        "htf_acceptance_count": 0,
+        "history_context_start": evidence.htf_source_start or zone["created_at"],
+        "history_context_incomplete": evidence.htf_history_context_incomplete,
+        "sweep_importance_class": _sweep_importance_class(
+            source_timeframe_primary=source_timeframe_primary,
+            has_htf=has_htf,
+            htf_sweep_count=0,
+            first_sweep_at="",
+            structural_zone_mode=_structural_zone_mode(
+                str(zone["zone_type"]), evidence, zone_width_pct
+            ),
+        ),
         "confidence_score": confidence_score,
         "confidence_tier": confidence_tier,
         "touch_count": evidence.touch_count,
@@ -268,6 +419,8 @@ def _passes_pruning(row: dict[str, object]) -> bool:
         return True
     if zone_type in {"PDH_ZONE", "PDL_ZONE", "EQUAL_HIGHS_ZONE", "EQUAL_LOWS_ZONE"}:
         return True
+    if "DOUBLE_TOP" in zone_type or "DOUBLE_BOTTOM" in zone_type or "HNS_" in zone_type:
+        return True
     if "H4" in zone_type or "PDH" in zone_type or "PDL" in zone_type:
         return True
     return len([source_id for source_id in source_ids if source_id]) >= 2 and zone_type.startswith("EQUAL_")
@@ -276,6 +429,48 @@ def _passes_pruning(row: dict[str, object]) -> bool:
 def _confidence_score(evidence: SourceEvidence, zone_width_pct: float = 0.0) -> int:
     components = _confidence_components(evidence, zone_width_pct)
     return int(components["final_confidence_score"])
+
+
+def _structural_zone_mode(
+    zone_type: str, evidence: SourceEvidence, zone_width_pct: float
+) -> str:
+    if any(marker in zone_type for marker in ["DOUBLE_", "HNS_", "NECKLINE"]):
+        return "PATTERN_DERIVED_ZONE"
+    if (
+        evidence.cluster_member_count > 1
+        or len(evidence.level_ids) > 1
+        or zone_type.startswith("CLUSTERED_")
+        or zone_type in {"EQUAL_HIGHS_ZONE", "EQUAL_LOWS_ZONE"}
+        or zone_width_pct >= 0.25
+    ):
+        return "BROAD_STRUCTURAL_ZONE"
+    return "THIN_LEVEL"
+
+
+def _source_timeframe_primary(timeframes: tuple[str, ...]) -> str:
+    available = set(timeframes)
+    for timeframe in ["H4", "H1", "PATTERN", "CLUSTER", "SESSION"]:
+        if timeframe in available:
+            return timeframe
+    return sorted(available)[0] if available else ""
+
+
+def _sweep_importance_class(
+    *,
+    source_timeframe_primary: str,
+    has_htf: bool,
+    htf_sweep_count: int,
+    first_sweep_at: str,
+    structural_zone_mode: str,
+) -> str:
+    swept = bool(first_sweep_at) or htf_sweep_count > 0
+    if has_htf or source_timeframe_primary in {"H1", "H4"}:
+        return "HTF_STRUCTURAL_SWEEP" if swept else "HTF_STRUCTURAL_LEVEL"
+    if source_timeframe_primary == "SESSION":
+        return "LOCAL_SESSION_SWEEP" if swept else "LOCAL_SESSION_ZONE"
+    if structural_zone_mode == "PATTERN_DERIVED_ZONE" or source_timeframe_primary == "PATTERN":
+        return "LOCAL_SESSION_SWEEP" if swept else "LOCAL_SESSION_ZONE"
+    return "MICRO_SWEEP" if swept else "M1_LOCAL_ZONE"
 
 
 def _confidence_components(evidence: SourceEvidence, zone_width_pct: float = 0.0) -> dict[str, object]:
@@ -288,6 +483,18 @@ def _confidence_components(evidence: SourceEvidence, zone_width_pct: float = 0.0
     pdh_pdl_component = 45 if level_types & {"PDH", "PDL"} else 0
     high_low_component = 0
     equal_level_component = 4 if level_types & {"EQUAL_HIGHS", "EQUAL_LOWS"} else 0
+    pattern_component = 35 if level_types & {
+        "DOUBLE_TOP_HIGH",
+        "DOUBLE_BOTTOM_LOW",
+        "HNS_LEFT_SHOULDER",
+        "HNS_HEAD",
+        "HNS_RIGHT_SHOULDER",
+        "HNS_NECKLINE",
+        "INVERSE_HNS_LEFT_SHOULDER",
+        "INVERSE_HNS_HEAD",
+        "INVERSE_HNS_RIGHT_SHOULDER",
+        "INVERSE_HNS_NECKLINE",
+    } else 0
     source_diversity_bonus = min(max(len(source_families) - 2, 0) * 4, 12)
     raw_source_count_bonus = _raw_source_count_bonus(
         source_count=len(evidence.level_ids),
@@ -305,6 +512,7 @@ def _confidence_components(evidence: SourceEvidence, zone_width_pct: float = 0.0
         + pdh_pdl_component
         + high_low_component
         + equal_level_component
+        + pattern_component
         + source_diversity_bonus
         + raw_source_count_bonus
         + touch_bonus
@@ -323,6 +531,7 @@ def _confidence_components(evidence: SourceEvidence, zone_width_pct: float = 0.0
         "high_low_component": high_low_component,
         "pdh_pdl_component": pdh_pdl_component,
         "equal_level_component": equal_level_component,
+        "pattern_component": pattern_component,
         "source_diversity_bonus": source_diversity_bonus,
         "raw_source_count_bonus": raw_source_count_bonus,
         "source_count_bonus": source_count_bonus,
@@ -426,6 +635,16 @@ def _distance_from_close(price_mid: float, latest_close: float | None) -> float:
     if latest_close is None or latest_close == 0:
         return 0.0
     return (price_mid - float(latest_close)) / float(latest_close) * 100.0
+
+
+def _float_or_zero(value) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    if pd.isna(parsed):
+        return 0.0
+    return parsed
 
 
 def _source_ids_for_level(level: pd.Series) -> list[str]:

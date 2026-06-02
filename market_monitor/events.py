@@ -5,6 +5,10 @@ import json
 import pandas as pd
 
 from market_monitor.score_instrumentation import PRECISION_TOO_WIDE, SCORE_INSTRUMENTATION_COLUMNS
+from market_monitor.zone_registry import (
+    LOCAL_CONTEXT_ACTIVE_FORWARD_ROLES,
+    local_session_context_role,
+)
 
 
 APPROACH_THRESHOLD_FRACTION = 0.001
@@ -273,6 +277,8 @@ def _interaction_events(
     run_slice = feed[feed["Timestamp"] >= first_seen].copy()
     if run_slice.empty:
         return []
+    if _consumed_before_or_at(zone, run_slice["Timestamp"].min()):
+        return []
 
     cross_row = _first_cross(zone, run_slice)
     touch_row = _first_touch(zone, run_slice)
@@ -345,7 +351,11 @@ def _unresolved_sweep_event(
     first_seen_at = pd.Timestamp(zone["first_seen_at"])
     if first_seen_at >= event_timestamp:
         return None
+    if _consumed_before_or_at(zone, event_timestamp):
+        return None
     if str(zone.get("precision_status", "")) == PRECISION_TOO_WIDE:
+        return None
+    if _non_fresh_role_before_or_at(zone, event_timestamp):
         return None
 
     if _is_repeated_prior_cross_without_new_transition(
@@ -395,9 +405,24 @@ def _unresolved_sweep_event(
         "price_upper": float(zone["price_upper"]),
         "reaction_status": "UNRESOLVED",
         "side": str(zone["side"]),
+        "active_forward": str(zone.get("active_forward", "")),
+        "active_forward_role": str(zone.get("active_forward_role", "")),
+        "accepted_above_at": str(zone.get("accepted_above_at", "")),
+        "accepted_below_at": str(zone.get("accepted_below_at", "")),
+        "consumption_status": str(zone.get("consumption_status", "")),
+        "consumed_at": str(zone.get("consumed_at", "")),
+        "failed_acceptance_count": int(float(zone.get("failed_acceptance_count", 0) or 0)),
+        "first_sweep_at": str(zone.get("first_sweep_at", "")),
+        "resweep_count": int(float(zone.get("resweep_count", 0) or 0)),
         "source_timeframes": str(zone.get("source_timeframes", "")),
+        "structural_zone_mode": str(zone.get("structural_zone_mode", "")),
         "volume_zscore": float(ctx["volume_zscore"]),
+        "zone_behavior_state": str(zone.get("zone_behavior_state", "")),
         "zone_id": str(zone["zone_id"]),
+        "zone_outer_lower": float(zone.get("zone_outer_lower", zone["price_lower"]) or zone["price_lower"]),
+        "zone_outer_upper": float(zone.get("zone_outer_upper", zone["price_upper"]) or zone["price_upper"]),
+        "zone_core_lower": float(zone.get("zone_core_lower", zone["price_lower"]) or zone["price_lower"]),
+        "zone_core_upper": float(zone.get("zone_core_upper", zone["price_upper"]) or zone["price_upper"]),
         "zone_type": str(zone["zone_type"]),
         **_score_instrumentation_evidence(zone),
     }
@@ -556,9 +581,30 @@ def _base_evidence(
         "price_mid": float(zone["price_mid"]),
         "price_upper": float(zone["price_upper"]),
         "side": str(zone["side"]),
+        "active_forward": str(zone.get("active_forward", "")),
+        "active_forward_role": str(zone.get("active_forward_role", "")),
+        "consumption_status": str(zone.get("consumption_status", "")),
+        "consumed_at": str(zone.get("consumed_at", "")),
+        "first_sweep_at": str(zone.get("first_sweep_at", "")),
+        "htf_acceptance_count": int(float(zone.get("htf_acceptance_count", 0) or 0)),
+        "htf_close_through_count": int(float(zone.get("htf_close_through_count", 0) or 0)),
+        "htf_confirmation_timestamp": str(zone.get("htf_confirmation_timestamp", "")),
+        "htf_level_type": str(zone.get("htf_level_type", "")),
+        "htf_lifecycle_status": str(zone.get("htf_lifecycle_status", "")),
+        "htf_origin_price": float(zone.get("htf_origin_price", 0) or 0),
+        "htf_origin_timestamp": str(zone.get("htf_origin_timestamp", "")),
+        "htf_sweep_count": int(float(zone.get("htf_sweep_count", 0) or 0)),
+        "history_context_incomplete": str(zone.get("history_context_incomplete", "")),
+        "history_context_start": str(zone.get("history_context_start", "")),
+        "m1_interaction_count": int(float(zone.get("m1_interaction_count", 0) or 0)),
+        "resweep_count": int(float(zone.get("resweep_count", 0) or 0)),
+        "source_timeframe_primary": str(zone.get("source_timeframe_primary", "")),
         "source_timeframes": str(zone.get("source_timeframes", "")),
+        "structural_zone_mode": str(zone.get("structural_zone_mode", "")),
+        "sweep_importance_class": str(zone.get("sweep_importance_class", "")),
         "trigger": trigger,
         "volume_zscore": float(context["volume_zscore"]),
+        "zone_behavior_state": str(zone.get("zone_behavior_state", "")),
         "zone_id": str(zone["zone_id"]),
         "zone_type": str(zone["zone_type"]),
         **_score_instrumentation_evidence(zone),
@@ -566,18 +612,20 @@ def _base_evidence(
 
 
 def _first_cross(zone: dict[str, object], feed: pd.DataFrame) -> pd.Series | None:
+    lower = float(zone.get("zone_outer_lower", zone["price_lower"]) or zone["price_lower"])
+    upper = float(zone.get("zone_outer_upper", zone["price_upper"]) or zone["price_upper"])
     if zone["side"] == "BUY_SIDE":
-        crossed = feed[feed["HiPrice"] > float(zone["price_upper"])]
+        crossed = feed[feed["HiPrice"] > upper]
     else:
-        crossed = feed[feed["LowPrice"] < float(zone["price_lower"])]
+        crossed = feed[feed["LowPrice"] < lower]
     if crossed.empty:
         return None
     return crossed.iloc[0]
 
 
 def _first_touch(zone: dict[str, object], feed: pd.DataFrame) -> pd.Series | None:
-    lower = float(zone["price_lower"])
-    upper = float(zone["price_upper"])
+    lower = float(zone.get("zone_outer_lower", zone["price_lower"]) or zone["price_lower"])
+    upper = float(zone.get("zone_outer_upper", zone["price_upper"]) or zone["price_upper"])
     if zone["side"] == "BUY_SIDE":
         touched = feed[(feed["HiPrice"] >= lower) & (feed["HiPrice"] <= upper)]
     else:
@@ -590,8 +638,8 @@ def _first_touch(zone: dict[str, object], feed: pd.DataFrame) -> pd.Series | Non
 def _first_approach(zone: dict[str, object], feed: pd.DataFrame) -> pd.Series | None:
     latest_close = float(feed.iloc[-1]["ClosePrice"])
     threshold = max(APPROACH_THRESHOLD_MIN_USD, latest_close * APPROACH_THRESHOLD_FRACTION)
-    lower = float(zone["price_lower"])
-    upper = float(zone["price_upper"])
+    lower = float(zone.get("zone_outer_lower", zone["price_lower"]) or zone["price_lower"])
+    upper = float(zone.get("zone_outer_upper", zone["price_upper"]) or zone["price_upper"])
     if zone["side"] == "BUY_SIDE":
         approached = feed[(feed["HiPrice"] >= lower - threshold) & (feed["HiPrice"] < lower)]
     else:
@@ -602,9 +650,11 @@ def _first_approach(zone: dict[str, object], feed: pd.DataFrame) -> pd.Series | 
 
 
 def _cross_excursion(zone: dict[str, object], candle: pd.Series) -> float:
+    lower = float(zone.get("zone_outer_lower", zone["price_lower"]) or zone["price_lower"])
+    upper = float(zone.get("zone_outer_upper", zone["price_upper"]) or zone["price_upper"])
     if zone["side"] == "BUY_SIDE":
-        return max(0.0, float(candle["HiPrice"]) - float(zone["price_upper"]))
-    return max(0.0, float(zone["price_lower"]) - float(candle["LowPrice"]))
+        return max(0.0, float(candle["HiPrice"]) - upper)
+    return max(0.0, lower - float(candle["LowPrice"]))
 
 
 def _min_sweep_excursion(zone: dict[str, object]) -> float:
@@ -633,6 +683,29 @@ def _event_data_quality(zone: dict[str, object], candle: pd.Series) -> str:
     return sorted(value for value in values if value)[0] if any(values) else "RAW"
 
 
+def _consumed_before_or_at(zone: dict[str, object], timestamp) -> bool:
+    if str(zone.get("consumption_status", "")) not in {"CONSUMED", "CHOPPED_THROUGH", "EXPIRED"}:
+        return False
+    consumed_at = str(zone.get("consumed_at", "") or "")
+    if not consumed_at:
+        return True
+    return pd.Timestamp(consumed_at) <= pd.Timestamp(timestamp)
+
+
+def _non_fresh_role_before_or_at(zone: dict[str, object], timestamp) -> bool:
+    role = str(zone.get("active_forward_role", "") or "FRESH_LIQUIDITY")
+    if role in LOCAL_CONTEXT_ACTIVE_FORWARD_ROLES:
+        return True
+    if role == "FRESH_LIQUIDITY" and local_session_context_role(zone):
+        return True
+    if role not in {"AUDIT_ONLY", "INACTIVE"}:
+        return False
+    first_sweep_at = str(zone.get("first_sweep_at", "") or "")
+    if not first_sweep_at:
+        return True
+    return pd.Timestamp(first_sweep_at) < pd.Timestamp(timestamp)
+
+
 def _is_repeated_prior_cross_without_new_transition(
     *,
     zone: dict[str, object],
@@ -645,9 +718,11 @@ def _is_repeated_prior_cross_without_new_transition(
     previous_rows = feed[feed["Timestamp"] < pd.Timestamp(candle["Timestamp"])]
     if previous_rows.empty:
         return True
+    lower = float(zone.get("zone_outer_lower", zone["price_lower"]) or zone["price_lower"])
+    upper = float(zone.get("zone_outer_upper", zone["price_upper"]) or zone["price_upper"])
     if zone["side"] == "BUY_SIDE":
-        return bool((previous_rows["HiPrice"] > float(zone["price_upper"])).all())
-    return bool((previous_rows["LowPrice"] < float(zone["price_lower"])).all())
+        return bool((previous_rows["HiPrice"] > upper).all())
+    return bool((previous_rows["LowPrice"] < lower).all())
 
 
 def _price_before(feed: pd.DataFrame, timestamp) -> float | str:
