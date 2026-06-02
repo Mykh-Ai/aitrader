@@ -18,6 +18,10 @@ from market_monitor.label_taxonomy import (
     label_stats,
 )
 from market_monitor.liquidity_zones import LIQUIDITY_MAP_COLUMNS, build_liquidity_map
+from market_monitor.pattern_structures import (
+    PATTERN_STRUCTURES_COLUMNS,
+    build_pattern_structures,
+)
 from market_monitor.post_sweep_observation import (
     POST_SWEEP_OBSERVATION_COLUMNS,
     build_post_sweep_observations,
@@ -28,6 +32,7 @@ from market_monitor.summary import write_market_summary
 from market_monitor.zone_registry import (
     REGISTRY_COLUMNS,
     build_zone_registry,
+    forward_liquidity_from_registry,
     load_registry,
     write_registry,
 )
@@ -81,6 +86,7 @@ REQUIRED_CSV_SCHEMAS = {
     "volume_delta_state.csv": VOLUME_DELTA_STATE_COLUMNS,
     "accumulation_zones.csv": ACCUMULATION_ZONES_COLUMNS,
     "event_log.csv": EVENT_LOG_COLUMNS,
+    "pattern_structures.csv": PATTERN_STRUCTURES_COLUMNS,
     "market_move_groups.csv": MARKET_MOVE_GROUP_COLUMNS,
     "post_sweep_observation.csv": POST_SWEEP_OBSERVATION_COLUMNS,
     "sweep_label_taxonomy.csv": SWEEP_LABEL_TAXONOMY_COLUMNS,
@@ -111,6 +117,11 @@ def write_outputs(
         feed=feed,
         registry_in=registry_in,
     )
+    pattern_structures = build_pattern_structures(
+        structure_levels=structure_levels,
+        liquidity_zone_registry=liquidity_zone_registry,
+    )
+    forward_liquidity_map = forward_liquidity_from_registry(liquidity_zone_registry, latest_close)
     event_log = build_event_log(
         registry=liquidity_zone_registry,
         feed=feed,
@@ -132,11 +143,12 @@ def write_outputs(
 
     frames = {
         "market_state_timeline.csv": market_state_timeline,
-        "liquidity_map.csv": liquidity_map,
+        "liquidity_map.csv": forward_liquidity_map,
         "structure_levels.csv": structure_levels,
         "volume_delta_state.csv": volume_delta_state,
         "accumulation_zones.csv": accumulation_zones,
         "event_log.csv": event_log,
+        "pattern_structures.csv": pattern_structures,
         "market_move_groups.csv": market_move_groups,
         "post_sweep_observation.csv": post_sweep_observation,
         "sweep_label_taxonomy.csv": sweep_label_taxonomy,
@@ -154,7 +166,7 @@ def write_outputs(
     write_market_summary(
         output_dir / "market_summary.md",
         feed=feed,
-        liquidity_map=liquidity_map,
+        liquidity_map=forward_liquidity_map,
         structure_levels=structure_levels,
         event_log=event_log,
         run_timestamp=run_timestamp,

@@ -34,3 +34,4 @@ research/results/**/.pytest_cache/
 
 feed_recovered/
 market_monitor_runs/
+visual_reports/
