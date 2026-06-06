@@ -7,7 +7,13 @@ import pandas as pd
 
 from market_monitor.run_significant_zone_selector import main
 from market_monitor.significant_zone_selector import (
+    BUCKET_MAJOR,
+    BUCKET_NOISE,
+    BUCKET_PRIMARY,
     SELECTED_ZONE_COLUMNS,
+    SIDE_BALANCE_DISPLACED_REASON,
+    SIDE_BALANCE_PROMOTION_REASON,
+    _assign_visibility,
     run_significant_zone_selector,
 )
 
@@ -64,6 +70,89 @@ def test_selector_keeps_buy_and_sell_side_visible_when_available(tmp_path: Path)
     visible = _visible_rows(selected)
     assert "BUY_SIDE" in set(visible["side"])
     assert "SELL_SIDE" in set(visible["side"])
+
+
+def test_visibility_prefers_two_zones_per_side_when_strong_candidates_exist():
+    candidates = pd.DataFrame(
+        [
+            _visibility_candidate("buy_1", "BUY_SIDE", 150, distance=0.6),
+            _visibility_candidate("buy_2", "BUY_SIDE", 149, distance=0.7),
+            _visibility_candidate("buy_3", "BUY_SIDE", 148, distance=0.8),
+            _visibility_candidate("buy_4", "BUY_SIDE", 147, distance=0.9),
+            _visibility_candidate("buy_5", "BUY_SIDE", 146, distance=1.0),
+            _visibility_candidate("sell_1", "SELL_SIDE", 145, distance=0.3),
+            _visibility_candidate("sell_2", "SELL_SIDE", 144, distance=0.2),
+        ]
+    )
+
+    selected = _assign_visibility(candidates, max_visible_zones=6)
+    visible = _visible_rows(selected)
+
+    assert len(visible) <= 6
+    assert int((visible["side"] == "BUY_SIDE").sum()) >= 2
+    assert int((visible["side"] == "SELL_SIDE").sum()) >= 2
+    assert str(selected.loc[selected["zone_id"] == "sell_2", "visible_on_snapshot"].iloc[0]).lower() == "true"
+    assert SIDE_BALANCE_PROMOTION_REASON in selected.loc[
+        selected["zone_id"] == "sell_2", "reason_selected"
+    ].iloc[0]
+
+
+def test_visibility_requires_one_zone_per_side_even_with_large_score_gap():
+    candidates = pd.DataFrame(
+        [
+            _visibility_candidate(f"buy_{idx}", "BUY_SIDE", 200 - idx, distance=0.5)
+            for idx in range(6)
+        ]
+        + [
+            _visibility_candidate("sell_required", "SELL_SIDE", 100, distance=0.5),
+        ]
+    )
+
+    selected = _assign_visibility(candidates, max_visible_zones=6)
+    visible = _visible_rows(selected)
+
+    assert len(visible) == 6
+    assert "SELL_SIDE" in set(visible["side"])
+    assert str(selected.loc[selected["zone_id"] == "sell_required", "visible_on_snapshot"].iloc[0]).lower() == "true"
+
+
+def test_side_balance_replaces_weaker_same_side_zone_with_reason():
+    candidates = pd.DataFrame(
+        [
+            _visibility_candidate("buy_1", "BUY_SIDE", 150, distance=0.6),
+            _visibility_candidate("buy_2", "BUY_SIDE", 149, distance=0.7),
+            _visibility_candidate("buy_3", "BUY_SIDE", 148, distance=0.8),
+            _visibility_candidate("buy_4", "BUY_SIDE", 147, distance=0.9),
+            _visibility_candidate("buy_5", "BUY_SIDE", 146, distance=1.0),
+            _visibility_candidate("sell_1", "SELL_SIDE", 145, distance=0.3),
+            _visibility_candidate("sell_2", "SELL_SIDE", 144, distance=0.2),
+        ]
+    )
+
+    selected = _assign_visibility(candidates, max_visible_zones=6)
+
+    assert str(selected.loc[selected["zone_id"] == "buy_5", "visible_on_snapshot"].iloc[0]).lower() == "false"
+    assert selected.loc[selected["zone_id"] == "buy_5", "reason_hidden"].iloc[0] == SIDE_BALANCE_DISPLACED_REASON
+
+
+def test_side_balance_does_not_promote_noise_or_hidden_statuses():
+    candidates = pd.DataFrame(
+        [
+            _visibility_candidate(f"buy_{idx}", "BUY_SIDE", 150 - idx, distance=0.5)
+            for idx in range(6)
+        ]
+        + [
+            _visibility_candidate("sell_noise", "SELL_SIDE", 149, bucket=BUCKET_NOISE, distance=0.1),
+            _visibility_candidate("sell_expired", "SELL_SIDE", 148, status="EXPIRED", distance=0.1),
+            _visibility_candidate("sell_consumed", "SELL_SIDE", 147, status="CONSUMED", distance=0.1),
+            _visibility_candidate("sell_chopped", "SELL_SIDE", 146, status="CHOPPED_THROUGH", distance=0.1),
+        ]
+    )
+
+    selected = _assign_visibility(candidates, max_visible_zones=7)
+
+    for zone_id in ["sell_noise", "sell_expired", "sell_consumed", "sell_chopped"]:
+        assert str(selected.loc[selected["zone_id"] == zone_id, "visible_on_snapshot"].iloc[0]).lower() == "false"
 
 
 def test_htf_sources_outrank_equivalent_m15_and_session_zones(tmp_path: Path):
@@ -286,6 +375,33 @@ def _write_selector_input(root: Path, liquidity_rows: list[dict[str, object]]) -
 
 def _visible_rows(frame: pd.DataFrame) -> pd.DataFrame:
     return frame[frame["visible_on_snapshot"].astype(str).str.lower() == "true"]
+
+
+def _visibility_candidate(
+    zone_id: str,
+    side: str,
+    score: float,
+    *,
+    bucket: str = BUCKET_MAJOR,
+    status: str = "ACTIVE",
+    source_timeframe: str = "CLUSTER|H1|H4|SESSION",
+    distance: float = 0.5,
+) -> dict[str, object]:
+    return {
+        "zone_id": zone_id,
+        "side": side,
+        "source_timeframe": source_timeframe,
+        "bucket": bucket,
+        "status": status,
+        "significance_score": score,
+        "distance_to_current_price_pct": distance,
+        "price_lower": 99.0,
+        "price_upper": 101.0,
+        "evidence_fields_present": "has_h4_source|has_h1_source|touch_count",
+        "reason_selected": "H4 structural source; H1 structural source",
+        "reason_hidden": "" if bucket in {BUCKET_MAJOR, BUCKET_PRIMARY} else "noise or hide-by-default bucket",
+        "visible_on_snapshot": "false",
+    }
 
 
 def _zone(

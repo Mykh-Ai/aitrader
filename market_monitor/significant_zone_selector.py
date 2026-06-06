@@ -20,6 +20,12 @@ BUCKET_PRIMARY = "PRIMARY"
 BUCKET_MINIMUM = "MINIMUM"
 BUCKET_LOCAL_CONTEXT = "LOCAL_CONTEXT"
 BUCKET_NOISE = "NOISE_HIDE_BY_DEFAULT"
+SIDE_BALANCE_PROMOTION_REASON = (
+    "selected to preserve two-sided liquidity map; strong opposite-side MAJOR/PRIMARY zone within score gap"
+)
+SIDE_BALANCE_DISPLACED_REASON = (
+    "hidden by side-balanced visibility cap; lower priority than opposite-side zone needed for market map"
+)
 
 SELECTED_ZONE_COLUMNS = [
     "rank",
@@ -153,9 +159,9 @@ def run_significant_zone_selector(
             "manifest_json": str(manifest_path),
         },
         "max_visible_zones": max_visible_zones,
-        "visible_zone_count": int((selected["visible_on_snapshot"].astype(str) == "true").sum())
-        if not selected.empty
-        else 0,
+        "visible_zone_count": _visible_zone_count(selected),
+        "visible_side_counts": _visible_side_counts(selected),
+        "side_balance_policy": _side_balance_policy(max_visible_zones),
         "total_candidate_count": int(len(selected)),
         "missing_data_flags": missing_flags,
         "repo_commit": _repo_commit(),
@@ -316,19 +322,14 @@ def _assign_visibility(frame: pd.DataFrame, *, max_visible_zones: int) -> pd.Dat
     if eligible.empty:
         return out
 
-    selected_indices: list[int] = []
-    for side in ["BUY_SIDE", "SELL_SIDE"]:
-        side_rows = eligible[eligible["side"] == side]
-        if not side_rows.empty and len(selected_indices) < max_visible_zones:
-            selected_indices.append(int(side_rows.index[0]))
-
-    for idx in eligible.index:
-        idx = int(idx)
-        if idx in selected_indices:
-            continue
-        if len(selected_indices) >= max_visible_zones:
-            break
-        selected_indices.append(idx)
+    eligible_indices = _visibility_sorted_indices(out, eligible.index)
+    selected_indices = eligible_indices[:max_visible_zones]
+    selected_indices = _rebalance_visible_sides(
+        out,
+        eligible_indices=eligible_indices,
+        selected_indices=selected_indices,
+        max_visible_zones=max_visible_zones,
+    )
 
     out.loc[selected_indices, "visible_on_snapshot"] = "true"
     out.loc[out["visible_on_snapshot"] == "true", "reason_hidden"] = ""
@@ -337,6 +338,224 @@ def _assign_visibility(frame: pd.DataFrame, *, max_visible_zones: int) -> pd.Dat
         "reason_hidden",
     ] = "outside max visible zone cap or lower ranked than selected zones"
     return out
+
+
+def _rebalance_visible_sides(
+    frame: pd.DataFrame,
+    *,
+    eligible_indices: list[int],
+    selected_indices: list[int],
+    max_visible_zones: int,
+) -> list[int]:
+    if max_visible_zones < 2:
+        return selected_indices
+
+    selected = list(selected_indices)
+    available_sides = {
+        _string(frame.loc[idx, "side"])
+        for idx in eligible_indices
+        if _string(frame.loc[idx, "side"]) in {"BUY_SIDE", "SELL_SIDE"}
+    }
+    if not {"BUY_SIDE", "SELL_SIDE"}.issubset(available_sides):
+        return selected
+
+    selected = _promote_to_side_minimum(
+        frame,
+        eligible_indices=eligible_indices,
+        selected_indices=selected,
+        side="BUY_SIDE",
+        target_count=1,
+        require_visible_side=True,
+    )
+    selected = _promote_to_side_minimum(
+        frame,
+        eligible_indices=eligible_indices,
+        selected_indices=selected,
+        side="SELL_SIDE",
+        target_count=1,
+        require_visible_side=True,
+    )
+
+    if max_visible_zones >= 6:
+        for side in ["BUY_SIDE", "SELL_SIDE"]:
+            if _eligible_side_count(frame, eligible_indices, side) >= 2:
+                selected = _promote_to_side_minimum(
+                    frame,
+                    eligible_indices=eligible_indices,
+                    selected_indices=selected,
+                    side=side,
+                    target_count=2,
+                    require_visible_side=False,
+                )
+    return _visibility_sorted_indices(frame, selected)[:max_visible_zones]
+
+
+def _promote_to_side_minimum(
+    frame: pd.DataFrame,
+    *,
+    eligible_indices: list[int],
+    selected_indices: list[int],
+    side: str,
+    target_count: int,
+    require_visible_side: bool,
+) -> list[int]:
+    selected = list(selected_indices)
+    while _selected_side_count(frame, selected, side) < target_count:
+        candidate = _best_hidden_side_candidate(frame, eligible_indices, selected, side)
+        if candidate is None:
+            return selected
+        displaced = _replacement_index_for_side_balance(
+            frame,
+            selected,
+            candidate,
+            require_visible_side=require_visible_side,
+        )
+        if displaced is None:
+            return selected
+        selected.remove(displaced)
+        selected.append(candidate)
+        _append_reason(frame, candidate, "reason_selected", SIDE_BALANCE_PROMOTION_REASON)
+        frame.loc[displaced, "reason_hidden"] = SIDE_BALANCE_DISPLACED_REASON
+    return selected
+
+
+def _best_hidden_side_candidate(
+    frame: pd.DataFrame,
+    eligible_indices: list[int],
+    selected_indices: list[int],
+    side: str,
+) -> int | None:
+    selected = set(selected_indices)
+    for idx in eligible_indices:
+        if idx in selected:
+            continue
+        row = frame.loc[idx]
+        if _string(row.get("side")) != side:
+            continue
+        if _is_side_balance_candidate(row):
+            return idx
+    return None
+
+
+def _replacement_index_for_side_balance(
+    frame: pd.DataFrame,
+    selected_indices: list[int],
+    candidate_idx: int,
+    *,
+    require_visible_side: bool,
+) -> int | None:
+    candidate = frame.loc[candidate_idx]
+    candidate_side = _string(candidate.get("side"))
+    candidate_score = _float(candidate.get("significance_score"))
+    side_counts = {
+        side: _selected_side_count(frame, selected_indices, side)
+        for side in ["BUY_SIDE", "SELL_SIDE"]
+    }
+    overrepresented_sides = [
+        side for side, count in side_counts.items() if side != candidate_side and count > 1
+    ]
+    if not overrepresented_sides:
+        return None
+
+    replacement_pool = [
+        idx
+        for idx in selected_indices
+        if _string(frame.loc[idx].get("side")) in overrepresented_sides
+    ]
+    for replace_idx in reversed(_visibility_sorted_indices(frame, replacement_pool)):
+        replacement = frame.loc[replace_idx]
+        if require_visible_side:
+            return replace_idx
+        replacement_score = _float(replacement.get("significance_score"))
+        if replacement_score - candidate_score > 10:
+            continue
+        if _candidate_can_replace(candidate, replacement):
+            return replace_idx
+    return None
+
+
+def _candidate_can_replace(candidate: pd.Series, replacement: pd.Series) -> bool:
+    candidate_distance = abs(_float(candidate.get("distance_to_current_price_pct"), 999.0))
+    replacement_distance = abs(_float(replacement.get("distance_to_current_price_pct"), 999.0))
+    if candidate_distance < replacement_distance:
+        return True
+    if _bucket_strength(candidate.get("bucket")) > _bucket_strength(replacement.get("bucket")):
+        return True
+    return _source_strength(candidate.get("source_timeframe")) > _source_strength(replacement.get("source_timeframe"))
+
+
+def _is_side_balance_candidate(row: pd.Series) -> bool:
+    if _string(row.get("bucket")) not in {BUCKET_MAJOR, BUCKET_PRIMARY}:
+        return False
+    if not _valid_price_range(row):
+        return False
+    if _string(row.get("side")) not in {"BUY_SIDE", "SELL_SIDE"}:
+        return False
+    distance = abs(_float(row.get("distance_to_current_price_pct"), 999.0))
+    return distance <= 2.0 or _has_strong_structural_or_event_evidence(row)
+
+
+def _valid_price_range(row: pd.Series) -> bool:
+    lower = _float(row.get("price_lower"))
+    upper = _float(row.get("price_upper"))
+    return not pd.isna(lower) and not pd.isna(upper) and lower <= upper
+
+
+def _has_strong_structural_or_event_evidence(row: pd.Series) -> bool:
+    present = set(_string(row.get("evidence_fields_present")).split("|"))
+    return bool({"has_h4_source", "has_h1_source", "event_log", "post_sweep_observation"} & present)
+
+
+def _eligible_side_count(frame: pd.DataFrame, eligible_indices: list[int], side: str) -> int:
+    return sum(1 for idx in eligible_indices if _string(frame.loc[idx].get("side")) == side)
+
+
+def _selected_side_count(frame: pd.DataFrame, selected_indices: list[int], side: str) -> int:
+    return sum(1 for idx in selected_indices if _string(frame.loc[idx].get("side")) == side)
+
+
+def _visibility_sorted_indices(frame: pd.DataFrame, indices: Iterable[int]) -> list[int]:
+    return sorted((int(idx) for idx in indices), key=lambda idx: _visibility_priority_key(frame.loc[idx], idx))
+
+
+def _visibility_priority_key(row: pd.Series, idx: int) -> tuple[float, float, int, int, str, int]:
+    return (
+        -_float(row.get("significance_score")),
+        abs(_float(row.get("distance_to_current_price_pct"), 999.0)),
+        -_bucket_strength(row.get("bucket")),
+        -_source_strength(row.get("source_timeframe")),
+        _string(row.get("zone_id")),
+        idx,
+    )
+
+
+def _bucket_strength(bucket: object) -> int:
+    return {
+        BUCKET_MAJOR: 4,
+        BUCKET_PRIMARY: 3,
+        BUCKET_MINIMUM: 2,
+        BUCKET_LOCAL_CONTEXT: 1,
+    }.get(_string(bucket), 0)
+
+
+def _source_strength(source_timeframe: object) -> int:
+    sources = _split_sources(source_timeframe)
+    if "H4" in sources:
+        return 4
+    if "H1" in sources:
+        return 3
+    if "M15" in sources:
+        return 2
+    if "SESSION" in sources:
+        return 1
+    return 0
+
+
+def _append_reason(frame: pd.DataFrame, idx: int, column: str, reason: str) -> None:
+    existing = _string(frame.loc[idx, column])
+    if reason in existing:
+        return
+    frame.loc[idx, column] = f"{existing}; {reason}" if existing else reason
 
 
 def _is_visibility_eligible(row: pd.Series) -> bool:
@@ -356,6 +575,50 @@ def _is_visibility_eligible(row: pd.Series) -> bool:
 def _has_supporting_evidence(row: pd.Series) -> bool:
     present = set(_string(row.get("evidence_fields_present")).split("|"))
     return bool({"event_log", "post_sweep_observation", "sweep_count", "touch_count"} & present)
+
+
+def _visible_zone_count(selected: pd.DataFrame) -> int:
+    if selected.empty:
+        return 0
+    return int((selected["visible_on_snapshot"].astype(str) == "true").sum())
+
+
+def _visible_side_counts(selected: pd.DataFrame) -> dict[str, int]:
+    if selected.empty:
+        return {}
+    visible = selected[selected["visible_on_snapshot"].astype(str) == "true"]
+    return {key: int(value) for key, value in visible["side"].value_counts().to_dict().items()}
+
+
+def _side_balance_policy(max_visible_zones: int) -> str:
+    if max_visible_zones >= 6:
+        return "require one zone per side when available; prefer two zones per side from eligible MAJOR/PRIMARY zones within score gap"
+    if max_visible_zones >= 2:
+        return "require one zone per side when available"
+    return "single visible zone cap cannot preserve both sides"
+
+
+def _side_balance_note(selected: pd.DataFrame, max_visible_zones: int) -> str:
+    if selected.empty:
+        return "no candidate zones"
+    visible_counts = _visible_side_counts(selected)
+    if max_visible_zones < 6:
+        return "visible cap below six only guarantees one zone per side when available"
+    notes = []
+    for side in ["BUY_SIDE", "SELL_SIDE"]:
+        eligible_count = int(
+            selected[
+                (selected["side"] == side)
+                & selected.apply(_is_visibility_eligible, axis=1)
+                & selected.apply(_is_side_balance_candidate, axis=1)
+            ].shape[0]
+        )
+        visible_count = visible_counts.get(side, 0)
+        if eligible_count < 2:
+            notes.append(f"{side} has fewer than two high-quality eligible zones")
+        elif visible_count < 2:
+            notes.append(f"{side} has fewer than two visible zones because score-gap replacement criteria were not met")
+    return "; ".join(notes) if notes else "both sides preserved when high-quality eligible zones were available"
 
 
 def _add_source_scores(
@@ -649,6 +912,7 @@ def _render_summary(
     hidden = selected[selected["visible_on_snapshot"].astype(str) != "true"] if not selected.empty else selected
     bucket_counts = selected["bucket"].value_counts().to_dict() if not selected.empty else {}
     side_counts = selected["side"].value_counts().to_dict() if not selected.empty else {}
+    visible_side_counts = _visible_side_counts(selected)
 
     lines = [
         "# Significant Zone Selector Summary",
@@ -673,7 +937,10 @@ def _render_summary(
             f"- Total candidate zones: {len(selected)}",
             f"- Visible zones: {len(visible)}",
             f"- Side counts: {json.dumps(side_counts, sort_keys=True)}",
+            f"- Visible side counts: {json.dumps(visible_side_counts, sort_keys=True)}",
             f"- Bucket counts: {json.dumps(bucket_counts, sort_keys=True)}",
+            f"- Side balance policy: {_side_balance_policy(max_visible_zones)}.",
+            f"- Side balance note: {_side_balance_note(selected, max_visible_zones)}",
             "",
             "## Scoring Model Summary",
             "",
