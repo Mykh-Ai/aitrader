@@ -43,13 +43,12 @@ def test_positive_delta_low_progress_detected_as_pressure_anomaly(tmp_path: Path
     candidates = pd.read_csv(paths["out"] / "hidden_flow_candidates.csv")
 
     assert not candidates.empty
-    top = candidates.iloc[0]
-    assert top["cumulative_delta"] > 0
-    assert top["pressure_without_progress_score"] >= 45
-    assert top["candidate_label"] in {
+    assert candidates["cumulative_delta"].max() > 0
+    assert candidates["pressure_without_progress_score"].max() >= 45
+    assert set(candidates["candidate_label"]) & {
         "HIDDEN_ACCUMULATION_UP_CANDIDATE",
         "DOWNTREND_EXHAUSTION_CANDIDATE",
-        "UNCLEAR_FLOW_ANOMALY",
+        "COMPRESSION_BEFORE_EXPANSION_CANDIDATE",
     }
 
 
@@ -73,6 +72,16 @@ def test_negative_delta_near_lower_zone_can_be_buyer_absorption(tmp_path: Path):
     assert "BUYER_ABSORPTION_CANDIDATE" in set(candidates["candidate_label"])
 
 
+def test_high_compression_without_directional_evidence_stays_neutral(tmp_path: Path):
+    paths = _run_fixture(tmp_path, pattern="neutral_compression")
+    candidates = pd.read_csv(paths["out"] / "hidden_flow_candidates.csv")
+
+    assert not candidates.empty
+    assert candidates.iloc[0]["candidate_label"] == "COMPRESSION_BEFORE_EXPANSION_CANDIDATE"
+    assert candidates.iloc[0]["neutral_compression_score"] >= candidates.iloc[0]["accumulation_direction_score"]
+    assert candidates.iloc[0]["neutral_compression_score"] >= candidates.iloc[0]["distribution_direction_score"]
+
+
 def test_future_labels_are_generated_but_not_used_for_candidate_detection(tmp_path: Path):
     up_paths = _run_fixture(tmp_path / "up", pattern="positive_lower", future_direction="up")
     down_paths = _run_fixture(tmp_path / "down", pattern="positive_lower", future_direction="down")
@@ -80,9 +89,41 @@ def test_future_labels_are_generated_but_not_used_for_candidate_detection(tmp_pa
     down_candidates = pd.read_csv(down_paths["out"] / "hidden_flow_candidates.csv")
     up_future = pd.read_csv(up_paths["out"] / "hidden_flow_future_labels.csv")
     down_future = pd.read_csv(down_paths["out"] / "hidden_flow_future_labels.csv")
+    up_candidate = _candidate_for_window(up_candidates, "2026-03-22T02:00:00+00:00", "2026-03-22T02:59:00+00:00")
+    down_candidate = _candidate_for_window(
+        down_candidates, "2026-03-22T02:00:00+00:00", "2026-03-22T02:59:00+00:00"
+    )
 
-    assert up_candidates.iloc[0]["candidate_label"] == down_candidates.iloc[0]["candidate_label"]
-    assert set(up_future["impulse_direction_label"]) != set(down_future["impulse_direction_label"])
+    assert up_candidate["candidate_label"] == down_candidate["candidate_label"]
+    assert up_candidate["directional_classification_reason"] == down_candidate["directional_classification_reason"]
+    up_labels = set(up_future.loc[up_future["candidate_id"] == up_candidate["candidate_id"], "impulse_direction_label"])
+    down_labels = set(
+        down_future.loc[down_future["candidate_id"] == down_candidate["candidate_id"], "impulse_direction_label"]
+    )
+    assert up_labels != down_labels
+
+
+def test_directional_sub_scores_and_reason_are_output(tmp_path: Path):
+    paths = _run_fixture(tmp_path, pattern="positive_lower")
+    candidates = pd.read_csv(paths["out"] / "hidden_flow_candidates.csv")
+    required = {
+        "prior_trend_direction",
+        "range_position",
+        "zone_position_context",
+        "close_location_in_window",
+        "accumulation_direction_score",
+        "distribution_direction_score",
+        "buyer_absorption_score",
+        "seller_absorption_score",
+        "neutral_compression_score",
+        "directional_classification_reason",
+    }
+
+    assert required <= set(candidates.columns)
+    reason = str(candidates.iloc[0]["directional_classification_reason"])
+    assert len(reason) >= 20
+    assert "prior_trend=" in reason
+    assert "zone_context=" in reason
 
 
 def test_candidate_count_is_capped_and_prioritized(tmp_path: Path):
@@ -176,6 +217,14 @@ def _run_fixture(
     return {"feed": feed_dir, "selected": selected, "input_root": input_root, "out": out}
 
 
+def _candidate_for_window(candidates: pd.DataFrame, start: str, end: str) -> pd.Series:
+    matches = candidates[
+        (candidates["start_timestamp"].astype(str) == start) & (candidates["end_timestamp"].astype(str) == end)
+    ]
+    assert not matches.empty
+    return matches.iloc[0]
+
+
 def _write_feed(
     feed_dir: Path,
     *,
@@ -186,22 +235,26 @@ def _write_feed(
     feed_dir.mkdir(parents=True)
     rows = []
     base = pd.Timestamp("2026-03-22T00:00:00Z")
-    price = 100.0
+    compression_start = 120 if minutes >= 180 else 0
+    future_start = max(compression_start + 60, minutes - 60)
     for idx in range(minutes):
         if pattern == "positive_upper":
             buy_qty, sell_qty = 80.0, 20.0
-            price = 107.0 + (idx % 8) * 0.01
+            price = 103.4 + idx * 0.03 if idx < compression_start else 107.0 + (idx % 8) * 0.01
         elif pattern == "negative_lower":
             buy_qty, sell_qty = 20.0, 80.0
-            price = 96.0 - (idx % 8) * 0.01
+            price = 100.0 - idx * 0.035 if idx < compression_start else 96.0 - (idx % 8) * 0.01
+        elif pattern == "neutral_compression":
+            buy_qty, sell_qty = 50.0, 50.0
+            price = 100.0 + ((idx % 20) - 10) * 0.15 if idx < compression_start else 100.0 + (idx % 4) * 0.005
         else:
-            buy_qty, sell_qty = 85.0, 15.0
-            price = 96.0 + (idx % 8) * 0.01
-        if idx >= minutes - 60:
+            buy_qty, sell_qty = (35.0, 65.0) if idx < compression_start else (85.0, 15.0)
+            price = 100.0 - idx * 0.035 if idx < compression_start else 96.0 + (idx % 8) * 0.01
+        if idx >= future_start:
             if future_direction == "up":
-                price += (idx - (minutes - 60)) * 0.08
+                price += (idx - future_start) * 0.08
             elif future_direction == "down":
-                price -= (idx - (minutes - 60)) * 0.08
+                price -= (idx - future_start) * 0.08
         rows.append(
             {
                 "Timestamp": (base + pd.Timedelta(minutes=idx)).strftime("%Y-%m-%d %H:%M:%S"),

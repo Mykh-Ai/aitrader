@@ -41,12 +41,14 @@ WINDOW_COLUMNS = [
     "end_timestamp",
     "window_minutes",
     "trend_direction",
+    "prior_trend_direction",
     "trend_strength",
     "downtrend_exhaustion_score",
     "uptrend_exhaustion_score",
     "normalization_score",
     "compression_score",
     "range_position",
+    "zone_position_context",
     "distance_to_selected_zone",
     "nearest_zone_id",
     "nearest_zone_side",
@@ -77,12 +79,18 @@ WINDOW_COLUMNS = [
     "oi_build_without_price_progress_score",
     "zone_hold_score",
     "compression_before_expansion_score",
+    "accumulation_direction_score",
+    "distribution_direction_score",
+    "buyer_absorption_score",
+    "seller_absorption_score",
+    "neutral_compression_score",
     "absorption_score",
     "accumulation_score",
     "distribution_score",
     "candidate_label",
     "confidence",
     "candidate_score",
+    "directional_classification_reason",
     "evidence_summary",
     "missing_data_flags",
 ]
@@ -95,6 +103,10 @@ CANDIDATE_COLUMNS = [
     "candidate_label",
     "confidence",
     "trend_context",
+    "prior_trend_direction",
+    "range_position",
+    "zone_position_context",
+    "close_location_in_window",
     "nearest_zone_id",
     "nearest_zone_side",
     "nearest_zone_bucket",
@@ -110,9 +122,15 @@ CANDIDATE_COLUMNS = [
     "price_progress_score",
     "pressure_without_progress_score",
     "compression_score",
+    "accumulation_direction_score",
+    "distribution_direction_score",
+    "buyer_absorption_score",
+    "seller_absorption_score",
+    "neutral_compression_score",
     "absorption_score",
     "accumulation_score",
     "distribution_score",
+    "directional_classification_reason",
     "evidence_summary",
     "missing_data_flags",
     "review_priority_rank",
@@ -314,10 +332,12 @@ def _build_windows(
     window_id = 1
     for minutes in windows:
         for end_pos in range(minutes, len(feed) + 1, 60):
-            window = feed.iloc[end_pos - minutes : end_pos]
+            start_pos = end_pos - minutes
+            window = feed.iloc[start_pos:end_pos]
             if len(window) < minutes:
                 continue
-            rows.append(_score_window(window, selected_zones, minutes, window_id, missing_flags))
+            prior_context = _prior_trend_context(feed, start_pos, minutes)
+            rows.append(_score_window(window, selected_zones, minutes, window_id, missing_flags, prior_context))
             window_id += 1
     frame = pd.DataFrame(rows)
     if frame.empty:
@@ -333,6 +353,7 @@ def _score_window(
     minutes: int,
     window_id: int,
     missing_flags: dict[str, str],
+    prior_context: dict[str, object],
 ) -> dict[str, object]:
     start_price = float(window["close_price"].iloc[0])
     end_price = float(window["close_price"].iloc[-1])
@@ -358,14 +379,17 @@ def _score_window(
     effort_result_ratio = (abs(delta_pct) * 100 + 1) / (abs(price_change_pct) + 0.05)
     trend_direction = "UP" if price_change_pct > 0.25 else "DOWN" if price_change_pct < -0.25 else "RANGE"
     trend_strength = _clamp(abs(price_change_pct) * 12 + range_pct * 2, 0, 100)
+    zone_position_context = _zone_position_context(selected_zones, end_price, nearest)
     return {
         "window_id": f"window_{window_id:06d}",
         "start_timestamp": window["timestamp"].iloc[0].isoformat(),
         "end_timestamp": window["timestamp"].iloc[-1].isoformat(),
         "window_minutes": int(minutes),
         "trend_direction": trend_direction,
+        "prior_trend_direction": prior_context["prior_trend_direction"],
         "trend_strength": round(trend_strength, 3),
         "range_position": round(float(range_position), 4),
+        "zone_position_context": zone_position_context,
         "distance_to_selected_zone": nearest["distance_pct"],
         "nearest_zone_id": nearest["zone_id"],
         "nearest_zone_side": nearest["side"],
@@ -387,6 +411,41 @@ def _score_window(
         "effort_result_ratio": round(float(effort_result_ratio), 6),
         "missing_data_flags": _format_missing_flags(missing_flags),
     }
+
+
+def _prior_trend_context(feed: pd.DataFrame, start_pos: int, minutes: int) -> dict[str, object]:
+    if start_pos <= 0:
+        return {"prior_trend_direction": "UNKNOWN", "prior_trend_change_pct": 0.0}
+    lookback = min(max(int(minutes), 60), 1440)
+    prior = feed.iloc[max(0, start_pos - lookback) : start_pos]
+    if len(prior) < min(60, lookback):
+        return {"prior_trend_direction": "UNKNOWN", "prior_trend_change_pct": 0.0}
+    start_price = float(prior["close_price"].iloc[0])
+    end_price = float(prior["close_price"].iloc[-1])
+    change_pct = (end_price - start_price) / start_price * 100 if start_price else 0.0
+    direction = "UP" if change_pct > 0.35 else "DOWN" if change_pct < -0.35 else "RANGE"
+    return {"prior_trend_direction": direction, "prior_trend_change_pct": round(change_pct, 6)}
+
+
+def _zone_position_context(zones: pd.DataFrame, price: float, nearest: dict[str, object]) -> str:
+    lower = float(nearest["price_lower"])
+    upper = float(nearest["price_upper"])
+    side = str(nearest["side"])
+    distance = abs(float(nearest["distance_pct"]))
+    if lower <= price <= upper:
+        return "inside_zone"
+    if side == "BUY_SIDE" and price < lower and distance <= 0.85:
+        return "near_upper_zone"
+    if side == "SELL_SIDE" and price > upper and distance <= 0.85:
+        return "near_lower_zone"
+
+    representatives = zones["representative_price"].astype(float)
+    sides = zones["side"].astype(str)
+    has_lower_sell = bool(((sides == "SELL_SIDE") & (representatives < price)).any())
+    has_upper_buy = bool(((sides == "BUY_SIDE") & (representatives > price)).any())
+    if has_lower_sell and has_upper_buy:
+        return "between_zones"
+    return "unclear"
 
 
 def _add_relative_metrics(frame: pd.DataFrame) -> pd.DataFrame:
@@ -425,23 +484,47 @@ def _finalize_window(row: pd.Series) -> dict[str, object]:
     high_volume_low_range = _clamp(max(rel_volume, rel_trades) * 35 + progress_score * 0.45 + compression * 0.25, 0, 100)
     oi_build = _clamp(abs(float(row["open_interest_change"])) / 50 + progress_score * 0.45, 0, 100)
     compression_before = _clamp(compression * 0.7 + pressure * 0.3, 0, 100)
-    absorption = max(positive_no_up, negative_no_down, pressure if zone_hold >= 50 and progress_score >= 45 else 0.0)
-    accumulation = _accumulation_score(row, positive_no_up, zone_hold, compression)
-    distribution = _distribution_score(row, positive_no_up, negative_no_down, zone_hold, compression)
+    directional_scores = _directional_sub_scores(
+        row=row,
+        pressure=pressure,
+        compression=compression,
+        positive_no_up=positive_no_up,
+        negative_no_down=negative_no_down,
+        zone_hold=zone_hold,
+        oi_build=oi_build,
+    )
+    accumulation = directional_scores["accumulation_direction_score"]
+    distribution = directional_scores["distribution_direction_score"]
+    buyer_absorption = directional_scores["buyer_absorption_score"]
+    seller_absorption = directional_scores["seller_absorption_score"]
+    neutral_compression = directional_scores["neutral_compression_score"]
+    absorption = max(buyer_absorption, seller_absorption)
     down_exhaustion = _clamp(accumulation * 0.65 + (40 if row["trend_direction"] == "DOWN" else 0), 0, 100)
     up_exhaustion = _clamp(distribution * 0.65 + (40 if row["trend_direction"] == "UP" else 0), 0, 100)
     normalization = _clamp(progress_score * 0.45 + compression * 0.35 + (20 if row["trend_direction"] == "RANGE" else 0), 0, 100)
-    label, confidence = _candidate_label_and_confidence(
+    label, confidence, reason = _candidate_label_and_confidence(
         row=row,
         pressure=pressure,
         compression=compression,
         absorption=absorption,
         accumulation=accumulation,
         distribution=distribution,
+        buyer_absorption=buyer_absorption,
+        seller_absorption=seller_absorption,
+        neutral_compression=neutral_compression,
         down_exhaustion=down_exhaustion,
         up_exhaustion=up_exhaustion,
     )
-    candidate_score = max(pressure, absorption, accumulation, distribution, compression_before, down_exhaustion, up_exhaustion)
+    candidate_score = max(
+        pressure,
+        absorption,
+        accumulation,
+        distribution,
+        neutral_compression,
+        compression_before,
+        down_exhaustion,
+        up_exhaustion,
+    )
     out = row.to_dict()
     out.update(
         {
@@ -460,37 +543,150 @@ def _finalize_window(row: pd.Series) -> dict[str, object]:
             "oi_build_without_price_progress_score": round(oi_build, 3),
             "zone_hold_score": round(zone_hold, 3),
             "compression_before_expansion_score": round(compression_before, 3),
+            "accumulation_direction_score": round(accumulation, 3),
+            "distribution_direction_score": round(distribution, 3),
+            "buyer_absorption_score": round(buyer_absorption, 3),
+            "seller_absorption_score": round(seller_absorption, 3),
+            "neutral_compression_score": round(neutral_compression, 3),
             "absorption_score": round(absorption, 3),
             "accumulation_score": round(accumulation, 3),
             "distribution_score": round(distribution, 3),
             "candidate_label": label,
             "confidence": confidence,
             "candidate_score": round(candidate_score, 3),
-            "evidence_summary": _evidence_summary(row, pressure, compression, absorption, accumulation, distribution),
+            "directional_classification_reason": reason,
+            "evidence_summary": _evidence_summary(
+                row,
+                pressure,
+                compression,
+                buyer_absorption,
+                seller_absorption,
+                accumulation,
+                distribution,
+                neutral_compression,
+            ),
         }
     )
     return {column: out.get(column, "") for column in WINDOW_COLUMNS}
 
 
-def _accumulation_score(row: pd.Series, positive_no_up: float, zone_hold: float, compression: float) -> float:
-    location = float(row["range_position"])
-    lower_context = 1.0 if location <= 0.45 or row["nearest_zone_side"] == "SELL_SIDE" else 0.4
-    markdown_context = 1.0 if row["trend_direction"] in {"DOWN", "RANGE"} else 0.5
-    return _clamp(positive_no_up * 0.55 + zone_hold * 0.2 + compression * 0.15 + lower_context * markdown_context * 18, 0, 100)
-
-
-def _distribution_score(
+def _directional_sub_scores(
+    *,
     row: pd.Series,
+    pressure: float,
+    compression: float,
     positive_no_up: float,
     negative_no_down: float,
     zone_hold: float,
-    compression: float,
-) -> float:
+    oi_build: float,
+) -> dict[str, float]:
+    lower_context = _lower_context_score(row)
+    upper_context = _upper_context_score(row)
+    prior = str(row["prior_trend_direction"])
+    close_location = float(row["close_location_in_window"])
+    oi_component = min(oi_build * 0.12, 10.0)
+
+    markdown_bonus = 16.0 if prior == "DOWN" else 8.0 if prior == "RANGE" else 0.0
+    markup_bonus = 16.0 if prior == "UP" else 8.0 if prior == "RANGE" else 0.0
+    lower_close_hold = 8.0 if close_location >= 0.38 else 0.0
+    upper_close_reject = 8.0 if close_location <= 0.62 else 0.0
+
+    accumulation = _clamp(
+        positive_no_up * 0.34
+        + negative_no_down * 0.18
+        + compression * 0.16
+        + zone_hold * 0.10
+        + lower_context * 0.24
+        + markdown_bonus
+        + lower_close_hold
+        + oi_component,
+        0,
+        100,
+    )
+    distribution = _clamp(
+        positive_no_up * 0.28
+        + negative_no_down * 0.20
+        + compression * 0.16
+        + zone_hold * 0.10
+        + upper_context * 0.24
+        + markup_bonus
+        + upper_close_reject
+        + oi_component,
+        0,
+        100,
+    )
+    buyer_absorption = _clamp(
+        negative_no_down * 0.58
+        + lower_context * 0.22
+        + zone_hold * 0.08
+        + compression * 0.08
+        + lower_close_hold
+        + oi_component * 0.6,
+        0,
+        100,
+    )
+    seller_absorption = _clamp(
+        positive_no_up * 0.58
+        + upper_context * 0.22
+        + zone_hold * 0.08
+        + compression * 0.08
+        + upper_close_reject
+        + oi_component * 0.6,
+        0,
+        100,
+    )
+    directional_leader = max(accumulation, distribution, buyer_absorption, seller_absorption)
+    neutral_penalty = max(0.0, directional_leader - 70.0) * 0.35
+    neutral = _clamp(compression * 0.68 + pressure * 0.32 - neutral_penalty, 0, 100)
+    return {
+        "accumulation_direction_score": accumulation,
+        "distribution_direction_score": distribution,
+        "buyer_absorption_score": buyer_absorption,
+        "seller_absorption_score": seller_absorption,
+        "neutral_compression_score": neutral,
+    }
+
+
+def _lower_context_score(row: pd.Series) -> float:
+    score = 0.0
     location = float(row["range_position"])
-    upper_context = 1.0 if location >= 0.55 or row["nearest_zone_side"] == "BUY_SIDE" else 0.4
-    mark_up_context = 1.0 if row["trend_direction"] in {"UP", "RANGE"} else 0.5
-    pressure = max(positive_no_up, negative_no_down * 0.75)
-    return _clamp(pressure * 0.52 + zone_hold * 0.2 + compression * 0.15 + upper_context * mark_up_context * 18, 0, 100)
+    zone_context = str(row["zone_position_context"])
+    nearest_side = str(row["nearest_zone_side"])
+    distance = abs(float(row["distance_to_selected_zone"]))
+    if zone_context == "near_lower_zone":
+        score += 45
+    elif zone_context == "inside_zone" and nearest_side == "SELL_SIDE":
+        score += 42
+    elif zone_context == "between_zones":
+        score += 12
+    if nearest_side == "SELL_SIDE" and distance <= 0.85:
+        score += 22
+    if location <= 0.35:
+        score += 30
+    elif location <= 0.50:
+        score += 16
+    return _clamp(score, 0, 100)
+
+
+def _upper_context_score(row: pd.Series) -> float:
+    score = 0.0
+    location = float(row["range_position"])
+    zone_context = str(row["zone_position_context"])
+    nearest_side = str(row["nearest_zone_side"])
+    distance = abs(float(row["distance_to_selected_zone"]))
+    if zone_context == "near_upper_zone":
+        score += 45
+    elif zone_context == "inside_zone" and nearest_side == "BUY_SIDE":
+        score += 42
+    elif zone_context == "between_zones":
+        score += 12
+    if nearest_side == "BUY_SIDE" and distance <= 0.85:
+        score += 22
+    if location >= 0.65:
+        score += 30
+    elif location >= 0.50:
+        score += 16
+    return _clamp(score, 0, 100)
 
 
 def _candidate_label_and_confidence(
@@ -501,33 +697,173 @@ def _candidate_label_and_confidence(
     absorption: float,
     accumulation: float,
     distribution: float,
+    buyer_absorption: float,
+    seller_absorption: float,
+    neutral_compression: float,
     down_exhaustion: float,
     up_exhaustion: float,
-) -> tuple[str, str]:
+) -> tuple[str, str, str]:
     delta_pct = float(row["delta_pct"])
     price_change_pct = float(row["price_change_pct"])
-    location = float(row["range_position"])
-    nearest_side = str(row["nearest_zone_side"])
+    lower_context = _lower_context_score(row)
+    upper_context = _upper_context_score(row)
+    prior = str(row["prior_trend_direction"])
+    zone_context = str(row["zone_position_context"])
+    close_location = float(row["close_location_in_window"])
     if pressure < 45:
-        return "UNCLEAR_FLOW_ANOMALY", "LOW"
-    if delta_pct > 0.04 and price_change_pct < 0.35 and (location >= 0.58 or nearest_side == "BUY_SIDE"):
-        label = "SELLER_ABSORPTION_CANDIDATE" if distribution < 70 else "HIDDEN_DISTRIBUTION_DOWN_CANDIDATE"
-        return label, _confidence(max(distribution, absorption), pressure)
-    if delta_pct < -0.04 and price_change_pct > -0.35 and (location <= 0.42 or nearest_side == "SELL_SIDE"):
-        return "BUYER_ABSORPTION_CANDIDATE", _confidence(absorption, pressure)
-    if delta_pct > 0.04 and price_change_pct < 0.45 and (location <= 0.5 or nearest_side == "SELL_SIDE"):
-        label = "DOWNTREND_EXHAUSTION_CANDIDATE" if down_exhaustion >= accumulation else "HIDDEN_ACCUMULATION_UP_CANDIDATE"
-        return label, _confidence(max(accumulation, down_exhaustion), pressure)
-    if delta_pct < -0.04 and price_change_pct > -0.45 and (location >= 0.5 or nearest_side == "BUY_SIDE"):
-        label = "UPTREND_EXHAUSTION_CANDIDATE" if up_exhaustion >= distribution else "HIDDEN_DISTRIBUTION_DOWN_CANDIDATE"
-        return label, _confidence(max(distribution, up_exhaustion), pressure)
+        return (
+            "UNCLEAR_FLOW_ANOMALY",
+            "LOW",
+            f"pressure below directional threshold; pressure={pressure:.1f}; zone_context={zone_context}; prior_trend={prior}",
+        )
+    if delta_pct > 0.04 and price_change_pct < 0.35 and upper_context >= 45:
+        if prior == "UP" and distribution >= 78 and distribution >= neutral_compression + 8:
+            return (
+                "HIDDEN_DISTRIBUTION_DOWN_CANDIDATE",
+                _confidence(distribution, pressure),
+                _direction_reason(
+                    "positive delta without upward progress after prior upward context near upper zone",
+                    row,
+                    distribution,
+                    neutral_compression,
+                ),
+            )
+        if seller_absorption >= 72 and seller_absorption >= neutral_compression + 5:
+            return (
+                "SELLER_ABSORPTION_CANDIDATE",
+                _confidence(seller_absorption, pressure),
+                _direction_reason(
+                    "positive delta without upward progress rejected near upper zone",
+                    row,
+                    seller_absorption,
+                    neutral_compression,
+                ),
+            )
+        if neutral_compression >= 58:
+            return (
+                "COMPRESSION_BEFORE_EXPANSION_CANDIDATE",
+                _confidence(neutral_compression, pressure),
+                _direction_reason(
+                    "upper-zone positive delta pressure did not beat neutral compression",
+                    row,
+                    max(distribution, seller_absorption),
+                    neutral_compression,
+                ),
+            )
+        return (
+            "UNCLEAR_FLOW_ANOMALY",
+            "LOW",
+            _direction_reason("upper-zone positive delta pressure has mixed directional evidence", row, distribution, neutral_compression),
+        )
+    if delta_pct < -0.04 and price_change_pct > -0.35 and lower_context >= 45:
+        if buyer_absorption >= 60 and buyer_absorption >= neutral_compression - 5:
+            return (
+                "BUYER_ABSORPTION_CANDIDATE",
+                _confidence(buyer_absorption, pressure),
+                _direction_reason(
+                    "negative delta without downward progress held near lower zone",
+                    row,
+                    buyer_absorption,
+                    neutral_compression,
+                ),
+            )
+        if accumulation >= 78 and accumulation >= neutral_compression + 8:
+            return (
+                "HIDDEN_ACCUMULATION_UP_CANDIDATE",
+                _confidence(accumulation, pressure),
+                _direction_reason(
+                    "seller pressure failed to push lower in lower-zone context",
+                    row,
+                    accumulation,
+                    neutral_compression,
+                ),
+            )
+    if delta_pct > 0.04 and price_change_pct < 0.45 and lower_context >= 45:
+        if accumulation >= 78 and accumulation >= neutral_compression + 5:
+            label = "DOWNTREND_EXHAUSTION_CANDIDATE" if prior == "DOWN" and accumulation < 86 else "HIDDEN_ACCUMULATION_UP_CANDIDATE"
+            return (
+                label,
+                _confidence(max(accumulation, down_exhaustion), pressure),
+                _direction_reason(
+                    "positive delta compressed after lower-zone or markdown context",
+                    row,
+                    accumulation,
+                    neutral_compression,
+                ),
+            )
+        if neutral_compression >= 58:
+            return (
+                "COMPRESSION_BEFORE_EXPANSION_CANDIDATE",
+                _confidence(neutral_compression, pressure),
+                _direction_reason(
+                    "lower-zone positive delta compression lacks enough accumulation separation",
+                    row,
+                    accumulation,
+                    neutral_compression,
+                ),
+            )
+    if delta_pct < -0.04 and price_change_pct > -0.45 and upper_context >= 45:
+        if prior == "UP" and distribution >= 78 and distribution >= neutral_compression + 8:
+            label = "UPTREND_EXHAUSTION_CANDIDATE" if up_exhaustion >= distribution else "HIDDEN_DISTRIBUTION_DOWN_CANDIDATE"
+            return (
+                label,
+                _confidence(max(distribution, up_exhaustion), pressure),
+                _direction_reason(
+                    "negative delta compressed after upper-zone or markup context",
+                    row,
+                    distribution,
+                    neutral_compression,
+                ),
+            )
+        if neutral_compression >= 58:
+            return (
+                "COMPRESSION_BEFORE_EXPANSION_CANDIDATE",
+                _confidence(neutral_compression, pressure),
+                _direction_reason(
+                    "upper-zone negative delta compression lacks enough distribution separation",
+                    row,
+                    distribution,
+                    neutral_compression,
+                ),
+            )
     if compression >= 55 and pressure >= 50:
-        return "COMPRESSION_BEFORE_EXPANSION_CANDIDATE", _confidence(compression, pressure)
+        return (
+            "COMPRESSION_BEFORE_EXPANSION_CANDIDATE",
+            _confidence(max(compression, neutral_compression), pressure),
+            _direction_reason(
+                "high compression with no dominant directional sub-score",
+                row,
+                max(accumulation, distribution, absorption),
+                neutral_compression,
+            ),
+        )
     if row["trend_direction"] == "DOWN" and float(row["price_progress_score"]) >= 55:
-        return "NORMALIZATION_AFTER_MARKDOWN", "LOW"
+        return (
+            "NORMALIZATION_AFTER_MARKDOWN",
+            "LOW",
+            f"range normalized after markdown context; pressure={pressure:.1f}; close_location={close_location:.2f}",
+        )
     if row["trend_direction"] == "UP" and float(row["price_progress_score"]) >= 55:
-        return "NORMALIZATION_AFTER_MARKUP", "LOW"
-    return "UNCLEAR_FLOW_ANOMALY", "LOW"
+        return (
+            "NORMALIZATION_AFTER_MARKUP",
+            "LOW",
+            f"range normalized after markup context; pressure={pressure:.1f}; close_location={close_location:.2f}",
+        )
+    return (
+        "UNCLEAR_FLOW_ANOMALY",
+        "LOW",
+        f"mixed effort-result evidence; pressure={pressure:.1f}; zone_context={zone_context}; prior_trend={prior}",
+    )
+
+
+def _direction_reason(prefix: str, row: pd.Series, directional_score: float, neutral_score: float) -> str:
+    return (
+        f"{prefix}; prior_trend={row['prior_trend_direction']}; "
+        f"zone_context={row['zone_position_context']}; "
+        f"close_location={float(row['close_location_in_window']):.2f}; "
+        f"directional_score={directional_score:.1f}; "
+        f"neutral_compression_score={neutral_score:.1f}"
+    )
 
 
 def _confidence(primary: float, pressure: float) -> str:
@@ -573,6 +909,10 @@ def _select_candidates(windows_frame: pd.DataFrame) -> pd.DataFrame:
                 "candidate_label": row["candidate_label"],
                 "confidence": row["confidence"],
                 "trend_context": row["trend_direction"],
+                "prior_trend_direction": row["prior_trend_direction"],
+                "range_position": row["range_position"],
+                "zone_position_context": row["zone_position_context"],
+                "close_location_in_window": row["close_location_in_window"],
                 "nearest_zone_id": row["nearest_zone_id"],
                 "nearest_zone_side": row["nearest_zone_side"],
                 "nearest_zone_bucket": row["nearest_zone_bucket"],
@@ -588,9 +928,15 @@ def _select_candidates(windows_frame: pd.DataFrame) -> pd.DataFrame:
                 "price_progress_score": row["price_progress_score"],
                 "pressure_without_progress_score": row["pressure_without_progress_score"],
                 "compression_score": row["compression_score"],
+                "accumulation_direction_score": row["accumulation_direction_score"],
+                "distribution_direction_score": row["distribution_direction_score"],
+                "buyer_absorption_score": row["buyer_absorption_score"],
+                "seller_absorption_score": row["seller_absorption_score"],
+                "neutral_compression_score": row["neutral_compression_score"],
                 "absorption_score": row["absorption_score"],
                 "accumulation_score": row["accumulation_score"],
                 "distribution_score": row["distribution_score"],
+                "directional_classification_reason": row["directional_classification_reason"],
                 "evidence_summary": row["evidence_summary"],
                 "missing_data_flags": row["missing_data_flags"],
                 "review_priority_rank": rank,
@@ -696,6 +1042,8 @@ def _nearest_zone(zones: pd.DataFrame, price: float) -> dict[str, object]:
         "zone_id": str(row["zone_id"]),
         "side": str(row["side"]),
         "bucket": str(row["bucket"]),
+        "price_lower": float(row["price_lower"]),
+        "price_upper": float(row["price_upper"]),
         "distance_pct": round(distance_pct, 6),
     }
 
@@ -717,9 +1065,11 @@ def _evidence_summary(
     row: pd.Series,
     pressure: float,
     compression: float,
-    absorption: float,
+    buyer_absorption: float,
+    seller_absorption: float,
     accumulation: float,
     distribution: float,
+    neutral_compression: float,
 ) -> str:
     return (
         f"delta_pct={float(row['delta_pct']):.4f}; "
@@ -728,9 +1078,14 @@ def _evidence_summary(
         f"range_pct={float(row['range_pct']):.3f}; "
         f"pressure_without_progress={pressure:.1f}; "
         f"compression={compression:.1f}; "
-        f"absorption={absorption:.1f}; "
+        f"buyer_absorption={buyer_absorption:.1f}; "
+        f"seller_absorption={seller_absorption:.1f}; "
         f"accumulation={accumulation:.1f}; "
         f"distribution={distribution:.1f}; "
+        f"neutral_compression={neutral_compression:.1f}; "
+        f"prior_trend={row['prior_trend_direction']}; "
+        f"zone_context={row['zone_position_context']}; "
+        f"close_location={float(row['close_location_in_window']):.2f}; "
         f"nearest_zone={row['nearest_zone_id']}:{row['nearest_zone_side']}"
     )
 
@@ -753,6 +1108,9 @@ def _render_summary(
         if not future_labels.empty
         else 0
     )
+    future_by_label = _future_counts_by_label(candidates, future_labels)
+    false_positive_by_label = _false_positive_counts_by_label(candidates, future_labels)
+    pre_impulse_review = _pre_impulse_review_rows(candidates, future_labels)
     lines = [
         "# Hidden Flow Research Summary",
         "",
@@ -763,11 +1121,40 @@ def _render_summary(
         f"- Market regime windows: {len(windows_frame)}",
         f"- Candidates: {len(candidates)}",
         f"- Visible review candidates: {int((candidates['visible_for_review'].astype(str) == 'true').sum()) if not candidates.empty else 0}",
-        f"- Candidate labels: {json.dumps(label_counts, sort_keys=True)}",
+        f"- Candidate labels after patch/current run: {json.dumps(label_counts, sort_keys=True)}",
         f"- Confidence: {json.dumps(confidence_counts, sort_keys=True)}",
         f"- Future impulse labels: {json.dumps(future_counts, sort_keys=True)}",
         f"- Future false-positive rows: {false_positive_count}",
         f"- Missing data flags: {json.dumps(missing_flags, sort_keys=True)}",
+        "",
+        "## Future Direction By Candidate Label",
+        "",
+        _markdown_table(future_by_label, list(future_by_label.columns)),
+        "",
+        "## False Positive Rows By Candidate Label",
+        "",
+        _markdown_table(false_positive_by_label, list(false_positive_by_label.columns)),
+        "",
+        "## 2026-04-05 Pre-Impulse Review",
+        "",
+        _markdown_table(
+            pre_impulse_review,
+            [
+                "candidate_id",
+                "start_timestamp",
+                "end_timestamp",
+                "window_minutes",
+                "candidate_label",
+                "confidence",
+                "cumulative_delta",
+                "delta_pct",
+                "price_change",
+                "pressure_without_progress_score",
+                "compression_score",
+                "directional_classification_reason",
+                "future_impulse_labels",
+            ],
+        ),
         "",
         "## Top Review Candidates",
         "",
@@ -782,11 +1169,86 @@ def _render_summary(
                 "pressure_without_progress_score",
                 "delta_pct",
                 "price_change_pct",
+                "zone_position_context",
+                "prior_trend_direction",
                 "nearest_zone_side",
             ],
         ),
     ]
     return "\n".join(lines) + "\n"
+
+
+def _future_counts_by_label(candidates: pd.DataFrame, future_labels: pd.DataFrame) -> pd.DataFrame:
+    columns = ["candidate_label", "impulse_direction_label", "rows"]
+    if candidates.empty or future_labels.empty:
+        return pd.DataFrame(columns=columns)
+    merged = future_labels.merge(candidates[["candidate_id", "candidate_label"]], on="candidate_id", how="left")
+    grouped = (
+        merged.groupby(["candidate_label", "impulse_direction_label"], dropna=False)
+        .size()
+        .reset_index(name="rows")
+        .sort_values(["candidate_label", "impulse_direction_label"], kind="mergesort")
+    )
+    return grouped[columns]
+
+
+def _false_positive_counts_by_label(candidates: pd.DataFrame, future_labels: pd.DataFrame) -> pd.DataFrame:
+    columns = ["candidate_label", "false_positive_rows"]
+    if candidates.empty or future_labels.empty:
+        return pd.DataFrame(columns=columns)
+    merged = future_labels.merge(candidates[["candidate_id", "candidate_label"]], on="candidate_id", how="left")
+    false_rows = merged[merged["false_positive_flag"].astype(str).str.lower() == "true"]
+    if false_rows.empty:
+        return pd.DataFrame(columns=columns)
+    grouped = (
+        false_rows.groupby("candidate_label", dropna=False)
+        .size()
+        .reset_index(name="false_positive_rows")
+        .sort_values(["false_positive_rows", "candidate_label"], ascending=[False, True], kind="mergesort")
+    )
+    return grouped[columns]
+
+
+def _pre_impulse_review_rows(candidates: pd.DataFrame, future_labels: pd.DataFrame) -> pd.DataFrame:
+    columns = [
+        "candidate_id",
+        "start_timestamp",
+        "end_timestamp",
+        "window_minutes",
+        "candidate_label",
+        "confidence",
+        "cumulative_delta",
+        "delta_pct",
+        "price_change",
+        "pressure_without_progress_score",
+        "compression_score",
+        "directional_classification_reason",
+        "future_impulse_labels",
+    ]
+    if candidates.empty:
+        return pd.DataFrame(columns=columns)
+    frame = candidates.copy()
+    starts = pd.to_datetime(frame["start_timestamp"], errors="coerce", utc=True)
+    ends = pd.to_datetime(frame["end_timestamp"], errors="coerce", utc=True)
+    mask = (
+        (starts >= pd.Timestamp("2026-04-03T18:00:00Z"))
+        & (starts <= pd.Timestamp("2026-04-04T02:00:00Z"))
+        & (ends >= pd.Timestamp("2026-04-04T06:00:00Z"))
+        & (ends <= pd.Timestamp("2026-04-04T12:00:00Z"))
+    )
+    review = frame.loc[mask].sort_values("review_priority_rank", kind="mergesort").head(5).copy()
+    if review.empty:
+        return pd.DataFrame(columns=columns)
+    if future_labels.empty:
+        review["future_impulse_labels"] = ""
+    else:
+        labels = (
+            future_labels.groupby("candidate_id")["impulse_direction_label"]
+            .apply(lambda values: ",".join(sorted(set(str(value) for value in values))))
+            .to_dict()
+        )
+        review["future_impulse_labels"] = review["candidate_id"].map(labels).fillna("")
+    return review[columns]
 
 
 def _markdown_table(frame: pd.DataFrame, columns: list[str]) -> str:
