@@ -60,7 +60,6 @@ def test_positive_delta_near_upper_zone_is_not_blindly_bullish(tmp_path: Path):
     assert candidates.iloc[0]["candidate_label"] in {
         "SELLER_ABSORPTION_CANDIDATE",
         "HIDDEN_DISTRIBUTION_DOWN_CANDIDATE",
-        "UNCLEAR_FLOW_ANOMALY",
     }
     assert "HIDDEN_ACCUMULATION_UP_CANDIDATE" not in set(candidates.head(5)["candidate_label"])
 
@@ -133,6 +132,21 @@ def test_candidate_count_is_capped_and_prioritized(tmp_path: Path):
     assert len(candidates) <= 100
     assert int((candidates["visible_for_review"].astype(str).str.lower() == "true").sum()) <= 20
     assert candidates["review_priority_rank"].tolist() == list(range(1, len(candidates) + 1))
+
+
+def test_candidates_exclude_low_confidence_and_unclear_rows(tmp_path: Path):
+    paths = _run_fixture(tmp_path, pattern="positive_lower", minutes=900)
+    windows = pd.read_csv(paths["out"] / "market_regime_windows.csv")
+    candidates = pd.read_csv(paths["out"] / "hidden_flow_candidates.csv")
+    manifest = json.loads((paths["out"] / "hidden_flow_manifest.json").read_text(encoding="utf-8"))
+
+    assert "LOW" in set(windows["confidence"])
+    assert "UNCLEAR_FLOW_ANOMALY" in set(windows["candidate_label"])
+    assert "LOW" not in set(candidates["confidence"])
+    assert "UNCLEAR_FLOW_ANOMALY" not in set(candidates["candidate_label"])
+    assert manifest["review_candidate_confidence_tiers"] == ["HIGH"]
+    assert manifest["excluded_review_candidate_labels"] == ["UNCLEAR_FLOW_ANOMALY"]
+    assert manifest["low_confidence_windows_retained_in_regime_csv"] is True
 
 
 def test_missing_data_flags_are_marked_not_faked(tmp_path: Path):
