@@ -40,15 +40,20 @@ def test_hidden_flow_research_creates_required_outputs(tmp_path: Path):
 
 def test_positive_delta_low_progress_detected_as_pressure_anomaly(tmp_path: Path):
     paths = _run_fixture(tmp_path, pattern="positive_lower")
+    windows = pd.read_csv(paths["out"] / "market_regime_windows.csv")
     candidates = pd.read_csv(paths["out"] / "hidden_flow_candidates.csv")
 
-    assert not candidates.empty
-    assert candidates["cumulative_delta"].max() > 0
-    assert candidates["pressure_without_progress_score"].max() >= 45
-    assert set(candidates["candidate_label"]) & {
+    assert windows["cumulative_delta"].max() > 0
+    assert windows["pressure_without_progress_score"].max() >= 45
+    assert set(windows["candidate_label"]) & {
         "HIDDEN_ACCUMULATION_UP_CANDIDATE",
         "DOWNTREND_EXHAUSTION_CANDIDATE",
         "COMPRESSION_BEFORE_EXPANSION_CANDIDATE",
+    }
+    assert not set(candidates["candidate_label"]) & {
+        "HIDDEN_ACCUMULATION_UP_CANDIDATE",
+        "DOWNTREND_EXHAUSTION_CANDIDATE",
+        "BUYER_ABSORPTION_CANDIDATE",
     }
 
 
@@ -66,9 +71,11 @@ def test_positive_delta_near_upper_zone_is_not_blindly_bullish(tmp_path: Path):
 
 def test_negative_delta_near_lower_zone_can_be_buyer_absorption(tmp_path: Path):
     paths = _run_fixture(tmp_path, pattern="negative_lower")
+    windows = pd.read_csv(paths["out"] / "market_regime_windows.csv")
     candidates = pd.read_csv(paths["out"] / "hidden_flow_candidates.csv")
 
-    assert "BUYER_ABSORPTION_CANDIDATE" in set(candidates["candidate_label"])
+    assert "BUYER_ABSORPTION_CANDIDATE" in set(windows["candidate_label"])
+    assert "BUYER_ABSORPTION_CANDIDATE" not in set(candidates["candidate_label"])
 
 
 def test_high_compression_without_directional_evidence_stays_neutral(tmp_path: Path):
@@ -82,8 +89,8 @@ def test_high_compression_without_directional_evidence_stays_neutral(tmp_path: P
 
 
 def test_future_labels_are_generated_but_not_used_for_candidate_detection(tmp_path: Path):
-    up_paths = _run_fixture(tmp_path / "up", pattern="positive_lower", future_direction="up")
-    down_paths = _run_fixture(tmp_path / "down", pattern="positive_lower", future_direction="down")
+    up_paths = _run_fixture(tmp_path / "up", pattern="neutral_compression", future_direction="up")
+    down_paths = _run_fixture(tmp_path / "down", pattern="neutral_compression", future_direction="down")
     up_candidates = pd.read_csv(up_paths["out"] / "hidden_flow_candidates.csv")
     down_candidates = pd.read_csv(down_paths["out"] / "hidden_flow_candidates.csv")
     up_future = pd.read_csv(up_paths["out"] / "hidden_flow_future_labels.csv")
@@ -103,7 +110,7 @@ def test_future_labels_are_generated_but_not_used_for_candidate_detection(tmp_pa
 
 
 def test_directional_sub_scores_and_reason_are_output(tmp_path: Path):
-    paths = _run_fixture(tmp_path, pattern="positive_lower")
+    paths = _run_fixture(tmp_path, pattern="positive_upper")
     candidates = pd.read_csv(paths["out"] / "hidden_flow_candidates.csv")
     required = {
         "prior_trend_direction",
@@ -145,12 +152,17 @@ def test_candidates_exclude_low_confidence_and_unclear_rows(tmp_path: Path):
     assert "LOW" not in set(candidates["confidence"])
     assert "UNCLEAR_FLOW_ANOMALY" not in set(candidates["candidate_label"])
     assert manifest["review_candidate_confidence_tiers"] == ["HIGH"]
+    assert manifest["allowed_review_candidate_labels"] == [
+        "COMPRESSION_BEFORE_EXPANSION_CANDIDATE",
+        "HIDDEN_DISTRIBUTION_DOWN_CANDIDATE",
+        "SELLER_ABSORPTION_CANDIDATE",
+    ]
     assert manifest["excluded_review_candidate_labels"] == ["UNCLEAR_FLOW_ANOMALY"]
     assert manifest["low_confidence_windows_retained_in_regime_csv"] is True
 
 
 def test_missing_data_flags_are_marked_not_faked(tmp_path: Path):
-    paths = _run_fixture(tmp_path, pattern="positive_lower")
+    paths = _run_fixture(tmp_path, pattern="neutral_compression")
     candidates = pd.read_csv(paths["out"] / "hidden_flow_candidates.csv")
     manifest = json.loads((paths["out"] / "hidden_flow_manifest.json").read_text(encoding="utf-8"))
 
