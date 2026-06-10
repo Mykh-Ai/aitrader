@@ -19,6 +19,11 @@ MANIFEST_JSON = "hidden_flow_manifest.json"
 MAX_CANDIDATES = 100
 MAX_VISIBLE_REVIEW = 20
 REVIEW_CONFIDENCE_TIERS = {"HIGH"}
+ALLOWED_REVIEW_LABELS = {
+    "COMPRESSION_BEFORE_EXPANSION_CANDIDATE",
+    "HIDDEN_DISTRIBUTION_DOWN_CANDIDATE",
+    "SELLER_ABSORPTION_CANDIDATE",
+}
 EXCLUDED_REVIEW_LABELS = {"UNCLEAR_FLOW_ANOMALY"}
 
 FORBIDDEN_CANDIDATE_LABELS = {
@@ -240,6 +245,7 @@ def run_hidden_flow_research(
         "candidate_cap": MAX_CANDIDATES,
         "visible_review_cap": MAX_VISIBLE_REVIEW,
         "review_candidate_confidence_tiers": sorted(REVIEW_CONFIDENCE_TIERS),
+        "allowed_review_candidate_labels": sorted(ALLOWED_REVIEW_LABELS),
         "excluded_review_candidate_labels": sorted(EXCLUDED_REVIEW_LABELS),
         "low_confidence_windows_retained_in_regime_csv": True,
         "missing_data_flags": missing_flags,
@@ -898,6 +904,7 @@ def _select_candidates(windows_frame: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=CANDIDATE_COLUMNS)
     selected = selected[
         selected["confidence"].isin(REVIEW_CONFIDENCE_TIERS)
+        & selected["candidate_label"].isin(ALLOWED_REVIEW_LABELS)
         & ~selected["candidate_label"].isin(EXCLUDED_REVIEW_LABELS)
     ].copy()
     if selected.empty:
@@ -1131,8 +1138,9 @@ def _render_summary(
         f"- Candidates: {len(candidates)}",
         f"- Visible review candidates: {int((candidates['visible_for_review'].astype(str) == 'true').sum()) if not candidates.empty else 0}",
         f"- Review candidate confidence tiers: {json.dumps(sorted(REVIEW_CONFIDENCE_TIERS))}",
+        f"- Allowed review candidate labels: {json.dumps(sorted(ALLOWED_REVIEW_LABELS))}",
         f"- Excluded review candidate labels: {json.dumps(sorted(EXCLUDED_REVIEW_LABELS))}",
-        "- LOW confidence and unclear windows remain in `market_regime_windows.csv` for audit, but are not promoted to `hidden_flow_candidates.csv`.",
+        "- LOW confidence, unclear, and unproven directional windows remain in `market_regime_windows.csv` for audit, but are not promoted to `hidden_flow_candidates.csv`.",
         f"- Candidate labels after patch/current run: {json.dumps(label_counts, sort_keys=True)}",
         f"- Confidence: {json.dumps(confidence_counts, sort_keys=True)}",
         f"- Future impulse labels: {json.dumps(future_counts, sort_keys=True)}",
