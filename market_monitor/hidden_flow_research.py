@@ -10,7 +10,9 @@ from typing import Iterable
 import pandas as pd
 
 
-RESEARCH_VERSION = "SHI_RESET_37A_MARKET_REGIME_AND_HIDDEN_FLOW_RESEARCH_V0"
+RESEARCH_VERSION = "SHI_RESET_37D_EPISODE_CONTEXT_CLASSIFIER_V0"
+OUTAGE_START = pd.Timestamp("2026-04-23T17:05:00Z")
+OUTAGE_END = pd.Timestamp("2026-05-06T22:51:00Z")
 WINDOWS_CSV = "market_regime_windows.csv"
 CANDIDATES_CSV = "hidden_flow_candidates.csv"
 FUTURE_LABELS_CSV = "hidden_flow_future_labels.csv"
@@ -18,13 +20,22 @@ SUMMARY_MD = "hidden_flow_research_summary.md"
 MANIFEST_JSON = "hidden_flow_manifest.json"
 MAX_CANDIDATES = 100
 MAX_VISIBLE_REVIEW = 20
+EPISODE_LINK_LOOKBACK_HOURS = 72
+EPISODE_CONTEXT_WINDOWS = {
+    "1d": 1440,
+    "3d": 4320,
+    "7d": 10080,
+}
 REVIEW_CONFIDENCE_TIERS = {"HIGH"}
+EPISODE_LINKED_COMPRESSION_CONFIDENCE_TIERS = {"HIGH", "MEDIUM"}
+EPISODE_PRIOR_DISTRIBUTION_LABELS = {"HIDDEN_DISTRIBUTION_DOWN_CANDIDATE"}
 ALLOWED_REVIEW_LABELS = {
     "COMPRESSION_BEFORE_EXPANSION_CANDIDATE",
     "HIDDEN_DISTRIBUTION_DOWN_CANDIDATE",
     "SELLER_ABSORPTION_CANDIDATE",
 }
 EXCLUDED_REVIEW_LABELS = {"UNCLEAR_FLOW_ANOMALY"}
+EPISODE_ZONE_CONTEXTS = {"inside_zone", "near_upper_zone", "between_zones"}
 
 FORBIDDEN_CANDIDATE_LABELS = {
     "BUY",
@@ -104,6 +115,7 @@ WINDOW_COLUMNS = [
 
 CANDIDATE_COLUMNS = [
     "candidate_id",
+    "source_window_id",
     "start_timestamp",
     "end_timestamp",
     "window_minutes",
@@ -137,6 +149,37 @@ CANDIDATE_COLUMNS = [
     "absorption_score",
     "accumulation_score",
     "distribution_score",
+    "context_1d_read",
+    "context_1d_price_change_pct",
+    "context_1d_range_pct",
+    "context_1d_close_position",
+    "context_1d_delta_pct",
+    "context_1d_open_interest_change",
+    "context_1d_minutes_available",
+    "context_3d_read",
+    "context_3d_price_change_pct",
+    "context_3d_range_pct",
+    "context_3d_close_position",
+    "context_3d_delta_pct",
+    "context_3d_open_interest_change",
+    "context_3d_minutes_available",
+    "context_7d_read",
+    "context_7d_price_change_pct",
+    "context_7d_range_pct",
+    "context_7d_close_position",
+    "context_7d_delta_pct",
+    "context_7d_open_interest_change",
+    "context_7d_minutes_available",
+    "episode_chain_type",
+    "linked_prior_window_id",
+    "linked_prior_label",
+    "linked_prior_start_timestamp",
+    "linked_prior_end_timestamp",
+    "linked_prior_zone_position_context",
+    "linked_prior_nearest_zone_side",
+    "episode_review_state",
+    "episode_read",
+    "episode_context_reason",
     "directional_classification_reason",
     "evidence_summary",
     "missing_data_flags",
@@ -204,11 +247,19 @@ def run_hidden_flow_research(
         raise HiddenFlowResearchError(f"input root not found: {input_root_path}")
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    feed = _load_feed(feed_root, start_date, end_date)
+    context_start_date = start_date - timedelta(days=7)
+    feed, feed_source_notes = _load_feed(feed_root, context_start_date, end_date, required_start=start_date)
     selected_zones = _load_visible_selected_zones(selected_path)
     missing_flags = _missing_flags(feed, selected_zones)
-    windows_frame = _build_windows(feed, selected_zones, window_list, missing_flags)
+    windows_frame = _build_windows(
+        feed,
+        selected_zones,
+        window_list,
+        missing_flags,
+        detection_start=pd.Timestamp(start_date.isoformat(), tz="UTC"),
+    )
     candidates = _select_candidates(windows_frame)
+    candidates = _add_episode_context(feed, windows_frame, candidates)
     future_labels = _build_future_labels(feed, candidates, future_window_list)
 
     windows_path = out_dir / WINDOWS_CSV
@@ -240,13 +291,19 @@ def run_hidden_flow_research(
         "input_root": str(input_root_path),
         "windows": window_list,
         "future_windows": future_window_list,
+        "feed_context_start": context_start_date.isoformat(),
+        "feed_source_notes": feed_source_notes,
         "detection_features_use_future_data": False,
         "future_labels_evaluation_only": True,
         "candidate_cap": MAX_CANDIDATES,
         "visible_review_cap": MAX_VISIBLE_REVIEW,
         "review_candidate_confidence_tiers": sorted(REVIEW_CONFIDENCE_TIERS),
+        "episode_linked_compression_confidence_tiers": sorted(EPISODE_LINKED_COMPRESSION_CONFIDENCE_TIERS),
+        "episode_link_lookback_hours": EPISODE_LINK_LOOKBACK_HOURS,
         "allowed_review_candidate_labels": sorted(ALLOWED_REVIEW_LABELS),
         "excluded_review_candidate_labels": sorted(EXCLUDED_REVIEW_LABELS),
+        "episode_context_windows_minutes": EPISODE_CONTEXT_WINDOWS,
+        "episode_context_uses_future_data": False,
         "low_confidence_windows_retained_in_regime_csv": True,
         "missing_data_flags": missing_flags,
         "repo_commit": _repo_commit(),
@@ -274,12 +331,24 @@ def run_hidden_flow_research(
     )
 
 
-def _load_feed(feed_dir: Path, start_date: date, end_date: date) -> pd.DataFrame:
+def _load_feed(feed_dir: Path, start_date: date, end_date: date, *, required_start: date) -> tuple[pd.DataFrame, dict[str, object]]:
     parts = []
+    recovered_days: list[str] = []
+    skipped_context_days: list[str] = []
     for day in _date_range(start_date, end_date):
-        path = feed_dir / f"{day.isoformat()}.csv"
+        base_path = feed_dir / f"{day.isoformat()}.csv"
+        recovered_path = feed_dir.parent / "feed_recovered" / f"{day.isoformat()}.csv"
+        day_start = pd.Timestamp(day.isoformat(), tz="UTC")
+        day_end = day_start + pd.Timedelta(days=1) - pd.Timedelta(minutes=1)
+        use_recovered = recovered_path.exists() and day_start <= OUTAGE_END and day_end >= OUTAGE_START
+        path = recovered_path if use_recovered else base_path
         if not path.exists():
+            if day < required_start:
+                skipped_context_days.append(day.isoformat())
+                continue
             raise HiddenFlowResearchError(f"missing feed file: {path}")
+        if use_recovered:
+            recovered_days.append(day.isoformat())
         frame = pd.read_csv(path)
         normalized = pd.DataFrame(
             {
@@ -303,10 +372,18 @@ def _load_feed(feed_dir: Path, start_date: date, end_date: date) -> pd.DataFrame
         if normalized.empty:
             raise HiddenFlowResearchError(f"{path} has no usable feed rows")
         parts.append(normalized)
+    if not parts:
+        raise HiddenFlowResearchError(f"no usable feed files found from {start_date} to {end_date}")
     out = pd.concat(parts, ignore_index=True).sort_values("timestamp", kind="mergesort").reset_index(drop=True)
     for column in ["trades", "total_qty", "buy_qty", "sell_qty", "open_interest", "funding_rate"]:
         out[column] = out[column].fillna(0.0)
-    return out
+    notes = {
+        "recovered_feed_used": bool(recovered_days),
+        "recovered_feed_days": recovered_days,
+        "skipped_missing_context_days": skipped_context_days,
+        "recovered_feed_caveat": "RECOVERED_DEGRADED" if recovered_days else "",
+    }
+    return out, notes
 
 
 def _column(frame: pd.DataFrame, names: list[str]) -> pd.Series:
@@ -338,15 +415,20 @@ def _build_windows(
     selected_zones: pd.DataFrame,
     windows: list[int],
     missing_flags: dict[str, str],
+    detection_start: pd.Timestamp,
 ) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
     window_id = 1
+    max_timestamp = pd.Timestamp(feed["timestamp"].max())
     for minutes in windows:
-        for end_pos in range(minutes, len(feed) + 1, 60):
-            start_pos = end_pos - minutes
-            window = feed.iloc[start_pos:end_pos]
+        end_timestamp = detection_start + pd.Timedelta(minutes=minutes - 1)
+        while end_timestamp <= max_timestamp:
+            start_timestamp = end_timestamp - pd.Timedelta(minutes=minutes - 1)
+            window = feed[(feed["timestamp"] >= start_timestamp) & (feed["timestamp"] <= end_timestamp)]
+            end_timestamp += pd.Timedelta(minutes=60)
             if len(window) < minutes:
                 continue
+            start_pos = int(window.index[0])
             prior_context = _prior_trend_context(feed, start_pos, minutes)
             rows.append(_score_window(window, selected_zones, minutes, window_id, missing_flags, prior_context))
             window_id += 1
@@ -902,11 +984,13 @@ def _select_candidates(windows_frame: pd.DataFrame) -> pd.DataFrame:
     selected = frame[candidate_mask].copy()
     if selected.empty:
         return pd.DataFrame(columns=CANDIDATE_COLUMNS)
-    selected = selected[
+    base_review_mask = (
         selected["confidence"].isin(REVIEW_CONFIDENCE_TIERS)
         & selected["candidate_label"].isin(ALLOWED_REVIEW_LABELS)
         & ~selected["candidate_label"].isin(EXCLUDED_REVIEW_LABELS)
-    ].copy()
+    )
+    linked_compression_mask = selected.apply(lambda row: _is_episode_linked_compression(frame, row), axis=1)
+    selected = selected[base_review_mask | linked_compression_mask].copy()
     if selected.empty:
         return pd.DataFrame(columns=CANDIDATE_COLUMNS)
     selected = selected.sort_values(
@@ -919,6 +1003,7 @@ def _select_candidates(windows_frame: pd.DataFrame) -> pd.DataFrame:
         rows.append(
             {
                 "candidate_id": f"hidden_flow_{rank:04d}",
+                "source_window_id": row["window_id"],
                 "start_timestamp": row["start_timestamp"],
                 "end_timestamp": row["end_timestamp"],
                 "window_minutes": int(row["window_minutes"]),
@@ -952,6 +1037,7 @@ def _select_candidates(windows_frame: pd.DataFrame) -> pd.DataFrame:
                 "absorption_score": row["absorption_score"],
                 "accumulation_score": row["accumulation_score"],
                 "distribution_score": row["distribution_score"],
+                **_empty_episode_context(),
                 "directional_classification_reason": row["directional_classification_reason"],
                 "evidence_summary": row["evidence_summary"],
                 "missing_data_flags": row["missing_data_flags"],
@@ -960,6 +1046,231 @@ def _select_candidates(windows_frame: pd.DataFrame) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(rows, columns=CANDIDATE_COLUMNS)
+
+
+def _is_episode_linked_compression(windows_frame: pd.DataFrame, row: pd.Series) -> bool:
+    if str(row["candidate_label"]) != "COMPRESSION_BEFORE_EXPANSION_CANDIDATE":
+        return False
+    if str(row["confidence"]) not in EPISODE_LINKED_COMPRESSION_CONFIDENCE_TIERS:
+        return False
+    if str(row["trend_direction"]) != "RANGE":
+        return False
+    if str(row["nearest_zone_side"]) != "BUY_SIDE":
+        return False
+    if str(row["zone_position_context"]) not in EPISODE_ZONE_CONTEXTS:
+        return False
+    return _linked_prior_stage_row(windows_frame, row.to_dict()) is not None
+
+
+def _empty_episode_context() -> dict[str, object]:
+    out: dict[str, object] = {}
+    for key in EPISODE_CONTEXT_WINDOWS:
+        out.update(
+            {
+                f"context_{key}_read": "UNKNOWN",
+                f"context_{key}_price_change_pct": 0.0,
+                f"context_{key}_range_pct": 0.0,
+                f"context_{key}_close_position": 0.5,
+                f"context_{key}_delta_pct": 0.0,
+                f"context_{key}_open_interest_change": 0.0,
+                f"context_{key}_minutes_available": 0,
+            }
+        )
+    out.update(
+        {
+            "episode_chain_type": "NONE",
+            "linked_prior_window_id": "",
+            "linked_prior_label": "",
+            "linked_prior_start_timestamp": "",
+            "linked_prior_end_timestamp": "",
+            "linked_prior_zone_position_context": "",
+            "linked_prior_nearest_zone_side": "",
+            "episode_review_state": "HIDE_UNRESOLVED",
+            "episode_read": "UNRESOLVED_CONTEXT",
+            "episode_context_reason": "episode context unavailable",
+        }
+    )
+    return out
+
+
+def _linked_prior_stage_row(windows_frame: pd.DataFrame, candidate: dict[str, object] | pd.Series) -> dict[str, object] | None:
+    if str(candidate.get("candidate_label", "")) != "COMPRESSION_BEFORE_EXPANSION_CANDIDATE":
+        return None
+    if str(candidate.get("nearest_zone_side", "")) != "BUY_SIDE":
+        return None
+    if str(candidate.get("zone_position_context", "")) not in EPISODE_ZONE_CONTEXTS:
+        return None
+    compression_start = pd.Timestamp(candidate["start_timestamp"])
+    if compression_start.tzinfo is None:
+        compression_start = compression_start.tz_localize("UTC")
+    lookback_start = compression_start - pd.Timedelta(hours=EPISODE_LINK_LOOKBACK_HOURS)
+    frame = windows_frame.copy()
+    starts = pd.to_datetime(frame["start_timestamp"], errors="coerce", utc=True)
+    ends = pd.to_datetime(frame["end_timestamp"], errors="coerce", utc=True)
+    mask = (
+        (frame["candidate_label"].astype(str).isin(EPISODE_PRIOR_DISTRIBUTION_LABELS))
+        & (frame["confidence"].astype(str).isin(REVIEW_CONFIDENCE_TIERS))
+        & (frame["nearest_zone_side"].astype(str) == "BUY_SIDE")
+        & (frame["zone_position_context"].astype(str).isin(EPISODE_ZONE_CONTEXTS))
+        & (ends < compression_start)
+        & (ends >= lookback_start)
+    )
+    matches = frame.loc[mask].copy()
+    if matches.empty:
+        return None
+    matches["_end_ts"] = ends.loc[matches.index]
+    matches = matches.sort_values(
+        ["_end_ts", "candidate_score", "pressure_without_progress_score"],
+        ascending=[False, False, False],
+        kind="mergesort",
+    )
+    return matches.iloc[0].drop(labels=["_end_ts"], errors="ignore").to_dict()
+
+
+def _add_episode_context(feed: pd.DataFrame, windows_frame: pd.DataFrame, candidates: pd.DataFrame) -> pd.DataFrame:
+    if candidates.empty:
+        return pd.DataFrame(columns=CANDIDATE_COLUMNS)
+    feed_sorted = feed.sort_values("timestamp", kind="mergesort").reset_index(drop=True)
+    enriched_rows = []
+    for _, candidate in candidates.iterrows():
+        row = candidate.to_dict()
+        start_ts = pd.Timestamp(row["start_timestamp"])
+        if start_ts.tzinfo is None:
+            start_ts = start_ts.tz_localize("UTC")
+        for key, minutes in EPISODE_CONTEXT_WINDOWS.items():
+            metrics = _episode_context_metrics(feed_sorted, start_ts, minutes)
+            for metric_name, value in metrics.items():
+                row[f"context_{key}_{metric_name}"] = value
+        linked_prior = _linked_prior_stage_row(windows_frame, row)
+        if linked_prior is not None:
+            row["episode_chain_type"] = "DISTRIBUTION_TO_COMPRESSION"
+            row["linked_prior_window_id"] = linked_prior["window_id"]
+            row["linked_prior_label"] = linked_prior["candidate_label"]
+            row["linked_prior_start_timestamp"] = linked_prior["start_timestamp"]
+            row["linked_prior_end_timestamp"] = linked_prior["end_timestamp"]
+            row["linked_prior_zone_position_context"] = linked_prior["zone_position_context"]
+            row["linked_prior_nearest_zone_side"] = linked_prior["nearest_zone_side"]
+        episode_read, reason = _episode_read(pd.Series(row))
+        row["episode_read"] = episode_read
+        row["episode_context_reason"] = reason
+        row["episode_review_state"] = _episode_review_state(pd.Series(row))
+        enriched_rows.append(row)
+    enriched = pd.DataFrame(enriched_rows, columns=CANDIDATE_COLUMNS)
+    return _apply_episode_visibility(enriched)
+
+
+def _episode_review_state(row: pd.Series) -> str:
+    if str(row.get("episode_chain_type", "")) != "DISTRIBUTION_TO_COMPRESSION":
+        if str(row.get("episode_read", "")) == "HIDDEN_DISTRIBUTION_STAGE_CONTEXT_ONLY":
+            return "CONTEXT_ONLY"
+        return "HIDE_UNRESOLVED"
+    if str(row.get("episode_read", "")).startswith("UNRESOLVED"):
+        return "HIDE_UNRESOLVED"
+    return "PROMOTE"
+
+
+def _apply_episode_visibility(candidates: pd.DataFrame) -> pd.DataFrame:
+    if candidates.empty:
+        return pd.DataFrame(columns=CANDIDATE_COLUMNS)
+    out = candidates.copy()
+    out["visible_for_review"] = "false"
+    promoted = out[out["episode_review_state"].astype(str) == "PROMOTE"].copy()
+    if promoted.empty:
+        return out[CANDIDATE_COLUMNS]
+    visible_indices: list[int] = []
+    seen_groups: set[tuple[str, str]] = set()
+    for index, row in promoted.iterrows():
+        group = (str(row["linked_prior_window_id"]), str(row["episode_read"]))
+        if group in seen_groups:
+            continue
+        visible_indices.append(index)
+        seen_groups.add(group)
+        if len(visible_indices) >= MAX_VISIBLE_REVIEW:
+            break
+    out.loc[visible_indices, "visible_for_review"] = "true"
+    return out[CANDIDATE_COLUMNS]
+
+
+def _episode_context_metrics(feed: pd.DataFrame, anchor: pd.Timestamp, minutes: int) -> dict[str, object]:
+    if anchor.tzinfo is None:
+        anchor = anchor.tz_localize("UTC")
+    window_start = anchor - pd.Timedelta(minutes=minutes)
+    window = feed[(feed["timestamp"] >= window_start) & (feed["timestamp"] < anchor)]
+    if window.empty:
+        return {
+            "read": "UNKNOWN",
+            "price_change_pct": 0.0,
+            "range_pct": 0.0,
+            "close_position": 0.5,
+            "delta_pct": 0.0,
+            "open_interest_change": 0.0,
+            "minutes_available": 0,
+        }
+    start_price = float(window["close_price"].iloc[0])
+    end_price = float(window["close_price"].iloc[-1])
+    high = float(window["high_price"].max())
+    low = float(window["low_price"].min())
+    total_qty = float(window["total_qty"].sum())
+    buy_qty = float(window["buy_qty"].sum())
+    sell_qty = float(window["sell_qty"].sum())
+    oi_change = float(window["open_interest"].iloc[-1] - window["open_interest"].iloc[0])
+    price_change_pct = (end_price - start_price) / start_price * 100 if start_price else 0.0
+    range_pct = (high - low) / start_price * 100 if start_price else 0.0
+    close_position = (end_price - low) / (high - low) if high != low else 0.5
+    delta_pct = (buy_qty - sell_qty) / total_qty * 100 if total_qty else 0.0
+    available = int(len(window))
+    if available < min(60, minutes):
+        read = "UNKNOWN"
+    else:
+        read = _context_read(price_change_pct)
+    return {
+        "read": read,
+        "price_change_pct": round(price_change_pct, 6),
+        "range_pct": round(range_pct, 6),
+        "close_position": round(float(close_position), 4),
+        "delta_pct": round(delta_pct, 6),
+        "open_interest_change": round(oi_change, 6),
+        "minutes_available": available,
+    }
+
+
+def _context_read(price_change_pct: float) -> str:
+    if price_change_pct >= 1.0:
+        return "UP"
+    if price_change_pct <= -1.0:
+        return "DOWN"
+    return "RANGE"
+
+
+def _episode_read(row: pd.Series) -> tuple[str, str]:
+    label = str(row.get("candidate_label", ""))
+    side = str(row.get("nearest_zone_side", ""))
+    zone_context = str(row.get("zone_position_context", ""))
+    context_1d = str(row.get("context_1d_read", "UNKNOWN"))
+    context_3d = str(row.get("context_3d_read", "UNKNOWN"))
+    context_7d = str(row.get("context_7d_read", "UNKNOWN"))
+    chain_type = str(row.get("episode_chain_type", "NONE"))
+    upper_buy_context = side == "BUY_SIDE" and zone_context in {"near_upper_zone", "inside_zone", "between_zones"}
+    compression = label == "COMPRESSION_BEFORE_EXPANSION_CANDIDATE"
+    distribution = label == "HIDDEN_DISTRIBUTION_DOWN_CANDIDATE"
+    seller_absorption = label == "SELLER_ABSORPTION_CANDIDATE"
+    reason = (
+        f"1d={context_1d}; 3d={context_3d}; 7d={context_7d}; "
+        f"zone_context={zone_context}; nearest_side={side}; label={label}; chain={chain_type}"
+    )
+    if distribution:
+        return "HIDDEN_DISTRIBUTION_STAGE_CONTEXT_ONLY", reason
+    if seller_absorption:
+        return "SELLER_ABSORPTION_STAGE_CONTEXT_ONLY", reason
+    if compression and chain_type != "DISTRIBUTION_TO_COMPRESSION":
+        return "UNRESOLVED_COMPRESSION_CONTEXT", reason
+    if upper_buy_context and context_7d == "UP" and context_1d in {"DOWN", "RANGE"} and compression:
+        return "PULLBACK_ABSORBED_IN_UPTREND_COMPRESSION", reason
+    if upper_buy_context and context_7d == "RANGE":
+        return "RANGE_UPPER_DISTRIBUTION_REJECTION", reason
+    if upper_buy_context and context_7d == "DOWN":
+        return "PULLBACK_ABSORBED_IN_DOWNTREND_COMPRESSION", reason
+    return "UNRESOLVED_CONTEXT", reason
 
 
 def _build_future_labels(feed: pd.DataFrame, candidates: pd.DataFrame, future_windows: list[int]) -> pd.DataFrame:
@@ -1118,6 +1429,8 @@ def _render_summary(
 ) -> str:
     label_counts = candidates["candidate_label"].value_counts().to_dict() if not candidates.empty else {}
     confidence_counts = candidates["confidence"].value_counts().to_dict() if not candidates.empty else {}
+    episode_counts = candidates["episode_read"].value_counts().to_dict() if not candidates.empty else {}
+    episode_review_counts = candidates["episode_review_state"].value_counts().to_dict() if not candidates.empty else {}
     future_counts = future_labels["impulse_direction_label"].value_counts().to_dict() if not future_labels.empty else {}
     false_positive_count = (
         int((future_labels["false_positive_flag"].astype(str).str.lower() == "true").sum())
@@ -1138,11 +1451,15 @@ def _render_summary(
         f"- Candidates: {len(candidates)}",
         f"- Visible review candidates: {int((candidates['visible_for_review'].astype(str) == 'true').sum()) if not candidates.empty else 0}",
         f"- Review candidate confidence tiers: {json.dumps(sorted(REVIEW_CONFIDENCE_TIERS))}",
+        f"- Episode-linked compression confidence tiers: {json.dumps(sorted(EPISODE_LINKED_COMPRESSION_CONFIDENCE_TIERS))}",
         f"- Allowed review candidate labels: {json.dumps(sorted(ALLOWED_REVIEW_LABELS))}",
         f"- Excluded review candidate labels: {json.dumps(sorted(EXCLUDED_REVIEW_LABELS))}",
+        f"- Episode context windows minutes: {json.dumps(EPISODE_CONTEXT_WINDOWS, sort_keys=True)}",
         "- LOW confidence, unclear, and unproven directional windows remain in `market_regime_windows.csv` for audit, but are not promoted to `hidden_flow_candidates.csv`.",
         f"- Candidate labels after patch/current run: {json.dumps(label_counts, sort_keys=True)}",
         f"- Confidence: {json.dumps(confidence_counts, sort_keys=True)}",
+        f"- Episode reads: {json.dumps(episode_counts, sort_keys=True)}",
+        f"- Episode review states: {json.dumps(episode_review_counts, sort_keys=True)}",
         f"- Future impulse labels: {json.dumps(future_counts, sort_keys=True)}",
         f"- Future false-positive rows: {false_positive_count}",
         f"- Missing data flags: {json.dumps(missing_flags, sort_keys=True)}",
@@ -1192,6 +1509,11 @@ def _render_summary(
                 "zone_position_context",
                 "prior_trend_direction",
                 "nearest_zone_side",
+                "context_1d_read",
+                "context_3d_read",
+                "context_7d_read",
+                "episode_review_state",
+                "episode_read",
             ],
         ),
     ]
