@@ -9,6 +9,8 @@ from market_monitor.market_structure_state import (
     MARKET_STRUCTURE_EVENT_COLUMNS,
     MARKET_STRUCTURE_LEVEL_COLUMNS,
     MARKET_STRUCTURE_STATE_COLUMNS,
+    _classify_state,
+    _window_metrics,
     run_market_structure_state,
 )
 from market_monitor.run_market_structure_state import main
@@ -92,6 +94,104 @@ def test_market_structure_state_cli_writes_outputs(tmp_path: Path):
     assert (output_dir / "market_structure_state_summary.md").exists()
     assert (output_dir / "market_structure_state_manifest.json").exists()
 
+def test_expanded_down_move_above_support_is_not_range():
+    metrics = _window_metrics(
+        pd.DataFrame(
+            [
+                _normalized_feed_row("2026-05-17 00:00:00", 81000, 81200, 80600, 80950, 1000, 420, 580, 100000),
+                _normalized_feed_row("2026-05-17 23:59:00", 80950, 81150, 78500, 78800, 3000, 900, 2100, 101500),
+            ]
+        )
+    )
+    support = _band("support_1", "SUPPORT", 77000, 78000, 88)
+    resistance = _band("resistance_1", "RESISTANCE", 82500, 83500, 70)
+
+    state, confidence, bias, strength, evidence = _classify_state(
+        metrics=metrics,
+        support=support,
+        resistance=resistance,
+        previous_states=[],
+    )
+
+    assert state != "RANGE_ABOVE_SUPPORT"
+    assert "RANGE" not in state
+    assert state in {"MARKDOWN_ABOVE_SUPPORT", "EXPANSION_DOWN"}
+    assert confidence in {"MEDIUM", "HIGH"}
+    assert bias == "DOWN"
+    assert strength in {"MEDIUM", "HIGH"}
+    assert "dominant_side=SELLER" in evidence
+
+
+def test_support_presence_does_not_override_seller_dominance():
+    metrics = {
+        "open": 80000.0,
+        "close": 79000.0,
+        "high": 80300.0,
+        "low": 78500.0,
+        "price_change_pct": -1.25,
+        "range_pct": 2.29,
+        "delta_pct": -18.0,
+        "open_interest_change": 700.0,
+        "close_position": 0.2778,
+    }
+    support = _band("support_1", "SUPPORT", 77000, 78000, 92)
+    resistance = _band("resistance_1", "RESISTANCE", 82000, 83000, 75)
+
+    state, _, bias, _, evidence = _classify_state(
+        metrics=metrics,
+        support=support,
+        resistance=resistance,
+        previous_states=[],
+    )
+
+    assert state != "RANGE_ABOVE_SUPPORT"
+    assert state != "COMPRESSION_ABOVE_SUPPORT"
+    assert bias == "DOWN"
+    assert "support_context=present" in evidence
+    assert "dominant_side=SELLER" in evidence
+
+
+def test_balanced_range_requires_low_range_mixed_pressure_and_middle_close():
+    support = _band("support_1", "SUPPORT", 77000, 78000, 88)
+    resistance = _band("resistance_1", "RESISTANCE", 80500, 81500, 88)
+    balanced = {
+        "open": 78500.0,
+        "close": 78520.0,
+        "high": 79000.0,
+        "low": 78000.0,
+        "price_change_pct": 0.025,
+        "range_pct": 1.266,
+        "delta_pct": 1.0,
+        "open_interest_change": 50.0,
+        "close_position": 0.52,
+    }
+    low_close_seller_pressure = {
+        **balanced,
+        "close": 78100.0,
+        "price_change_pct": -0.5,
+        "delta_pct": -12.0,
+        "close_position": 0.1,
+    }
+
+    range_state, _, range_bias, _, range_evidence = _classify_state(
+        metrics=balanced,
+        support=support,
+        resistance=resistance,
+        previous_states=[],
+    )
+    pressure_state, _, pressure_bias, _, pressure_evidence = _classify_state(
+        metrics=low_close_seller_pressure,
+        support=support,
+        resistance=resistance,
+        previous_states=[],
+    )
+
+    assert range_state == "BALANCED_RANGE_BETWEEN_LEVELS"
+    assert range_bias == "MIXED"
+    assert "range_quality=BALANCED" in range_evidence
+    assert pressure_state != "BALANCED_RANGE_BETWEEN_LEVELS"
+    assert pressure_bias == "DOWN"
+    assert "range_quality=BIASED" in pressure_evidence
 
 def _has_band_covering(levels: pd.DataFrame, lower: float, upper: float, *, role: str) -> bool:
     matching = levels[
@@ -101,6 +201,17 @@ def _has_band_covering(levels: pd.DataFrame, lower: float, upper: float, *, role
     ]
     return not matching.empty
 
+def _band(band_id: str, role: str, lower: float, upper: float, strength: float) -> pd.Series:
+    return pd.Series(
+        {
+            "band_id": band_id,
+            "role": role,
+            "price_lower": lower,
+            "price_upper": upper,
+            "strength_score": strength,
+            "strength_bucket": "MAJOR",
+        }
+    )
 
 def _write_daily_outputs(root: Path) -> Path:
     for day in [
@@ -250,6 +361,28 @@ def _write_feed(root: Path) -> Path:
         pd.DataFrame(rows).to_csv(root / f"{day}.csv", index=False)
     return root
 
+def _normalized_feed_row(
+    timestamp: str,
+    open_price: float,
+    high: float,
+    low: float,
+    close: float,
+    volume: float,
+    buy_qty: float,
+    sell_qty: float,
+    oi: float,
+) -> dict[str, object]:
+    return {
+        "Timestamp": pd.Timestamp(timestamp),
+        "OpenPrice": open_price,
+        "HiPrice": high,
+        "LowPrice": low,
+        "ClosePrice": close,
+        "TotalQty": volume,
+        "BuyQty": buy_qty,
+        "SellQty": sell_qty,
+        "OpenInterest": oi,
+    }
 
 def _feed_row(
     timestamp: str,

@@ -1222,7 +1222,12 @@ def _episode_context_metrics(feed: pd.DataFrame, anchor: pd.Timestamp, minutes: 
     if available < min(60, minutes):
         read = "UNKNOWN"
     else:
-        read = _context_read(price_change_pct)
+        read = _context_read(
+            price_change_pct=price_change_pct,
+            range_pct=range_pct,
+            close_position=float(close_position),
+            delta_pct=delta_pct,
+        )
     return {
         "read": read,
         "price_change_pct": round(price_change_pct, 6),
@@ -1234,13 +1239,21 @@ def _episode_context_metrics(feed: pd.DataFrame, anchor: pd.Timestamp, minutes: 
     }
 
 
-def _context_read(price_change_pct: float) -> str:
+def _context_read(
+    price_change_pct: float,
+    range_pct: float = 0.0,
+    close_position: float = 0.5,
+    delta_pct: float = 0.0,
+) -> str:
     if price_change_pct >= 1.0:
         return "UP"
     if price_change_pct <= -1.0:
         return "DOWN"
+    if range_pct >= 1.8 and close_position >= 0.82 and delta_pct >= 10.0:
+        return "UP"
+    if range_pct >= 1.8 and close_position <= 0.18 and delta_pct <= -10.0:
+        return "DOWN"
     return "RANGE"
-
 
 def _episode_read(row: pd.Series) -> tuple[str, str]:
     label = str(row.get("candidate_label", ""))

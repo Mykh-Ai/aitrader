@@ -78,6 +78,7 @@ MARKET_STRUCTURE_STATE_COLUMNS = [
     "price_low",
     "price_change_pct",
     "range_pct",
+    "close_position",
     "delta_pct",
     "open_interest_change",
     "oi_context",
@@ -508,6 +509,7 @@ def _build_state_timeline(
                 "price_low": metrics["low"],
                 "price_change_pct": metrics["price_change_pct"],
                 "range_pct": metrics["range_pct"],
+                "close_position": metrics["close_position"],
                 "delta_pct": metrics["delta_pct"],
                 "open_interest_change": metrics["open_interest_change"],
                 "oi_context": _oi_context(metrics),
@@ -529,23 +531,41 @@ def _classify_state(
     price_change = metrics["price_change_pct"]
     range_pct = metrics["range_pct"]
     delta_pct = metrics["delta_pct"]
+    close_position = metrics.get("close_position", 0.5)
     support_strength = _series_float(support, "strength_score")
     resistance_strength = _series_float(resistance, "strength_score")
     resistance_lower = _series_float(resistance, "price_lower")
     resistance_upper = _series_float(resistance, "price_upper")
     support_upper = _series_float(support, "price_upper")
+    support_context = "present" if support_strength > 0 and support_upper > 0 and close > support_upper else "absent"
+    resistance_context = "present" if resistance_strength > 0 and resistance_lower > 0 else "absent"
     near_resistance = bool(resistance_lower and high >= resistance_lower * 0.995)
-    strong_support = support_strength >= 65
     strong_resistance = resistance_strength >= 65
 
+    pressure = _market_pressure_dominance(
+        metrics=metrics,
+        support=support,
+        resistance=resistance,
+    )
     evidence = (
         f"price_change_pct={price_change:.3f}; range_pct={range_pct:.3f}; "
-        f"delta_pct={delta_pct:.3f}; support_strength={support_strength:.1f}; "
-        f"resistance_strength={resistance_strength:.1f}"
+        f"close_position={close_position:.3f}; delta_pct={delta_pct:.3f}; "
+        f"support_strength={support_strength:.1f}; resistance_strength={resistance_strength:.1f}; "
+        f"seller_pressure_score={pressure['seller_pressure_score']:.1f}; "
+        f"buyer_response_score={pressure['buyer_response_score']:.1f}; "
+        f"overhead_supply_score={pressure['overhead_supply_score']:.1f}; "
+        f"underlying_demand_score={pressure['underlying_demand_score']:.1f}; "
+        f"dominant_side={pressure['dominant_side']}; range_quality={pressure['range_quality']}; "
+        f"support_context={support_context}; resistance_context={resistance_context}"
     )
 
     next_round_level = math.ceil(float(metrics["open"]) / 10000.0) * 10000.0
-    if high >= next_round_level and close <= next_round_level * 0.995:
+    if (
+        float(metrics["open"]) < next_round_level * 0.995
+        and high >= next_round_level
+        and close <= next_round_level * 0.995
+        and close_position <= 0.45
+    ):
         return (
             "FAILED_CONTINUATION_ABOVE_ROUND_LEVEL",
             "MEDIUM",
@@ -553,6 +573,7 @@ def _classify_state(
             "MEDIUM",
             evidence + f"; high crossed round_level={next_round_level:.0f} but did not hold",
         )
+
     previous_state = previous_states[-1] if previous_states else ""
     if (
         previous_state
@@ -567,6 +588,28 @@ def _classify_state(
             "MEDIUM",
             evidence + "; post-expansion price remains inside/near major resistance band",
         )
+
+    if pressure["dominant_side"] == "SELLER" and price_change <= -0.45 and range_pct >= 1.2:
+        state = "MARKDOWN_ABOVE_SUPPORT" if support_context == "present" else "EXPANSION_DOWN"
+        confidence = "HIGH" if pressure["seller_pressure_score"] >= 70 else "MEDIUM"
+        strength = "HIGH" if pressure["seller_pressure_score"] >= 70 else "MEDIUM"
+        return (
+            state,
+            confidence,
+            "DOWN",
+            strength,
+            evidence + "; downside expansion classified before support/range fallback",
+        )
+
+    if strong_resistance and near_resistance and pressure["dominant_side"] == "SELLER" and close_position <= 0.45:
+        return (
+            "FAILED_BREAKOUT_SELLER_RECLAIM",
+            "MEDIUM",
+            "DOWN",
+            "MEDIUM",
+            evidence + "; seller pressure reclaimed below/inside overhead resistance context",
+        )
+
     if price_change >= 1.0 and delta_pct > 0 and near_resistance and strong_resistance:
         return (
             "UP_EXPANSION_INTO_MAJOR_RESISTANCE",
@@ -575,38 +618,52 @@ def _classify_state(
             "HIGH",
             evidence + "; upside expansion reached next strong resistance band",
         )
-    if strong_support and range_pct <= 2.5 and price_change <= -0.5 and delta_pct <= -2.0:
+
+    if pressure["dominant_side"] == "BUYER" and price_change >= 1.0 and range_pct >= 1.5:
+        return (
+            "EXPANSION_UP",
+            "MEDIUM",
+            "UP",
+            "MEDIUM",
+            evidence + "; upside expansion classified before range fallback",
+        )
+
+    if pressure["range_quality"] == "BALANCED" and support_context == "present" and resistance_context == "present":
+        return (
+            "BALANCED_RANGE_BETWEEN_LEVELS",
+            "MEDIUM",
+            "MIXED",
+            "LOW",
+            evidence + "; balance requires low range, mixed pressure, and middle close",
+        )
+
+    if pressure["dominant_side"] == "SELLER" and support_context == "present":
         return (
             "PRESSURE_INTO_SUPPORT",
             "MEDIUM",
-            "MIXED",
+            "DOWN",
             "MEDIUM",
-            evidence + f"; negative pressure into/above support_upper={support_upper:.3f}",
+            evidence + f"; seller pressure persists above support_upper={support_upper:.3f}",
         )
-    if strong_support and range_pct <= 2.5 and (resistance_lower == 0 or resistance_lower <= close * 1.04):
+
+    if pressure["dominant_side"] == "BUYER" and support_context == "present" and range_pct <= 2.5:
         return (
             "COMPRESSION_ABOVE_SUPPORT",
             "MEDIUM",
             "UP",
             "MEDIUM",
-            evidence + f"; compressed above support_upper={support_upper:.3f}",
+            evidence + f"; buyer response holds above support_upper={support_upper:.3f}",
         )
-    if strong_support and close > support_upper:
+
+    if resistance_context == "present" and close < resistance_upper and pressure["range_quality"] != "BIASED":
         return (
-            "RANGE_ABOVE_SUPPORT",
-            "MEDIUM",
+            "CONTEXT_BELOW_RESISTANCE",
+            "LOW",
             "MIXED",
             "LOW",
-            evidence + f"; price remains above support_upper={support_upper:.3f}",
+            evidence + f"; price remains below resistance_upper={resistance_upper:.3f} without proven balance",
         )
-    if strong_resistance and resistance_upper and close < resistance_upper:
-        return (
-            "RANGE_BELOW_RESISTANCE",
-            "MEDIUM",
-            "MIXED",
-            "LOW",
-            evidence + f"; price remains below resistance_upper={resistance_upper:.3f}",
-        )
+
     return (
         "MARKET_STRUCTURE_CONTEXT",
         "LOW",
@@ -615,6 +672,70 @@ def _classify_state(
         evidence + "; no dominant state transition",
     )
 
+
+def _market_pressure_dominance(
+    *,
+    metrics: dict[str, float],
+    support: pd.Series,
+    resistance: pd.Series,
+) -> dict[str, float | str]:
+    price_change = metrics["price_change_pct"]
+    range_pct = metrics["range_pct"]
+    delta_pct = metrics["delta_pct"]
+    close_position = metrics.get("close_position", 0.5)
+    close = metrics["close"]
+    support_strength = _series_float(support, "strength_score")
+    support_upper = _series_float(support, "price_upper")
+    resistance_strength = _series_float(resistance, "strength_score")
+    resistance_lower = _series_float(resistance, "price_lower")
+
+    seller_pressure = _clamp(
+        max(-price_change, 0.0) * 28.0
+        + max(-delta_pct, 0.0) * 1.8
+        + max(0.45 - close_position, 0.0) * 70.0
+        + max(range_pct - 1.0, 0.0) * 7.0,
+        0.0,
+        100.0,
+    )
+    buyer_response = _clamp(
+        max(price_change, 0.0) * 28.0
+        + max(delta_pct, 0.0) * 1.8
+        + max(close_position - 0.55, 0.0) * 70.0
+        + max(range_pct - 1.0, 0.0) * 4.0,
+        0.0,
+        100.0,
+    )
+    overhead_supply = 0.0
+    if resistance_lower > 0:
+        distance_to_resistance_pct = max((resistance_lower - close) / close * 100.0, 0.0) if close else 0.0
+        overhead_supply = _clamp(resistance_strength - min(distance_to_resistance_pct * 15.0, 40.0), 0.0, 100.0)
+    underlying_demand = 0.0
+    if support_upper > 0:
+        distance_to_support_pct = max((close - support_upper) / close * 100.0, 0.0) if close else 0.0
+        underlying_demand = _clamp(support_strength - min(distance_to_support_pct * 12.0, 45.0), 0.0, 100.0)
+
+    if seller_pressure >= buyer_response + 12.0 and seller_pressure >= 35.0:
+        dominant_side = "SELLER"
+    elif buyer_response >= seller_pressure + 12.0 and buyer_response >= 35.0:
+        dominant_side = "BUYER"
+    else:
+        dominant_side = "MIXED"
+
+    if range_pct <= 1.6 and abs(price_change) <= 0.35 and abs(delta_pct) <= 6.0 and 0.35 <= close_position <= 0.65:
+        range_quality = "BALANCED"
+    elif dominant_side == "MIXED" and range_pct <= 2.5 and 0.25 <= close_position <= 0.75:
+        range_quality = "MIXED"
+    else:
+        range_quality = "BIASED"
+
+    return {
+        "seller_pressure_score": round(float(seller_pressure), 3),
+        "buyer_response_score": round(float(buyer_response), 3),
+        "overhead_supply_score": round(float(overhead_supply), 3),
+        "underlying_demand_score": round(float(underlying_demand), 3),
+        "dominant_side": dominant_side,
+        "range_quality": range_quality,
+    }
 
 def _window_metrics(frame: pd.DataFrame) -> dict[str, float]:
     sorted_frame = frame.sort_values("Timestamp", kind="mergesort")
@@ -627,6 +748,7 @@ def _window_metrics(frame: pd.DataFrame) -> dict[str, float]:
     total = float(sorted_frame["TotalQty"].sum())
     open_price = float(first["OpenPrice"])
     close = float(last["ClosePrice"])
+    close_position = (close - low) / (high - low) if high != low else 0.5
     return {
         "open": round(open_price, 6),
         "close": round(close, 6),
@@ -634,10 +756,13 @@ def _window_metrics(frame: pd.DataFrame) -> dict[str, float]:
         "low": round(low, 6),
         "price_change_pct": round(((close / open_price) - 1.0) * 100.0, 6) if open_price else 0.0,
         "range_pct": round(((high / low) - 1.0) * 100.0, 6) if low else 0.0,
+        "close_position": round(float(close_position), 4),
         "delta_pct": round(((buy - sell) / total) * 100.0, 6) if total else 0.0,
         "open_interest_change": round(float(last["OpenInterest"]) - float(first["OpenInterest"]), 6),
     }
 
+def _clamp(value: float, low: float, high: float) -> float:
+    return max(low, min(high, float(value)))
 
 def _trader_role(row: pd.Series, current_price: float) -> str:
     lower = float(row["price_lower"])

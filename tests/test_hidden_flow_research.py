@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from market_monitor.hidden_flow_research import _episode_read, run_hidden_flow_research
+from market_monitor.hidden_flow_research import _context_read, _episode_read, run_hidden_flow_research
 from market_monitor.run_hidden_flow_research import main
 
 
@@ -172,6 +172,10 @@ def test_episode_context_columns_and_manifest_are_output(tmp_path: Path):
     assert set(visible["episode_review_state"]) <= {"PROMOTE"}
     assert "HIDDEN_DISTRIBUTION_STAGE_CONTEXT_ONLY" not in set(visible["episode_read"])
 
+def test_context_read_uses_range_close_position_and_pressure_not_only_price_change():
+    assert _context_read(price_change_pct=-0.35, range_pct=2.2, close_position=0.08, delta_pct=-18.0) == "DOWN"
+    assert _context_read(price_change_pct=0.05, range_pct=1.0, close_position=0.5, delta_pct=1.0) == "RANGE"
+    assert _context_read(price_change_pct=0.35, range_pct=2.2, close_position=0.92, delta_pct=18.0) == "UP"
 
 def test_episode_read_classifies_only_linked_distribution_to_compression_chain():
     base = {
