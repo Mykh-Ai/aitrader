@@ -12,7 +12,7 @@ from market_monitor.hidden_flow_research import (
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Run SHI_RESET_37A hidden-flow research detection from feed and selected zones."
+        description="Run SHI_RESET_37D hidden-flow episode context research from feed and selected zones."
     )
     parser.add_argument("--start", required=True, help="Inclusive start date YYYY-MM-DD.")
     parser.add_argument("--end", required=True, help="Inclusive end date YYYY-MM-DD.")

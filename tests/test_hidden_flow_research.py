@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from market_monitor.hidden_flow_research import run_hidden_flow_research
+from market_monitor.hidden_flow_research import _episode_read, run_hidden_flow_research
 from market_monitor.run_hidden_flow_research import main
 
 
@@ -130,6 +130,79 @@ def test_directional_sub_scores_and_reason_are_output(tmp_path: Path):
     assert len(reason) >= 20
     assert "prior_trend=" in reason
     assert "zone_context=" in reason
+
+
+def test_episode_context_columns_and_manifest_are_output(tmp_path: Path):
+    paths = _run_fixture(tmp_path, pattern="positive_upper")
+    candidates = pd.read_csv(paths["out"] / "hidden_flow_candidates.csv")
+    manifest = json.loads((paths["out"] / "hidden_flow_manifest.json").read_text(encoding="utf-8"))
+    summary = (paths["out"] / "hidden_flow_research_summary.md").read_text(encoding="utf-8")
+    required = {
+        "context_1d_read",
+        "context_1d_price_change_pct",
+        "context_1d_range_pct",
+        "context_1d_close_position",
+        "context_1d_delta_pct",
+        "context_1d_open_interest_change",
+        "context_1d_minutes_available",
+        "context_3d_read",
+        "context_7d_read",
+        "episode_review_state",
+        "episode_read",
+        "episode_context_reason",
+    }
+
+    assert required <= set(candidates.columns)
+    assert set(candidates["episode_read"]) <= {
+        "HIDDEN_DISTRIBUTION_STAGE_CONTEXT_ONLY",
+        "PULLBACK_ABSORBED_IN_DOWNTREND_COMPRESSION",
+        "PULLBACK_ABSORBED_IN_UPTREND_COMPRESSION",
+        "RANGE_UPPER_DISTRIBUTION_REJECTION",
+        "SELLER_ABSORPTION_STAGE_CONTEXT_ONLY",
+        "UNRESOLVED_ABSORPTION_CONTEXT",
+        "UNRESOLVED_COMPRESSION_CONTEXT",
+        "UNRESOLVED_CONTEXT",
+    }
+    assert manifest["episode_context_windows_minutes"] == {"1d": 1440, "3d": 4320, "7d": 10080}
+    assert manifest["episode_context_uses_future_data"] is False
+    assert manifest["episode_linked_compression_confidence_tiers"] == ["HIGH", "MEDIUM"]
+    assert manifest["episode_link_lookback_hours"] == 72
+    assert "Episode reads" in summary
+    visible = candidates[candidates["visible_for_review"].astype(str).str.lower() == "true"]
+    assert set(visible["episode_review_state"]) <= {"PROMOTE"}
+    assert "HIDDEN_DISTRIBUTION_STAGE_CONTEXT_ONLY" not in set(visible["episode_read"])
+
+
+def test_episode_read_classifies_only_linked_distribution_to_compression_chain():
+    base = {
+        "candidate_label": "COMPRESSION_BEFORE_EXPANSION_CANDIDATE",
+        "zone_position_context": "near_upper_zone",
+        "nearest_zone_side": "BUY_SIDE",
+        "context_1d_read": "DOWN",
+        "context_3d_read": "RANGE",
+        "episode_chain_type": "DISTRIBUTION_TO_COMPRESSION",
+    }
+
+    up_read, _ = _episode_read(pd.Series({**base, "context_7d_read": "UP"}))
+    range_read, _ = _episode_read(pd.Series({**base, "context_1d_read": "RANGE", "context_7d_read": "RANGE"}))
+    down_read, _ = _episode_read(pd.Series({**base, "context_1d_read": "RANGE", "context_7d_read": "DOWN"}))
+    standalone_distribution, _ = _episode_read(
+        pd.Series(
+            {
+                **base,
+                "candidate_label": "HIDDEN_DISTRIBUTION_DOWN_CANDIDATE",
+                "context_7d_read": "UP",
+                "episode_chain_type": "NONE",
+            }
+        )
+    )
+    unlinked_compression, _ = _episode_read(pd.Series({**base, "context_7d_read": "UP", "episode_chain_type": "NONE"}))
+
+    assert up_read == "PULLBACK_ABSORBED_IN_UPTREND_COMPRESSION"
+    assert range_read == "RANGE_UPPER_DISTRIBUTION_REJECTION"
+    assert down_read == "PULLBACK_ABSORBED_IN_DOWNTREND_COMPRESSION"
+    assert standalone_distribution == "HIDDEN_DISTRIBUTION_STAGE_CONTEXT_ONLY"
+    assert unlinked_compression == "UNRESOLVED_COMPRESSION_CONTEXT"
 
 
 def test_candidate_count_is_capped_and_prioritized(tmp_path: Path):
