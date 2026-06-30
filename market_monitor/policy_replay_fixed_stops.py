@@ -281,6 +281,7 @@ def _evaluate_forward_path(
         "be_hit_after_tp1_at": pd.NaT,
         "tp1_effective": False,
         "tp1_same_bar_as_stop": False,
+        "tp1_be_same_bar": False,
         "mfe_usd": float("nan"),
         "mae_usd": float("nan"),
         "mfe_r": float("nan"),
@@ -330,6 +331,18 @@ def _evaluate_forward_path(
         path["tp1_policy_first_event"] = "AMBIGUOUS_SAME_BAR"
     elif not pd.isna(tp1_at):
         path["tp1_effective"] = True
+        same_bar = forward[forward["_ts"] == tp1_at]
+        if not same_bar.empty:
+            if direction == "DOWN":
+                same_bar_be_mask = pd.to_numeric(same_bar["High"], errors="coerce") >= entry
+            else:
+                same_bar_be_mask = pd.to_numeric(same_bar["Low"], errors="coerce") <= entry
+            if bool(same_bar_be_mask.any()):
+                path["tp1_be_same_bar"] = True
+                path["be_hit_after_tp1"] = True
+                path["be_hit_after_tp1_at"] = tp1_at
+                path["tp1_policy_first_event"] = "AMBIGUOUS_SAME_BAR"
+                return path
         after_tp1 = forward[forward["_ts"] > tp1_at]
         if not after_tp1.empty:
             if direction == "DOWN":

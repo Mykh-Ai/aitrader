@@ -5,7 +5,12 @@ from pathlib import Path
 
 import pandas as pd
 
-from market_monitor.policy_replay_fixed_stops import run_policy_replay_fixed_stops
+from market_monitor.policy_replay_fixed_stops import (
+    _evaluate_forward_path,
+    _tp1_outcome,
+    _tp1_price,
+    run_policy_replay_fixed_stops,
+)
 from market_monitor.run_policy_replay_fixed_stops import main
 
 
@@ -204,3 +209,106 @@ def test_policy_replay_fixed_stops_regression_2026_06_23_1859_stop_before_tp1(tm
     assert row["first_event"] == "SELECTED_STOP"
     assert row["policy_outcome_label"] == "NO_TP1_SELECTED_STOP"
     assert row["policy_outcome_label"] != "TP1_THEN_TARGET"
+
+def test_tp1_be_short_be_before_tp1_does_not_trigger():
+    path = _tp1_path(
+        direction="DOWN",
+        entry=100.0,
+        stop=110.0,
+        rows=[
+            _path_row("2026-01-01T00:01:00Z", high=101.0, low=99.0),
+            _path_row("2026-01-01T00:02:00Z", high=100.5, low=98.0),
+        ],
+    )
+
+    assert path["tp1_touched"] is False
+    assert path["be_hit_after_tp1"] is False
+    assert _tp1_outcome(path=path, unresolved=False, insufficient=False) != "TP1_THEN_BE"
+
+
+def test_tp1_be_short_tp1_then_be_is_valid():
+    path = _tp1_path(
+        direction="DOWN",
+        entry=100.0,
+        stop=110.0,
+        rows=[
+            _path_row("2026-01-01T00:01:00Z", high=99.0, low=89.0),
+            _path_row("2026-01-01T00:02:00Z", high=100.0, low=95.0),
+        ],
+    )
+
+    assert path["tp1_touched"] is True
+    assert path["be_hit_after_tp1"] is True
+    assert _tp1_outcome(path=path, unresolved=False, insufficient=False) == "TP1_THEN_BE"
+
+
+def test_tp1_be_short_selected_stop_before_tp1_is_terminal():
+    path = _tp1_path(
+        direction="DOWN",
+        entry=100.0,
+        stop=110.0,
+        rows=[
+            _path_row("2026-01-01T00:01:00Z", high=110.0, low=99.0),
+            _path_row("2026-01-01T00:02:00Z", high=100.0, low=89.0),
+            _path_row("2026-01-01T00:03:00Z", high=95.0, low=80.0),
+        ],
+    )
+
+    assert path["tp1_touched"] is True
+    assert path["target_touched"] is True
+    assert path["tp1_policy_first_event"] == "SELECTED_STOP"
+    assert _tp1_outcome(path=path, unresolved=False, insufficient=False) == "NO_TP1_SELECTED_STOP"
+
+
+def test_tp1_be_long_be_before_tp1_does_not_trigger():
+    path = _tp1_path(
+        direction="UP",
+        entry=100.0,
+        stop=90.0,
+        rows=[
+            _path_row("2026-01-01T00:01:00Z", high=101.0, low=99.0),
+            _path_row("2026-01-01T00:02:00Z", high=102.0, low=99.5),
+        ],
+    )
+
+    assert path["tp1_touched"] is False
+    assert path["be_hit_after_tp1"] is False
+    assert _tp1_outcome(path=path, unresolved=False, insufficient=False) != "TP1_THEN_BE"
+
+
+def test_tp1_be_same_candle_tp1_and_be_is_ambiguous():
+    path = _tp1_path(
+        direction="DOWN",
+        entry=100.0,
+        stop=110.0,
+        rows=[_path_row("2026-01-01T00:01:00Z", high=100.0, low=89.0)],
+    )
+
+    assert path["tp1_touched"] is True
+    assert path["be_hit_after_tp1"] is True
+    assert path["tp1_be_same_bar"] is True
+    assert path["tp1_policy_first_event"] == "AMBIGUOUS_SAME_BAR"
+    assert _tp1_outcome(path=path, unresolved=False, insufficient=False) == "AMBIGUOUS_SAME_BAR"
+
+
+def _tp1_path(*, direction: str, entry: float, stop: float, rows: list[dict[str, object]]) -> dict[str, object]:
+    stop_distance = abs(stop - entry)
+    tp1_price = _tp1_price(direction=direction, entry=entry, stop_distance=stop_distance)
+    target = {"lower": 80.0, "upper": 80.0} if direction == "DOWN" else {"lower": 120.0, "upper": 120.0}
+    return _evaluate_forward_path(
+        forward=pd.DataFrame(rows),
+        direction=direction,
+        entry=entry,
+        selected_stop=stop,
+        target=target,
+        stop_distance=stop_distance,
+        tp1_price=tp1_price,
+    )
+
+
+def _path_row(ts: str, *, high: float, low: float) -> dict[str, object]:
+    return {
+        "_ts": pd.Timestamp(ts),
+        "High": high,
+        "Low": low,
+    }
