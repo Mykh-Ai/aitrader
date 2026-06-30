@@ -1,0 +1,110 @@
+# SHI_RESET_38J_WIDER_RESEARCH_WINDOW_2026_05_23_TO_2026_06_10_AUDIT
+
+Verdict: PASS_WITH_DATA_QUALITY_NOTE
+
+Scope: research-only wider-window classification of existing Market Monitor setup timeline rows. This audit does not modify Setup Builder detection rules, hidden-flow promotion rules, Executor logic, live logic, orders, entries/exits, PnL, position sizing, or strategy promotion.
+
+## Window
+
+- Start: 2026-05-23T00:00:00Z
+- End: 2026-06-10T23:59:00Z
+- Output root: `market_monitor_runs/SHI_RESET_38J_wider_research_window_2026_05_23_to_2026_06_10_v0`
+
+## Generated Artifacts
+
+- `wider_setup_timeline.csv`
+- `wider_setup_classification.csv`
+- `wider_structural_stop_candidates.csv`
+- `wider_policy_replay_results.csv`
+- `wider_research_summary.md`
+- `wider_research_manifest.json`
+- `manual_review_shortlist.csv`
+
+## Input Pipeline
+
+- Daily Market Monitor batch: 19 processed, 0 skipped, 0 failed
+- Significant zone selector: 957 candidates, 7 visible zones
+- Market Structure State: 17 levels, 11 events, 19 state rows
+- Hidden-flow research: 1787 raw windows, 9 promoted candidates
+- Setup Builder: 9 setup research timeline rows
+
+Data quality note: `2026-06-04` was marked `RECOVERED_DEGRADED=1440` by the batch contract. It was included with `--include-degraded` so the requested continuous wider window could be generated. This is retained as a data-quality caveat, not treated as clean live-feed evidence.
+
+## Classification Counts
+
+Setup rows classified: 9
+
+By role:
+
+- PRE_TRIGGER_CONTEXT: 1
+- LATE_LAST_WAGON: 2
+- FAILED_RECLAIM_TRIGGER_CANDIDATE: 1
+- STRUCTURAL_RETEST_TRIGGER_CANDIDATE: 5
+
+By trigger status:
+
+- WATCH: 1
+- ARMED: 8
+
+By source time precision:
+
+- RAW_REGIME_WINDOW_60M: 4
+- RAW_REGIME_WINDOW_240M: 3
+- RAW_REGIME_WINDOW_720M: 2
+
+Policy replay rows: 15
+
+By policy outcome:
+
+- POLICY_NOT_APPLIED_CONTEXT_ONLY: 1
+- POLICY_NOT_APPLIED_LATE_LAST_WAGON: 2
+- TARGET_BEFORE_SELECTED_STOP: 6
+- NO_TP1_SELECTED_STOP: 2
+- NO_DECISIVE_OUTCOME: 3
+- TP1_THEN_BE: 1
+
+## Classified Rows
+
+| setup_id | setup_formed_at | setup_type | trigger_status | source_time_precision | role | policy_allowed | reason |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| setup_000001 | 2026-05-24T05:59:00+00:00 | DEMAND_SWEEP_RECLAIM_UP_SETUP | WATCH | RAW_REGIME_WINDOW_240M | PRE_TRIGGER_CONTEXT | false | watch/context row; not counted as entry |
+| setup_000002 | 2026-05-26T16:59:00+00:00 | SELLER_DOMINANCE_RETEST_DOWN_SETUP | ARMED | RAW_REGIME_WINDOW_720M | LATE_LAST_WAGON | false | broad raw/source window; not immediate entry without local trigger |
+| setup_000003 | 2026-05-27T05:59:00+00:00 | SELLER_DOMINANCE_RETEST_DOWN_SETUP | ARMED | RAW_REGIME_WINDOW_720M | LATE_LAST_WAGON | false | broad raw/source window; not immediate entry without local trigger |
+| setup_000005 | 2026-06-01T00:59:00+00:00 | SUPPLY_SWEEP_RECLAIM_DOWN_SETUP | ARMED | RAW_REGIME_WINDOW_60M | FAILED_RECLAIM_TRIGGER_CANDIDATE | true | supply sweep/reclaim row with local raw evidence |
+| setup_000004 | 2026-06-01T12:59:00+00:00 | SELLER_DOMINANCE_RETEST_DOWN_SETUP | ARMED | RAW_REGIME_WINDOW_60M | STRUCTURAL_RETEST_TRIGGER_CANDIDATE | true | seller-dominance retest row requires structural rejection review |
+| setup_000006 | 2026-06-02T13:59:00+00:00 | SELLER_DOMINANCE_RETEST_DOWN_SETUP | ARMED | RAW_REGIME_WINDOW_60M | STRUCTURAL_RETEST_TRIGGER_CANDIDATE | true | seller-dominance retest row requires structural rejection review |
+| setup_000007 | 2026-06-03T13:59:00+00:00 | SELLER_DOMINANCE_RETEST_DOWN_SETUP | ARMED | RAW_REGIME_WINDOW_60M | STRUCTURAL_RETEST_TRIGGER_CANDIDATE | true | seller-dominance retest row requires structural rejection review |
+| setup_000008 | 2026-06-05T16:59:00+00:00 | SELLER_DOMINANCE_RETEST_DOWN_SETUP | ARMED | RAW_REGIME_WINDOW_240M | STRUCTURAL_RETEST_TRIGGER_CANDIDATE | true | seller-dominance retest row requires structural rejection review |
+| setup_000009 | 2026-06-09T17:59:00+00:00 | SELLER_DOMINANCE_RETEST_DOWN_SETUP | ARMED | RAW_REGIME_WINDOW_240M | STRUCTURAL_RETEST_TRIGGER_CANDIDATE | true | seller-dominance retest row requires structural rejection review |
+
+## Contract Checks
+
+- WATCH/context rows were not counted as immediate entry candidates.
+- RAW_REGIME_WINDOW_720M rows were demoted to LATE_LAST_WAGON and excluded from policy replay.
+- Policy replay was allowed only for failed-reclaim / structural-retest / correction-end / confirmation roles with `tradable_entry_anchor`, selected stop reference, and target reference available.
+- `setup_reference_level` remains a structural/reference level, not the replay anchor.
+- `actual_setup_price` is read from M1 feed at or before `setup_formed_at`.
+- `tradable_entry_anchor` is the replay price anchor.
+- Source-window stop is retained as context-only and is not blindly preferred over structural/local/original stop candidates.
+- TP1/BE policy treats selected stop before TP1 as terminal.
+- `hidden_flow_future_labels.csv` was generated by hidden-flow research as evaluation artifact, but the 38J classifier does not read it.
+
+## Manual Review Result
+
+The wider window contains six policy-eligible research candidates:
+
+- One FAILED_RECLAIM_TRIGGER_CANDIDATE at 2026-06-01T00:59:00Z.
+- Five STRUCTURAL_RETEST_TRIGGER_CANDIDATE rows from 2026-06-01T12:59:00Z through 2026-06-09T17:59:00Z.
+
+It also contains:
+
+- One PRE_TRIGGER_CONTEXT row at 2026-05-24T05:59:00Z.
+- Two LATE_LAST_WAGON rows from broad 720-minute source windows on 2026-05-26 and 2026-05-27.
+
+These labels are research classifications for replay review only. They are not trading instructions.
+
+## Tests
+
+- `python -m pytest -q tests/test_wider_research_window.py` -> 5 passed
+
+Full-suite result is recorded separately in the task completion report.
