@@ -14,7 +14,7 @@
     "summary_md": "market_monitor_runs\\SHI_RESET_38I_policy_replay_fixed_anchors_structural_stops_v0\\policy_replay_fixed_stop_summary.md"
   },
   "policy_replay_fixed_stops_version": "SHI_RESET_38I_POLICY_REPLAY_WITH_FIXED_ANCHORS_AND_STRUCTURAL_STOPS_V0",
-  "repo_commit": "dcceaa67a1c6471a4421268edce314cd668d25dd",
+  "repo_commit": "7aab826b4b631eefb207e04b60a7a2ed685bf9c2",
   "research_only": true,
   "result_row_count": 10,
   "sample_expanded": false,

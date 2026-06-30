@@ -142,3 +142,65 @@ def _feed_row(ts: str, open_price: float, high: float, low: float, close: float)
         "LiqSellQty": 0,
         "IsSynthetic": 0,
     }
+
+
+def test_policy_replay_fixed_stops_does_not_allow_later_tp1_after_selected_stop(tmp_path: Path):
+    focus, stops, verdicts, feed = _write_inputs(tmp_path)
+    pd.DataFrame(
+        [
+            _feed_row("2026-06-25 12:00:00", 61244.7, 62210.0, 61200.0, 62100.0),
+            _feed_row("2026-06-25 12:01:00", 62100.0, 62120.0, 60200.0, 60300.0),
+            _feed_row("2026-06-25 12:02:00", 60300.0, 60400.0, 59540.0, 59600.0),
+        ]
+    ).to_csv(feed / "2026-06-25.csv", index=False)
+
+    result = run_policy_replay_fixed_stops(
+        focus_alignment_path=focus,
+        structural_stops_path=stops,
+        manual_verdicts_path=verdicts,
+        feed_dir=feed,
+        output_dir=tmp_path / "out",
+    )
+
+    rows = pd.read_csv(result.results_path)
+    tp1 = rows[rows["policy_name"] == "TP1_BE_WITH_SELECTED_STOP_POLICY"].iloc[0]
+
+    assert tp1["selected_stop_touched_at"] == "2026-06-25T12:00:00Z"
+    assert tp1["tp1_touched_at"] == "2026-06-25T12:01:00Z"
+    assert tp1["target_touched_at"] == "2026-06-25T12:02:00Z"
+    assert tp1["first_event"] == "SELECTED_STOP"
+    assert tp1["policy_outcome_label"] == "NO_TP1_SELECTED_STOP"
+
+
+def test_policy_replay_fixed_stops_regression_2026_06_23_1859_stop_before_tp1(tmp_path: Path):
+    root = Path("market_monitor_runs")
+    required = [
+        root / "SHI_RESET_38G_live_like_bar_by_bar_state_replay_v0" / "focus_setup_alignment_check.csv",
+        root / "SHI_RESET_38H_structural_swing_stop_resolver_v0" / "structural_stop_reference_candidates.csv",
+        root / "SHI_RESET_38C_armed_manual_verdict_and_sequence_audit_v0" / "armed_setup_manual_verdicts.csv",
+        Path("feed") / "2026-06-24.csv",
+    ]
+    if not all(path.exists() for path in required):
+        return
+
+    result = run_policy_replay_fixed_stops(
+        focus_alignment_path=required[0],
+        structural_stops_path=required[1],
+        manual_verdicts_path=required[2],
+        feed_dir="feed",
+        output_dir=tmp_path / "out",
+    )
+
+    rows = pd.read_csv(result.results_path)
+    row = rows[
+        (rows["setup_formed_at"] == "2026-06-23T18:59:00Z")
+        & (rows["setup_type"] == "SELLER_DOMINANCE_RETEST_DOWN_SETUP")
+        & (rows["policy_name"] == "TP1_BE_WITH_SELECTED_STOP_POLICY")
+    ].iloc[0]
+
+    assert row["selected_stop_touched_at"] == "2026-06-24T00:10:00Z"
+    assert row["tp1_touched_at"] == "2026-06-24T13:42:00Z"
+    assert row["target_touched_at"] == "2026-06-24T16:52:00Z"
+    assert row["first_event"] == "SELECTED_STOP"
+    assert row["policy_outcome_label"] == "NO_TP1_SELECTED_STOP"
+    assert row["policy_outcome_label"] != "TP1_THEN_TARGET"

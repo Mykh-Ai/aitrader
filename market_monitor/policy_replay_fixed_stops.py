@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import re
@@ -248,14 +248,14 @@ def _replay_setup(*, setup: pd.Series, feed_root: Path) -> list[dict[str, object
             "policy_name": SELECTED_STOP_TARGET_POLICY,
             "first_event": path["selected_stop_first_event"],
             "policy_outcome_label": _selected_stop_outcome(path=path, unresolved=_unresolved(direction, entry, selected_stop, target), insufficient=forward.empty),
-            "evidence_summary": _evidence_summary(setup=setup, forward_rows=len(forward), policy=SELECTED_STOP_TARGET_POLICY),
+            "evidence_summary": _evidence_summary(setup=setup, forward_rows=len(forward), policy=SELECTED_STOP_TARGET_POLICY, path=path),
         },
         {
             **base,
             "policy_name": TP1_BE_WITH_SELECTED_STOP_POLICY,
             "first_event": path["tp1_policy_first_event"],
             "policy_outcome_label": _tp1_outcome(path=path, unresolved=_unresolved(direction, entry, selected_stop, target), insufficient=forward.empty),
-            "evidence_summary": _evidence_summary(setup=setup, forward_rows=len(forward), policy=TP1_BE_WITH_SELECTED_STOP_POLICY),
+            "evidence_summary": _evidence_summary(setup=setup, forward_rows=len(forward), policy=TP1_BE_WITH_SELECTED_STOP_POLICY, path=path),
         },
     ]
 
@@ -279,6 +279,8 @@ def _evaluate_forward_path(
         "tp1_touched_at": pd.NaT,
         "be_hit_after_tp1": False,
         "be_hit_after_tp1_at": pd.NaT,
+        "tp1_effective": False,
+        "tp1_same_bar_as_stop": False,
         "mfe_usd": float("nan"),
         "mae_usd": float("nan"),
         "mfe_r": float("nan"),
@@ -319,8 +321,15 @@ def _evaluate_forward_path(
     path["selected_stop_first_event"] = _first_event(
         [("TARGET", path["target_touched_at"]), ("SELECTED_STOP", path["stop_touched_at"])]
     )
-    tp1_at = path["tp1_touched_at"]
-    if not pd.isna(tp1_at):
+    tp1_at = _parse_ts(path["tp1_touched_at"])
+    stop_at = _parse_ts(path["stop_touched_at"])
+    if not pd.isna(stop_at) and not pd.isna(tp1_at) and stop_at < tp1_at:
+        path["tp1_policy_first_event"] = "SELECTED_STOP"
+    elif not pd.isna(stop_at) and not pd.isna(tp1_at) and stop_at == tp1_at:
+        path["tp1_same_bar_as_stop"] = True
+        path["tp1_policy_first_event"] = "AMBIGUOUS_SAME_BAR"
+    elif not pd.isna(tp1_at):
+        path["tp1_effective"] = True
         after_tp1 = forward[forward["_ts"] > tp1_at]
         if not after_tp1.empty:
             if direction == "DOWN":
@@ -360,6 +369,10 @@ def _tp1_outcome(*, path: dict[str, object], unresolved: bool, insufficient: boo
         return "INSUFFICIENT_FORWARD_DATA"
     if unresolved:
         return "NO_DECISIVE_OUTCOME"
+    if path["tp1_policy_first_event"] == "AMBIGUOUS_SAME_BAR":
+        return "AMBIGUOUS_SAME_BAR"
+    if path["tp1_policy_first_event"] == "SELECTED_STOP":
+        return "NO_TP1_SELECTED_STOP"
     if not path["tp1_touched"]:
         return "NO_TP1_SELECTED_STOP" if path["stop_touched"] else "NO_DECISIVE_OUTCOME"
     first = path["tp1_policy_first_event"]
@@ -470,14 +483,20 @@ def _positive(value: float) -> bool:
     return not pd.isna(value) and value > 0
 
 
-def _evidence_summary(*, setup: pd.Series, forward_rows: int, policy: str) -> str:
+def _evidence_summary(*, setup: pd.Series, forward_rows: int, policy: str, path: dict[str, object]) -> str:
+    ordering = ""
+    stop_at = _iso_z(path.get("stop_touched_at"))
+    tp1_at = _iso_z(path.get("tp1_touched_at"))
+    if stop_at and tp1_at and _parse_ts(stop_at) < _parse_ts(tp1_at):
+        ordering = f"; selected_stop_touched_at={stop_at} occurred before tp1_touched_at={tp1_at}"
+    elif stop_at and tp1_at and _parse_ts(stop_at) == _parse_ts(tp1_at):
+        ordering = f"; selected_stop_touched_at={stop_at} and tp1_touched_at={tp1_at} occurred in same bar"
     return (
         f"policy={policy}; forward_rows_after_setup={forward_rows}; setup_reference_used_as_entry=false; "
         f"entry_anchor=tradable_entry_anchor:{_round(setup.get('tradable_entry_anchor'))}; "
         f"selected_stop={_round(setup.get('selected_research_stop_reference'))}:{_cell(setup.get('selected_research_stop_type'))}; "
-        f"target_reference={_cell(setup.get('target_reference'))}; no_new_setup_detection=true"
+        f"target_reference={_cell(setup.get('target_reference'))}; no_new_setup_detection=true{ordering}"
     )
-
 
 def _summary_text(results: pd.DataFrame, focus_rows: pd.DataFrame) -> str:
     positive = results[
@@ -598,6 +617,3 @@ def _repo_commit() -> str:
         return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True, stderr=subprocess.DEVNULL).strip()
     except Exception:
         return ""
-
-
-
