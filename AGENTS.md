@@ -1,134 +1,142 @@
 # AGENTS.md
 
-## 1. Current Project State
+## Purpose
 
-AiTrader is currently in RESET / research infrastructure mode.
+This file tells a new agent how to work in this repository. It is not the project history and it is not the research log. For the project story and current state, read `README.md`. For commit/task summaries and links to evidence folders, read `PROJECT_LOG.md`.
 
-Active candidates = NONE.
+Current work is BTC Market Monitor research after the Analyzer v1 reset. The latest accepted research anchor is 38U specimen-like candidate evidence review; the next task is 38V setup_builder crosscheck.
 
-Replay candidates = NONE.
+## Autonomy And Permissions
 
-Holdout candidates = NONE.
+Do not ask the user for routine permission when the action is normal project work:
 
-Analyzer v1 = LEGACY / FAILED / READ-ONLY.
+- reading files;
+- searching the repository;
+- inspecting git history and diffs;
+- running local tests or lint/check commands;
+- creating or editing files directly related to the requested task;
+- adding documentation entries, canonical audit notes, or run-output summaries for the current task;
+- working around quoting/path/sandbox friction with an equivalent safe local command.
 
-Backtester = LEGACY / AUDIT REQUIRED / NOT ACTIVE.
+Ask before serious or potentially destructive actions:
 
-Old Sprint 02-10 research branch = archived / not active.
+- deleting files or directories;
+- `git reset`, destructive checkout/restore, or discarding user changes;
+- broad formatting or mass rewrites outside the task scope;
+- modifying `feed/`, `feed_recovered/`, or other data-lineage assets;
+- enabling Backtester as an active validation gate;
+- adding Executor/live/order/position-sizing behavior;
+- installing dependencies, using network, deploying, pushing, or touching remote systems;
+- changing project governance in a way that promotes research outputs to edge/live/production status.
 
-Active direction = BTC Market State Monitor research infrastructure.
+If a tool-level sandbox approval is required by the environment, request it only when the action is actually necessary. Do not use approval prompts as a substitute for normal repository work.
 
-Market Monitor research infrastructure exists and is active as a research-only module.
+## Start Every Task Here
 
-It produces structure/liquidity artifacts, zone registry/carry-forward outputs, event logs, unresolved sweep candidates, post-sweep observations, descriptive sweep labels, label quality reports, research summaries, and batch research outputs.
-
-It does not produce trading signals, entries, exits, positions, PnL, Backtester verdicts, Executor actions, orders, or live instructions.
-
-No Phase 4. No Executor. No live. No old Analyzer v1 workflow. No old failed-break/reclaim research. No old backtester replay campaigns. No old candidates.
-
-## 2. Active Sources of Truth
-
-Use these as current authority, in this order:
+Before changing anything, read in this order:
 
 1. `README.md`
-2. `AGENTS.md`
-3. `STAGE_1_FAILED_RESEARCH_SUMMARY.md`
-4. `docs/SHI_MARKET_STATE_MONITOR_V1_SPEC.md`
-5. `docs/FEED_CONTRACT_AND_SCHEMA_NOTES.md`
-6. `docs/LEGACY_CODE_AUDIT_TODO.md`
-7. `docs/ACTIVE_DOCS.md`
-8. `NEXT_TASK_MARKET_MONITOR.md`
+2. `PROJECT_LOG.md`
+3. `docs/ACTIVE_DOCS.md`
+4. `docs/FEED_CONTRACT_AND_SCHEMA_NOTES.md`
+5. the canonical audit for the task you are continuing
 
-Archived historical docs are not active implementation plans.
+Canonical audits live in:
 
-## 3. Not Active Sources
+`research/canonical/`
 
-Do not treat these as active source of truth:
+Generated run outputs live in:
 
-- `docs/Spec_v1.0.md`
-- `docs/Backtesting_Spec_v0.1.md`
-- `docs/Backtesting_Architecture_v0.1.md`
-- `docs/Analyzer_Run_Storage_v0.1.md`
-- `docs/Phase2_Implementation_Plan_AiTrader_v2_2_updated.md`
-- `docs/Phase3_Multi_Ruleset_Replay_Roadmap.md`
-- `research/OPS.md`
-- `scripts/run_analyzer_daily.sh`
-- `prompts/Shi_research.txt`
-- `prompts/weekly_research.txt`
+`market_monitor_runs/`
 
-If a file from this list reappears, treat it as governance leakage unless the user explicitly asks to inspect archive evidence.
+Example current audit:
 
-## 4. Hard Prohibitions
+`research/canonical/SHI_RESET_38U_SPECIMEN_LIKE_CANDIDATE_EVIDENCE_REVIEW_2026_07_01.md`
 
-Do not:
+Example current output root:
 
-- run live;
-- run Executor;
-- open Phase 4;
-- restore old candidates;
-- use Analyzer v1 as active research;
-- run Backtester replay campaigns;
-- use future labels for event generation;
-- use 12-bar outcome logic;
-- treat shallow sweep detection as a liquidity sweep model;
-- treat passing legacy tests as edge evidence;
-- continue Sprint 02-10;
-- restore old research scripts;
-- restore old research prompts;
-- write a new Analyzer;
-- add new Market Monitor feature work unless governance/source-of-truth docs remain aligned and the task is explicitly scoped as research infrastructure.
+`market_monitor_runs/SHI_RESET_38U_specimen_like_candidate_evidence_review_v0/`
 
-## 5. Module Boundaries
+## Live-Like Market Monitor Discipline
 
-### Aggregator and Feed
+The Market Monitor must be treated as a stateful market reader, not as a tool that cuts a convenient window from the feed and pretends that window is the market.
 
-`binance_aggregator_shi.py`, `feed/`, and `feed_recovered/` are core data-lineage assets.
+For live-like research runs:
+
+1. Process candles chronologically.
+2. At each newly closed H1 candle, recompute or update the monitor using all feed history available up to that candle close.
+3. Carry forward market state, structure levels, liquidity zones, qualified sweep/reclaim state, and setup review context from prior data.
+4. Do not reset state between technical chunks unless the task is explicitly a reset/diagnostic task and the artifact names that reset clearly.
+5. If chunking is needed for performance, write an audit field proving continuity, such as `market_state_reset=false`, `structure_levels_reset=false`, `liquidity_zones_reset=false`, `qualified_h1_state_reset=false`, and `setup_context_reset=false`.
+6. Treat a narrow date window as a diagnostic replay only. A diagnostic window must not be presented as live-like discovery unless it reconstructs prior context from earlier feed data.
+
+Market logic should model a live market as state that changes with each new closed candle and new trades. It should not infer setup quality from an isolated slice that lacks prior structure, liquidity, and state memory.
+
+## Post-38U Architecture Rules
+
+- Never treat `analyzer/` as an active source of current 38-chain candidates.
+- Never say the 227 rows came from old Analyzer v1; they came from the 38S run script under `market_monitor_runs/`.
+- Never treat 38S rows as canonical `setup_builder` candidates unless they survive a 38V setup_builder crosscheck.
+- Scripts under `market_monitor_runs/` are run artifacts, not reusable modules unless explicitly promoted into `market_monitor/` with tests and docs.
+- Canonical live-like monitor work must process closed candles chronologically and carry market state forward.
+- A valid future live monitor must update market state, structure levels, liquidity zones, hidden flow, setup context, and stage gates after each new closed candle.
+- 38T and 38U are post-generation QC/evidence reviews, not pre-generation monitor filters.
+
+## Run And Artifact Rules
+
+For each new SHI_RESET research task:
+
+1. Create a run root under `market_monitor_runs/<TASK_ID>_v0/` or a clearly versioned successor.
+2. Write generated CSV/JSON/MD artifacts into that run root.
+3. Write a canonical audit summary under `research/canonical/<TASK_ID>_AUDIT_<YYYY_MM_DD>.md`.
+4. Add a short entry to `PROJECT_LOG.md` with the task id, commit hash if available, canonical audit path, run-output root, key result, verification, and next implication.
+5. Keep `README.md`, `AGENTS.md`, `PROJECT_LOG.md`, `docs/ACTIVE_DOCS.md`, and `NEXT_TASK_MARKET_MONITOR.md` aligned when the project state changes.
+
+Do not bury negative evidence. If a run overgenerates, fails a gate, depends on degraded feed, or contradicts a prior assumption, record that directly in the audit and project log.
+
+## Feed/Data Rules
+
+Protected data-lineage assets:
+
+- `binance_aggregator_shi.py`
+- `feed/`
+- `feed_recovered/`
 
 Do not modify feed data or recovered feed data unless the user explicitly asks for a feed/data-lineage task.
 
-For read-only Market Monitor diagnostics, replays, visual overlays, and research summaries, select input data by lineage quality before running the monitor:
+Known outage/contamination window:
 
-- The known aggregator outage / contamination window is `2026-04-23 17:05:00 UTC -> 2026-05-06 22:51:00 UTC`.
-- For day-level diagnostic replays that include this known outage window, use `feed_recovered/YYYY-MM-DD.csv` for `2026-04-23` through `2026-05-06` when those recovered files exist. Do not use the flat zero-volume placeholder rows from `feed/` as market evidence for those dates.
-- For minute-precise tooling, `feed/` is usable before `2026-04-23 17:05:00 UTC` and after `2026-05-06 22:51:00 UTC`; rows inside the known outage window must come from `feed_recovered/` when available.
-- Use recovered rows without copying them into or overwriting `feed/`.
-- Mark the selected recovered rows/artifacts as `RECOVERED_DEGRADED` and explicitly report that the source was recovered.
-- Treat price/OHLCV/trades/buy/sell from `feed_recovered/` as usable with caveats, but treat OI/funding/liquidation conclusions from the recovered window as lower-confidence unless a real source is verified.
-- If both `feed/` and `feed_recovered/` are invalid or missing for a requested diagnostic day, report the missing/invalid data instead of synthesizing rows or forcing a market-state conclusion.
+`2026-04-23 17:05:00 UTC -> 2026-05-06 22:51:00 UTC`
 
-When the user asks to update or refresh `feed/`, treat it as a server data-lineage sync task first, not as a local REST backfill:
+Inside that window, use `feed_recovered/YYYY-MM-DD.csv` when available and mark affected conclusions as recovered/degraded. Do not copy recovered rows into `feed/` and do not hide the degraded provenance.
 
-- Find the live SHI aggregator on the server before generating any replacement rows.
-- Use the deployment/ops context outside this repository to identify the server host, process environment, and host-side feed mount. Do not hardcode server IPs, SSH targets, tokens, or private mount details in this file.
-- Copy authoritative enriched CSV files from the server-side live SHI feed into local `feed/YYYY-MM-DD.csv` when they exist.
-- Preserve server rows exactly, including missing minutes or nonzero `LiqBuyQty` / `LiqSellQty`; do not synthesize or overwrite those rows during sync.
-- Use Binance REST backfill only if the server enriched feed is missing for the requested dates, and explicitly report that the result is REST-derived rather than live-feed-derived. REST backfill must not claim historical liquidation coverage unless a real liquidation source was available.
+## Current Research Semantics
 
-### analyzer/
+Use current semantics carefully:
 
-Legacy only. Read `analyzer/README.md` before touching anything under `analyzer/`.
+- `RAW_SWEEP` is observation/context only.
+- `QUALIFIED_H1_SWEEP` requires completed H1 evidence and a meaningful H1/H4/structural level.
+- `QUALIFIED_H1_FAILED_RECLAIM` requires a completed H1 close back through the swept level.
+- `entry_candidate_ts` is the reclaim/rejection close timestamp.
+- `setup_formed_at` is a setup review timestamp, not the entry timestamp.
+- `policy_allowed` means a row passed the current research policy screen. It is not edge proof.
+- `specimen_like` means similar to the current evidence specimen by QC criteria. It still requires review.
 
-Analyzer v1 failed as a strategy Analyzer. It may be read for audited low-level references only. It must not be run as active research.
+For sequence-linked H1 sweep/reclaim candidates:
 
-### backtester/
+- short stop anchor should be `sweep_h1_high_stop` unless a farther valid structural stop exists;
+- long stop anchor should be `sweep_h1_low_stop` unless a farther valid structural stop exists;
+- a structural stop inside the sweep range is invalid.
 
-Legacy only. Read `backtester/README.md` before touching anything under `backtester/`.
+## Backtester And Executor Gates
 
-Backtester may be reusable only after audit and contract refactor. It must not be used for old replay campaigns.
+Backtester and Executor are future gates, not current active layers.
 
-### docs/
+The legacy `backtester/` package can become relevant again only after the current Market Monitor candidate contract is explicit enough to backtest. Do not run old Backtester campaigns against old Analyzer v1 survivors.
 
-Active docs must remain reset / feed contract / Market State Monitor only.
+Executor integration requires a later explicit user-scoped phase after research and Backtester evidence. Do not add live/order/position-sizing behavior during Market Monitor research tasks.
 
-Old Analyzer v1 / Phase2 / Phase3 / Backtester docs are archive evidence only.
-
-## 6. Evidence and Archive Rules
-
-Do not hide negative evidence. If old research artifacts must be removed from active tree, archive them first or ensure an archive manifest already records them.
-
-The old Analyzer v1 / Sprint 02-10 branch is archive-only. Do not use it to justify active candidates, replay survivors, Phase 4, or live readiness.
-
-## 7. Test Discipline
+## Tests
 
 Canonical local test command:
 
@@ -136,4 +144,18 @@ Canonical local test command:
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q
 ```
 
-Passing tests only proves current code contracts still execute. It does not prove edge, candidate validity, replay validity, or live readiness.
+PowerShell form:
+
+```powershell
+$env:PYTEST_DISABLE_PLUGIN_AUTOLOAD="1"
+python -m pytest -q
+Remove-Item Env:PYTEST_DISABLE_PLUGIN_AUTOLOAD
+```
+
+Current targeted tests for the 38M-38U chain:
+
+```bash
+python -m pytest -q tests/test_stage_gate_replay.py tests/test_policy_replay_fixed_stops.py tests/test_qualified_h1_sweep_reclaim.py tests/test_sequence_window_h1_replay.py
+```
+
+Passing tests proves executable contracts still run. It does not prove market edge.
