@@ -1,6 +1,12 @@
 # Project State Current
 
-Date: 2026-06-10
+Date: 2026-07-02
+
+## Current source of truth
+
+Current master audit: `research/canonical/SHI_RESET_39A_MASTER_RESEARCH_TO_MONITOR_ALIGNMENT_AUDIT_2026_07_02.md`.
+
+No new code promotion should happen until 39A is reviewed.
 
 ## State
 
@@ -10,36 +16,30 @@ replay_candidates = NONE
 
 holdout_candidates = NONE
 
-old_research_branch = archived
+old_research_branch = archived / not active
 
-Analyzer_v1 = legacy / failed
+Analyzer_v1 = legacy / failed / read-only
 
-Backtester = legacy / audit required
+Backtester = legacy / audit required / not active for current monitor
 
 Implementation = Market Monitor research infrastructure active
 
-Next = SHI_RESET_37D_EPISODE_CONTEXT_CLASSIFIER
+setup_builder = context candidate generator only / not final setup engine
 
-## Merged Research Infrastructure
+Executor_live = forbidden
 
-- SHI_RESET_36B significant zone selector
-- SHI_RESET_36C trader snapshot builder
-- SHI_RESET_37A hidden flow research
+Phase_4 = not open
 
-## Local Unmerged Branch
+## 39A preserved conclusions
 
-- branch: `codex/SHI_RESET_37C_prune_hidden_flow_labels_v0`
-- commit: `169ecd4 Prune hidden flow review labels`
-- status: not merged, not pushed
-
-## Current Research Log
-
-- `research/canonical/SHI_RESET_37_HIDDEN_FLOW_RESEARCH_LOG_2026_06_10.md`
+- Sweep must be redefined as sequence/lifecycle event before new setup logic is added.
+- 38S 227 rows are discovery material, not candidates.
+- 38W1-style corrected replay evidence is replay evidence, not edge proof.
+- Chat/manual conclusions are preserved separately from code-confirmed and run-artifact-confirmed facts.
+- Implementation promotion candidates are documentation-only backlog items until a future explicit promotion task.
 
 ## Boundary
 
-AiTrader remains open only as reset/research infrastructure. The old Analyzer v1 / Sprint 02-10 branch is closed and must not be continued.
+No live. No Executor. No orders. No PnL. No position sizing. No live readiness. No active trading strategy.
 
-No live. No Executor. No Phase 4. No active trading strategy.
-
-Market Monitor hidden-flow labels are descriptive research context only. They do not imply entries, exits, PnL, orders, live readiness, or edge validation.
+Market Monitor labels, setup_builder rows, replay outputs, and manual reviews are research artifacts only unless future code promotion and validation explicitly prove otherwise.
