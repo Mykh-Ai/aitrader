@@ -1,81 +1,44 @@
-# NEXT TASK: SHI_RESET_37D_EPISODE_CONTEXT_CLASSIFIER
+# NEXT TASK: SHI_RESET_39A_REVIEW_GATE
 
 ## Status
 
-This is the next intended research-infrastructure task after SHI_RESET_37A hidden-flow research and the local SHI_RESET_37C pruning branch.
+39A is now the required review gate before any new Market Monitor code promotion.
 
-Do not implement it as part of unrelated cleanup or merge work.
+Read first:
 
-## Goal
+- `research/canonical/SHI_RESET_39A_MASTER_RESEARCH_TO_MONITOR_ALIGNMENT_AUDIT_2026_07_02.md`
+- `research/canonical/SHI_RESET_39A_CONTROL_CASE_LEDGER_2026_07_02.csv`
+- `research/canonical/SHI_RESET_39A_RESEARCH_TO_CODE_DECISION_MATRIX_2026_07_02.csv`
+- `docs/SHI_MARKET_MONITOR_TERMINOLOGY_AND_EVENT_LIFECYCLE.md`
+- `docs/SHI_MARKET_MONITOR_KNOWN_GAPS_AND_NEXT_PROMOTIONS.md`
 
-Add descriptive episode context for promoted hidden-flow review candidates.
+## Gate
 
-This is not a strategy search task.
+No new code promotion should happen until 39A is reviewed.
 
-This is not a Backtester task.
+## Current boundaries
 
-This is not live trading.
+- Market Monitor is research infrastructure only.
+- `setup_builder` remains a context candidate generator, not a final setup engine.
+- Sweep must be redefined as a sequence/lifecycle event before new setup logic is added.
+- 38S 227 rows remain discovery material, not candidates.
+- 38W1-style corrected replay evidence remains replay evidence, not edge proof.
+- Chat/manual conclusions are preserved separately from code-confirmed facts.
 
-## Scope
+## Next possible promotion candidates after review
 
-The next accepted direction is research-only episode readability:
+Documentation-only backlog, not implemented here:
 
-- carry 1D / 3D / 7D market context into promoted hidden-flow review output;
-- classify reviewed episodes descriptively, for example:
-  - `PULLBACK_ABSORBED_IN_UPTREND_COMPRESSION`;
-  - `RANGE_UPPER_DISTRIBUTION_REJECTION`;
-  - `BEAR_MARKET_BOUNCE_REJECTED_AT_BUY_SIDE`;
-  - `UNRESOLVED_COMPRESSION_CONTEXT`;
-- keep raw `market_regime_windows.csv` available for audit;
-- keep future outcome labels audit-only;
-- no trading signals;
-- no Backtester.
+- level lifecycle memory;
+- sweep sequence classifier with next 1-3 H1 confirmation;
+- counter-sweep invalidation;
+- accepted break vs reclaim classifier;
+- support/resistance blocker for setup_builder;
+- target resolver using market_structure_levels, not only visible selected_zones;
+- last-wagon by prior move distance/maturity;
+- minimum structural risk / meaningful R validation;
+- local sequence direction override versus broad market state.
 
-## Hard Boundaries
+## Hard prohibitions
 
-Do not:
-
-- generate trading signals;
-- call Backtester;
-- call Executor;
-- open Phase 4;
-- reuse old candidate thresholds as strategy logic;
-- tune failed-break/reclaim parameters;
-- write orders or exchange logic;
-- infer short/long actions from `SWEEP_REJECTED` or `SWEEP_ACCEPTED`;
-- infer buy/sell recommendations from `BUY_SIDE` or `SELL_SIDE` liquidity terms;
-- calculate PnL.
-
-## Expected Direction
-
-Future implementation should explain hidden-flow market-reading episodes in context:
-
-- `7D UP` plus `1D DOWN` pullback plus `BUY_SIDE` compression can read as absorbed pullback context.
-- `7D RANGE` plus upper `BUY_SIDE` hidden distribution/compression can read as range upper rejection context.
-- `7D DOWN` plus local bounce into upper `BUY_SIDE` hidden distribution/compression can read as bearish bounce rejection context.
-
-It must remain descriptive research infrastructure. It must not create entries, exits, signals, position sizing, PnL, Backtester verdicts, Executor actions, or live-readiness claims.
-
-## Current Branch Dependency
-
-Before starting SHI_RESET_37D, decide what to do with:
-
-- branch: `codex/SHI_RESET_37C_prune_hidden_flow_labels_v0`
-- commit: `169ecd4 Prune hidden flow review labels`
-
-Accepted options:
-
-- merge 37C first, then branch 37D from updated `main`;
-- or intentionally replace 37C with 37D if pruning should be folded into the next branch.
-
-Do not leave the pruning behavior ambiguous.
-
-## Reference Spec
-
-Use:
-
-`docs/SHI_MARKET_STATE_MONITOR_V1_SPEC.md`
-
-Research log:
-
-`research/canonical/SHI_RESET_37_HIDDEN_FLOW_RESEARCH_LOG_2026_06_10.md`
+No Executor. No live. No orders. No PnL. No position sizing. No old analyzer activation. No old backtester activation. No strategy/edge/live-readiness claims.
