@@ -1,8 +1,20 @@
 # Active Docs
 
-Active docs are only reset / feed contract / Market State Monitor research-infrastructure docs.
+## Current active source of truth — SHI_RESET_39A
 
-Current active documents, in source-of-truth order:
+Current 39A alignment documents:
+
+- `research/canonical/SHI_RESET_39A_MASTER_RESEARCH_TO_MONITOR_ALIGNMENT_AUDIT_2026_07_02.md`
+- `research/canonical/SHI_RESET_39A_CONTROL_CASE_LEDGER_2026_07_02.csv`
+- `research/canonical/SHI_RESET_39A_RESEARCH_TO_CODE_DECISION_MATRIX_2026_07_02.csv`
+- `docs/SHI_MARKET_MONITOR_TERMINOLOGY_AND_EVENT_LIFECYCLE.md`
+- `docs/SHI_MARKET_MONITOR_KNOWN_GAPS_AND_NEXT_PROMOTIONS.md`
+
+No new code promotion should happen until 39A is reviewed.
+
+39A states that Market Monitor is still research infrastructure, `setup_builder` is still a context generator, sweep must be reworked as a sequence/lifecycle event before new setup logic, 38S rows remain discovery-only, replay evidence is not edge proof, and manual conclusions are not code-confirmed facts.
+
+## Baseline active docs
 
 - `README.md`
 - `AGENTS.md`
@@ -16,19 +28,3 @@ Current active documents, in source-of-truth order:
 Market Monitor exists as research infrastructure. It is not a trading strategy, not Backtester-ready, not Executor-ready, and not live-ready. There are no active trading candidates.
 
 Old Analyzer v1 / Phase2 / Phase3 / Backtester docs are archived historical references and must not be used as current implementation plans.
-
-Archived historical docs:
-
-- `docs/Spec_v1.0.md`
-- `docs/Phase2_Implementation_Plan_AiTrader_v2_2_updated.md`
-- `docs/Analyzer_Run_Storage_v0.1.md`
-- `docs/Phase3_Multi_Ruleset_Replay_Roadmap.md`
-- `docs/Backtesting_Spec_v0.1.md`
-- `docs/Backtesting_Architecture_v0.1.md`
-- `docs/H4_False_Break_Reclaim_Research_Contract_v0.1.md`
-
-These files are preserved in `_archive/FAILED_ANALYZER_V1_RESEARCH_BRANCH_2026_05.zip` and listed in `_archive/FAILED_ANALYZER_V1_RESEARCH_BRANCH_2026_05_MANIFEST.csv`.
-
-Do not revive Analyzer v1, run Backtester research, open Phase 4, or write Market Monitor implementation from archived docs.
-
-New Market Monitor feature work is allowed only when explicitly scoped as research infrastructure and when these active source-of-truth docs remain aligned. Labels such as `SWEEP_REJECTED` and `SWEEP_ACCEPTED` are descriptive research labels only and imply no trading action.
