@@ -1,5 +1,26 @@
 # AGENTS.md
 
+## 0. Current Source of Truth — SHI_RESET_39A
+
+Before new Market Monitor code-promotion work, read:
+
+1. `research/canonical/SHI_RESET_39A_MASTER_RESEARCH_TO_MONITOR_ALIGNMENT_AUDIT_2026_07_02.md`
+2. `research/canonical/SHI_RESET_39A_CONTROL_CASE_LEDGER_2026_07_02.csv`
+3. `research/canonical/SHI_RESET_39A_RESEARCH_TO_CODE_DECISION_MATRIX_2026_07_02.csv`
+4. `docs/SHI_MARKET_MONITOR_TERMINOLOGY_AND_EVENT_LIFECYCLE.md`
+5. `docs/SHI_MARKET_MONITOR_KNOWN_GAPS_AND_NEXT_PROMOTIONS.md`
+
+No new code promotion should happen until 39A is reviewed.
+
+Required 39A boundaries:
+
+- `setup_builder` is a context candidate generator, not a final setup engine.
+- Sweep is a sequence/lifecycle event, not a candle and not a quality gate.
+- 38S 227 rows are discovery material only, not candidates.
+- 38W1-style corrected replay evidence is not edge proof.
+- Chat/manual conclusions must stay separate from CODE_CONFIRMED and RUN_ARTIFACT_CONFIRMED facts.
+- Implementation promotion candidates are documentation-only until explicitly promoted later.
+
 ## 1. Current Project State
 
 AiTrader is currently in RESET / research infrastructure mode.
@@ -24,85 +45,33 @@ It produces structure/liquidity artifacts, zone registry/carry-forward outputs, 
 
 It does not produce trading signals, entries, exits, positions, PnL, Backtester verdicts, Executor actions, orders, or live instructions.
 
-No Phase 4. No Executor. No live. No old Analyzer v1 workflow. No old failed-break/reclaim research. No old backtester replay campaigns. No old candidates.
-
 ## 2. Active Sources of Truth
 
 Use these as current authority, in this order:
 
 1. `README.md`
 2. `AGENTS.md`
-3. `STAGE_1_FAILED_RESEARCH_SUMMARY.md`
-4. `docs/SHI_MARKET_STATE_MONITOR_V1_SPEC.md`
-5. `docs/FEED_CONTRACT_AND_SCHEMA_NOTES.md`
-6. `docs/LEGACY_CODE_AUDIT_TODO.md`
-7. `docs/ACTIVE_DOCS.md`
-8. `NEXT_TASK_MARKET_MONITOR.md`
+3. `research/canonical/SHI_RESET_39A_MASTER_RESEARCH_TO_MONITOR_ALIGNMENT_AUDIT_2026_07_02.md`
+4. `research/canonical/SHI_RESET_39A_CONTROL_CASE_LEDGER_2026_07_02.csv`
+5. `research/canonical/SHI_RESET_39A_RESEARCH_TO_CODE_DECISION_MATRIX_2026_07_02.csv`
+6. `docs/SHI_MARKET_MONITOR_TERMINOLOGY_AND_EVENT_LIFECYCLE.md`
+7. `docs/SHI_MARKET_MONITOR_KNOWN_GAPS_AND_NEXT_PROMOTIONS.md`
+8. `docs/ACTIVE_DOCS.md`
+9. `NEXT_TASK_MARKET_MONITOR.md`
 
 Archived historical docs are not active implementation plans.
 
-## 3. Not Active Sources
+## 3. Hard Prohibitions
 
-Do not treat these as active source of truth:
+Do not run live, run Executor, open Phase 4, restore old candidates, use Analyzer v1 as active research, run Backtester replay campaigns, use future labels for event generation, treat shallow sweep detection as a liquidity sweep model, treat passing tests as edge evidence, or add new Market Monitor feature work unless governance docs remain aligned and the task is explicitly scoped as research infrastructure.
 
-- `docs/Spec_v1.0.md`
-- `docs/Backtesting_Spec_v0.1.md`
-- `docs/Backtesting_Architecture_v0.1.md`
-- `docs/Analyzer_Run_Storage_v0.1.md`
-- `docs/Phase2_Implementation_Plan_AiTrader_v2_2_updated.md`
-- `docs/Phase3_Multi_Ruleset_Replay_Roadmap.md`
-- `research/OPS.md`
-- `scripts/run_analyzer_daily.sh`
-- `prompts/Shi_research.txt`
-- `prompts/weekly_research.txt`
-
-If a file from this list reappears, treat it as governance leakage unless the user explicitly asks to inspect archive evidence.
-
-## 4. Hard Prohibitions
-
-Do not:
-
-- run live;
-- run Executor;
-- open Phase 4;
-- restore old candidates;
-- use Analyzer v1 as active research;
-- run Backtester replay campaigns;
-- use future labels for event generation;
-- use 12-bar outcome logic;
-- treat shallow sweep detection as a liquidity sweep model;
-- treat passing legacy tests as edge evidence;
-- continue Sprint 02-10;
-- restore old research scripts;
-- restore old research prompts;
-- write a new Analyzer;
-- add new Market Monitor feature work unless governance/source-of-truth docs remain aligned and the task is explicitly scoped as research infrastructure.
-
-## 5. Module Boundaries
+## 4. Module Boundaries
 
 ### Aggregator and Feed
 
 `binance_aggregator_shi.py`, `feed/`, and `feed_recovered/` are core data-lineage assets.
 
 Do not modify feed data or recovered feed data unless the user explicitly asks for a feed/data-lineage task.
-
-For read-only Market Monitor diagnostics, replays, visual overlays, and research summaries, select input data by lineage quality before running the monitor:
-
-- The known aggregator outage / contamination window is `2026-04-23 17:05:00 UTC -> 2026-05-06 22:51:00 UTC`.
-- For day-level diagnostic replays that include this known outage window, use `feed_recovered/YYYY-MM-DD.csv` for `2026-04-23` through `2026-05-06` when those recovered files exist. Do not use the flat zero-volume placeholder rows from `feed/` as market evidence for those dates.
-- For minute-precise tooling, `feed/` is usable before `2026-04-23 17:05:00 UTC` and after `2026-05-06 22:51:00 UTC`; rows inside the known outage window must come from `feed_recovered/` when available.
-- Use recovered rows without copying them into or overwriting `feed/`.
-- Mark the selected recovered rows/artifacts as `RECOVERED_DEGRADED` and explicitly report that the source was recovered.
-- Treat price/OHLCV/trades/buy/sell from `feed_recovered/` as usable with caveats, but treat OI/funding/liquidation conclusions from the recovered window as lower-confidence unless a real source is verified.
-- If both `feed/` and `feed_recovered/` are invalid or missing for a requested diagnostic day, report the missing/invalid data instead of synthesizing rows or forcing a market-state conclusion.
-
-When the user asks to update or refresh `feed/`, treat it as a server data-lineage sync task first, not as a local REST backfill:
-
-- Find the live SHI aggregator on the server before generating any replacement rows.
-- Use the deployment/ops context outside this repository to identify the server host, process environment, and host-side feed mount. Do not hardcode server IPs, SSH targets, tokens, or private mount details in this file.
-- Copy authoritative enriched CSV files from the server-side live SHI feed into local `feed/YYYY-MM-DD.csv` when they exist.
-- Preserve server rows exactly, including missing minutes or nonzero `LiqBuyQty` / `LiqSellQty`; do not synthesize or overwrite those rows during sync.
-- Use Binance REST backfill only if the server enriched feed is missing for the requested dates, and explicitly report that the result is REST-derived rather than live-feed-derived. REST backfill must not claim historical liquidation coverage unless a real liquidation source was available.
 
 ### analyzer/
 
@@ -118,17 +87,15 @@ Backtester may be reusable only after audit and contract refactor. It must not b
 
 ### docs/
 
-Active docs must remain reset / feed contract / Market State Monitor only.
+Active docs must remain reset / feed contract / Market State Monitor / 39A alignment only.
 
-Old Analyzer v1 / Phase2 / Phase3 / Backtester docs are archive evidence only.
+## 5. Evidence and Archive Rules
 
-## 6. Evidence and Archive Rules
-
-Do not hide negative evidence. If old research artifacts must be removed from active tree, archive them first or ensure an archive manifest already records them.
+Do not hide negative evidence. If a referenced artifact is missing, mark it `NOT_FOUND` / `NOT_VERIFIED` instead of reconstructing it from memory.
 
 The old Analyzer v1 / Sprint 02-10 branch is archive-only. Do not use it to justify active candidates, replay survivors, Phase 4, or live readiness.
 
-## 7. Test Discipline
+## 6. Test Discipline
 
 Canonical local test command:
 
