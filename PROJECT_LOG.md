@@ -2,6 +2,31 @@
 
 Compact handoff log for AiTrader. This file is the index; detailed evidence remains in `research/canonical/` and generated outputs under `market_monitor_runs/`.
 
+## 2026-09-11 - Narrow v39A Snapshot Runtime Promotion
+
+- Reviewed the documentation-only 39A audit and promoted one bounded runtime
+  contract rather than relabelling the existing v1 builder.
+- Added `market_monitor_snapshot_v39a` with exact closed UTC
+  5/15/30/60/240/1440-minute windows, completeness and duplicate diagnostics,
+  future-row exclusion, per-window RAW/RECOVERED_DEGRADED quality, source
+  lineage, and atomic persistent state across calls and UTC midnight.
+- Existing v1/37E market-state and zone calculations remain the explicitly
+  labelled base source. Unified level lifecycle, accepted-break/reclaim, and
+  sweep-sequence classification remain open 39A promotion items.
+- Compared v1 and v39A on the same real server-feed cutoff. v1 exposed
+  15/60/240-minute local windows and no persisted snapshot state; v39A exposed
+  all six requested windows, explicit quality/readiness, lineage, and state
+  continuity while retaining v1 market context.
+- Executor integration is opt-in and deployed with state at
+  `/data/state/market_monitor_state_v39a.json`. Final production smoke cutoff
+  `2026-09-11T15:10:00Z` had all six windows complete, zero future rows, and
+  `CONTINUOUS_CARRY_FORWARD`.
+- Validation: `58 passed` targeted tests; deployed hashes matched reviewed local
+  files. Commit `9825123` was pushed to
+  `codex/scout-replay-backtester-v0-1`.
+- This promotion changes descriptive LLM entry evidence only. It does not change
+  setup generation, entry execution, SL/TP, trailing, orders, or PnL policy.
+
 ## Long Project Timeline
 
 ### Feed / Aggregator Foundation
