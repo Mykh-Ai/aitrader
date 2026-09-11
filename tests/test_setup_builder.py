@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from market_monitor.setup_builder import SETUP_BUILDER_COLUMNS, run_setup_builder
+from market_monitor.setup_builder import SETUP_BUILDER_COLUMNS, _target_reference_zone, run_setup_builder
 
 
 FORBIDDEN_OUTPUT_TERMS = {
@@ -118,6 +118,22 @@ def test_empty_promoted_hidden_flow_candidates_do_not_block_setup_creation(tmp_p
     assert manifest["candidate_count"] == 1
 
 
+
+def test_target_reference_zone_does_not_fallback_to_buy_side_below_up_entry():
+    zones = pd.DataFrame([_zone("stale_buy_side", "BUY_SIDE", 60549.71, 60610.29, 60580.0)])
+
+    target = _target_reference_zone(zones, "BUY_SIDE", 76244.0)
+
+    assert target == ""
+
+
+def test_target_reference_zone_does_not_fallback_to_sell_side_above_down_entry():
+    zones = pd.DataFrame([_zone("stale_sell_side", "SELL_SIDE", 80549.71, 80610.29, 80580.0)])
+
+    target = _target_reference_zone(zones, "SELL_SIDE", 76244.0)
+
+    assert target == ""
+
 def test_future_labels_are_not_used_for_detection(tmp_path: Path):
     paths = _write_fixture(tmp_path, state=_neutral_state(), windows=[], candidates=[])
     future_path = tmp_path / "hidden_flow_future_labels.csv"
@@ -198,7 +214,7 @@ def _write_fixture(
     pd.DataFrame(windows, columns=_window_columns()).to_csv(windows_path, index=False)
     pd.DataFrame(
         [
-            _zone("zone_demand", "SELL_SIDE", 70040.46225, 70110.53775, 70075.5),
+            _zone("zone_demand", "SELL_SIDE", 68850.05775, 68920.53775, 68885.5),
             _zone("zone_supply", "BUY_SIDE", 71341.81125, 71413.18875, 71377.5),
             _zone("zone_supply_next", "BUY_SIDE", 72000.0, 72100.0, 72050.0),
         ]

@@ -545,12 +545,12 @@ def _target_reference_zone(zones: pd.DataFrame, side: str, price: float) -> str:
     if side == "BUY_SIDE":
         candidates = frame[frame["_lower"] >= price] if not pd.isna(price) else frame
         if candidates.empty:
-            candidates = frame
+            return ""
         row = candidates.sort_values(["_lower", "_upper"], kind="mergesort").iloc[0]
     else:
         candidates = frame[frame["_upper"] <= price] if not pd.isna(price) else frame
         if candidates.empty:
-            candidates = frame
+            return ""
         row = candidates.sort_values(["_upper", "_lower"], ascending=[False, False], kind="mergesort").iloc[0]
     return f"{_cell(row.get('zone_id'))}:{side}:{_round(row.get('_lower'))}-{_round(row.get('_upper'))}"
 
