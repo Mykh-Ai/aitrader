@@ -4,7 +4,7 @@
 
 This file tells a new agent how to work in this repository. It is not the project history and it is not the research log. For the project story and current state, read `README.md`. For commit/task summaries and links to evidence folders, read `PROJECT_LOG.md`.
 
-Current work is BTC Market Monitor research after the Analyzer v1 reset. The latest accepted research anchor is 38U specimen-like candidate evidence review; the next task is 38V setup_builder crosscheck.
+Current work is BTC Market Monitor research after the Analyzer v1 reset. The 39A master research-to-monitor alignment audit remains the canonical architecture source. Its review is complete, and the bounded v39A snapshot contract was promoted on 2026-09-11 for descriptive Executor LLM entry evidence. Remaining lifecycle promotions still require separate scope and evidence.
 
 ## Autonomy And Permissions
 
@@ -49,13 +49,16 @@ Generated run outputs live in:
 
 `market_monitor_runs/`
 
-Example current audit:
+Current audit:
 
-`research/canonical/SHI_RESET_38U_SPECIMEN_LIKE_CANDIDATE_EVIDENCE_REVIEW_2026_07_01.md`
+`research/canonical/SHI_RESET_39A_MASTER_RESEARCH_TO_MONITOR_ALIGNMENT_AUDIT_2026_07_02.md`
 
-Example current output root:
+Current companion artifacts:
 
-`market_monitor_runs/SHI_RESET_38U_specimen_like_candidate_evidence_review_v0/`
+- `research/canonical/SHI_RESET_39A_CONTROL_CASE_LEDGER_2026_07_02.csv`
+- `research/canonical/SHI_RESET_39A_RESEARCH_TO_CODE_DECISION_MATRIX_2026_07_02.csv`
+- `docs/SHI_MARKET_MONITOR_TERMINOLOGY_AND_EVENT_LIFECYCLE.md`
+- `docs/SHI_MARKET_MONITOR_KNOWN_GAPS_AND_NEXT_PROMOTIONS.md`
 
 ## Live-Like Market Monitor Discipline
 
@@ -72,15 +75,20 @@ For live-like research runs:
 
 Market logic should model a live market as state that changes with each new closed candle and new trades. It should not infer setup quality from an isolated slice that lacks prior structure, liquidity, and state memory.
 
-## Post-38U Architecture Rules
+## Post-39A Architecture Rules
 
 - Never treat `analyzer/` as an active source of current 38-chain candidates.
 - Never say the 227 rows came from old Analyzer v1; they came from the 38S run script under `market_monitor_runs/`.
-- Never treat 38S rows as canonical `setup_builder` candidates unless they survive a 38V setup_builder crosscheck.
+- Never treat the 38S 227 rows as the canonical candidate source. They remain discovery material even when a row matched the 38V crosscheck.
 - Scripts under `market_monitor_runs/` are run artifacts, not reusable modules unless explicitly promoted into `market_monitor/` with tests and docs.
+- Treat `setup_builder` as a context candidate generator, not a final setup engine.
+- Treat a sweep as a sequence/lifecycle event, not one penetration candle or a generic quality label.
+- Keep chat/manual conclusions separate from code-confirmed, run-artifact-confirmed, and canonical-doc-confirmed facts.
+- Scope and validate every remaining 39A promotion separately; the completed snapshot promotion does not approve the remaining lifecycle backlog.
 - Canonical live-like monitor work must process closed candles chronologically and carry market state forward.
 - A valid future live monitor must update market state, structure levels, liquidity zones, hidden flow, setup context, and stage gates after each new closed candle.
 - 38T and 38U are post-generation QC/evidence reviews, not pre-generation monitor filters.
+- 38W1 is corrected replay evidence, not edge proof.
 
 ## Run And Artifact Rules
 

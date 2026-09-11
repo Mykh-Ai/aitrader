@@ -1,63 +1,35 @@
-# NEXT TASK: SHI_RESET_38V_FULL_FEED_38S_TO_SETUP_BUILDER_CROSSCHECK_V0
+# NEXT TASK: SELECT THE NEXT POST-39A MONITOR PROMOTION
 
 ## Status
 
-This supersedes the post-38T generic candidate-contract note.
+The 39A review is complete. On 2026-09-11, one bounded promotion added the
+stateful v39A snapshot used as descriptive entry-time evidence by Executor's
+LLM Trade Judge. It did not implement the unified level lifecycle, sweep
+classifier, setup policy, trade management, or PnL logic.
 
-38S produced 227 discovery/context rows with a permissive run script under `market_monitor_runs/`. 38T and 38U reviewed those rows after generation. They did not prove that the rows are canonical `setup_builder` candidates.
+## Review Set
 
-## Goal
+- `research/canonical/SHI_RESET_39A_MASTER_RESEARCH_TO_MONITOR_ALIGNMENT_AUDIT_2026_07_02.md`
+- `research/canonical/SHI_RESET_39A_CONTROL_CASE_LEDGER_2026_07_02.csv`
+- `research/canonical/SHI_RESET_39A_RESEARCH_TO_CODE_DECISION_MATRIX_2026_07_02.csv`
+- `docs/SHI_MARKET_MONITOR_TERMINOLOGY_AND_EVENT_LIFECYCLE.md`
+- `docs/SHI_MARKET_MONITOR_KNOWN_GAPS_AND_NEXT_PROMOTIONS.md`
 
-Compare the 227 38S full-feed discovery rows against canonical Market Monitor `setup_builder` output over the same full-feed scope.
+## Selection Questions
 
-The core question: which 38S rows are actually produced or confirmed by canonical `setup_builder` / monitor gates, and which are raw discovery contexts or overgeneration from the 38S run artifact?
+- Which one remaining gap has enough control cases for a bounded implementation?
+- What causal acceptance evidence will distinguish useful context from extra prompt volume?
+- How will the change preserve closed-candle cutoff, lineage, and state continuity?
+- Which replay or offline dataset will test usefulness before any trading-policy change?
 
-## Required Inputs
+## Candidate Next Step
 
-Use:
-
-- `README.md`
-- `AGENTS.md`
-- `PROJECT_LOG.md`
-- `docs/ACTIVE_DOCS.md`
-- `docs/SHI_MARKET_MONITOR_CURRENT_ARCHITECTURE.md`
-- `research/canonical/PROJECT_STATE_CURRENT.md`
-- `research/canonical/SHI_RESET_38S_REDO_FULL_FEED_LIVE_LIKE_SETUP_DISCOVERY_AUDIT_2026_06_30.md`
-- `research/canonical/SHI_RESET_38T_FULL_FEED_DISCOVERY_QUALITY_CONTROL_AUDIT_2026_06_30.md`
-- `research/canonical/SHI_RESET_38U_SPECIMEN_LIKE_CANDIDATE_EVIDENCE_REVIEW_2026_07_01.md`
-- `market_monitor_runs/SHI_RESET_38S_redo_full_feed_live_like_setup_discovery_v0/live_like_discovered_setup_rows.csv`
-- canonical `market_monitor` setup_builder / monitor-gate code
-- `feed/` plus `feed_recovered/` only under documented degraded-feed rules
-
-## Required Output
-
-Create a new run root:
-
-`market_monitor_runs/SHI_RESET_38V_full_feed_38s_to_setup_builder_crosscheck_v0/`
-
-Create a canonical audit:
-
-`research/canonical/SHI_RESET_38V_FULL_FEED_38S_TO_SETUP_BUILDER_CROSSCHECK_AUDIT_2026_07_01.md`
-
-## Questions To Answer
-
-- How many of the 227 38S rows match canonical `setup_builder` output?
-- How many are raw discovery rows only?
-- How many are overgeneration caused by the 38S runner turning every qualified H1 failed reclaim into ARMED review context?
-- Does the 2026-05-26 specimen survive canonical setup_builder crosscheck?
-- Which 38T/38U partial/numeric-only rows survive canonical setup_builder crosscheck?
-- What exact setup_builder fields should become the candidate contract before Backtester is considered?
+Select at most one item from the documented post-39A backlog. The leading
+candidate remains a unified level lifecycle and next-1-3-H1 sequence classifier,
+but it requires an explicit task and control cases before implementation.
 
 ## Boundary
 
-Research-only.
-
-Do not claim edge from 38S, 38T, 38U, or 38V alone.
-
-Do not run old `analyzer/` as active research.
-
-Do not run old `backtester/` as active validation.
-
-Do not add Executor, orders, live trading, PnL, position sizing, live-readiness, or strategy promotion.
-
-Do not rewrite 38S/38T/38U artifacts in place.
+Research-only. The deployed v39A snapshot is descriptive LLM evidence, not an
+edge claim or authority over orders, live trading, PnL, position sizing, stops,
+targets, or trailing.

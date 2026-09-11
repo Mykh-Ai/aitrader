@@ -10,20 +10,27 @@ The current project is not starting from zero. The feed, aggregator, tests, audi
 
 ## Current State
 
-Current active stage: Market Monitor / live-like, stage-gated qualified H1 sweep-reclaim research.
+Current active stage: post-39A Market Monitor promotion and validation.
 
-Latest accepted anchor: 38U specimen-like candidate evidence review.
+Latest canonical source of truth: `research/canonical/SHI_RESET_39A_MASTER_RESEARCH_TO_MONITOR_ALIGNMENT_AUDIT_2026_07_02.md`.
+
+The 39A review is complete. A bounded stateful snapshot contract was promoted on 2026-09-11 for descriptive Executor LLM entry evidence; the remaining lifecycle and setup-quality backlog is not promoted.
 
 Current facts:
 
-- The latest full-feed discovery pass is 38S redo, reviewed by 38T and 38U.
+- The latest full-feed discovery pass is 38S redo, reviewed by 38T and 38U, then crosschecked against setup_builder in 38V.
 - 38S redo processed `2026-03-11T13:45:00Z -> 2026-06-28T23:59:00Z` in live-like form and carried state forward across technical chunks.
 - 38S generated 227 setup/context rows and 140 policy-allowed research candidates.
 - 38T found this is overgenerated discovery material, not validated edge.
 - 38T identified 8 specimen-like primary setup ids and 17 data-quality review candidates touching recovered degraded periods.
 - 38U reviewed only those 8 specimen-like primary candidates: 1 strong canonical match, 6 partial matches, and 1 numeric-only lookalike.
+- 38V generated 51 canonical setup_builder context rows and matched only 10 of the 227 38S rows by its crosscheck categories; 38S remains discovery material, not a source-candidate stream.
+- 38W1 corrected replay chronology to 34 valid TP1-before-stop reactions and 17 stop-before-TP1 rows. This is replay evidence, not edge proof.
+- setup_builder remains a context candidate generator, not a final setup engine.
+- Sweep must be treated as a sequence/lifecycle event before new setup logic is added.
+- Chat/manual conclusions are preserved in 39A separately from code-confirmed and run-artifact-confirmed facts.
 - One research specimen is confirmed: the 2026-05-26 sequence-linked H1 sweep/reclaim candidate packaged in 38R and corrected in 38Q.
-- There are no active live/Executor candidates today.
+- The v39A snapshot is active as descriptive entry-time evidence in Executor; it is not a setup, order, or position-management policy.
 - Backtester is a future validation gate after the candidate contract is tightened; it is not the current authority for 38S/38T/38U rows.
 
 ## Current Architecture Map
@@ -32,7 +39,7 @@ The current intended architecture is:
 
 `Aggregator / feed -> Market Monitor base layer -> structure levels -> liquidity zones -> zone registry / carry-forward -> event log / post-sweep observation -> significant zone selector -> hidden flow research -> market structure state -> setup_builder -> qualified H1 sweep/reclaim sequence check -> stage-gate replay -> policy replay review -> QC / evidence packs -> future Backtester -> future Executor`
 
-Current active work is only the Market Monitor research portion up through QC/evidence packs. Backtester and Executor remain future gates.
+Current reusable work includes the Market Monitor research chain and the bounded v39A entry snapshot. Backtester validation and any Executor trading-policy authority remain future gates.
 
 ## 38S 227 Rows: What They Are And What They Are Not
 
@@ -60,7 +67,7 @@ What 38S rows are not:
 
 38S transformed every qualified H1 failed-reclaim context into an `ARMED` review row. That is why all 227 rows were ARMED and why 140 became policy-allowed under the current sequence gate. This is overgenerated discovery material. 38T and 38U reviewed the rows after generation; they were not pre-generation monitor filters.
 
-The next required check is 38V: compare the 38S discovery rows against canonical Market Monitor `setup_builder` output over the same full-feed scope.
+Historical next step 38V was completed as a run artifact. Its result is incorporated into 39A: the 38S discovery stream is not the canonical setup_builder candidate source.
 
 ## What The Project Is Trying To Build
 
@@ -261,15 +268,11 @@ The current 38U output root is:
 
 ## Next Direction
 
-The next meaningful work is post-38T candidate-contract tightening:
+Review the 39A master audit, control-case ledger, research-to-code decision matrix, terminology contract, and documented promotion backlog.
 
-- review the 8 specimen-like primary candidates;
-- inspect `manual_review_shortlist_38t.csv`;
-- tighten the current permissive scanner so qualified reclaim does not automatically become an ARMED setup;
-- add structural-context, R-profile, sequence-age, sweep-quality, and recovered-feed filters;
-- define the stable candidate contract that a future Backtester gate can consume.
+No implementation candidate is approved by documentation alone. After review, select one narrow promotion task. The intended order starts with a unified level lifecycle and a next-1-3-H1 sweep sequence classifier, then addresses counter-sweep invalidation, accepted break versus reclaim, structural blockers/targets, prior-move maturity, meaningful structural risk, and local-sequence direction precedence.
 
-Backtester and Executor are still part of the intended longer path, but they should come after this candidate contract exists.
+Backtester and Executor remain inactive future gates. Nothing in 39A proves edge or live readiness.
 
 ## Useful Commands
 

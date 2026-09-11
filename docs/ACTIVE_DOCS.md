@@ -1,29 +1,35 @@
 # Active Docs
 
-Active docs describe the reset boundary, feed/data lineage, and the current BTC Market Monitor / live-like stage-gated qualified H1 sweep-reclaim research track.
+Active docs describe the reset boundary, feed/data lineage, the 39A architecture audit, and the bounded v39A snapshot promotion completed on 2026-09-11.
 
 Current active documents, in source-of-truth order:
 
-1. `README.md`
-2. `AGENTS.md`
-3. `PROJECT_LOG.md`
-4. `docs/ACTIVE_DOCS.md`
-5. `docs/FEED_CONTRACT_AND_SCHEMA_NOTES.md`
-6. `docs/SHI_MARKET_MONITOR_CURRENT_ARCHITECTURE.md`
-7. `docs/SHI_MARKET_STATE_MONITOR_V1_SPEC.md` (historical baseline / v1 spec, not the full current 38-chain architecture)
-8. `NEXT_TASK_MARKET_MONITOR.md`
-9. `research/canonical/SHI_RESET_38U_SPECIMEN_LIKE_CANDIDATE_EVIDENCE_REVIEW_2026_07_01.md`
-10. future `research/canonical/SHI_RESET_38V_FULL_FEED_38S_TO_SETUP_BUILDER_CROSSCHECK_AUDIT_*.md`
+1. `research/canonical/SHI_RESET_39A_MASTER_RESEARCH_TO_MONITOR_ALIGNMENT_AUDIT_2026_07_02.md`
+2. `research/canonical/SHI_RESET_39A_CONTROL_CASE_LEDGER_2026_07_02.csv`
+3. `research/canonical/SHI_RESET_39A_RESEARCH_TO_CODE_DECISION_MATRIX_2026_07_02.csv`
+4. `docs/SHI_MARKET_MONITOR_TERMINOLOGY_AND_EVENT_LIFECYCLE.md`
+5. `docs/SHI_MARKET_MONITOR_KNOWN_GAPS_AND_NEXT_PROMOTIONS.md`
+6. `README.md`
+7. `AGENTS.md`
+8. `PROJECT_LOG.md`
+9. `docs/ACTIVE_DOCS.md`
+10. `docs/FEED_CONTRACT_AND_SCHEMA_NOTES.md`
+11. `docs/SHI_MARKET_MONITOR_CURRENT_ARCHITECTURE.md` (post-38U architecture snapshot; retained as historical context and superseded by 39A where they differ)
+12. `research/canonical/PROJECT_STATE_CURRENT.md`
+13. `NEXT_TASK_MARKET_MONITOR.md`
+14. `docs/SHI_MARKET_STATE_MONITOR_V1_SPEC.md` (historical baseline / v1 spec)
 
 Current status:
 
-- Market Monitor research infrastructure is active.
-- Live-like runs must carry market state forward from prior feed context, not slice arbitrary windows and treat them as the market.
-- 38U is the latest accepted evidence-review anchor.
-- 38S rows are permissive discovery/context material, not canonical setup_builder candidates until 38V proves a match.
-- 38T/38U are post-generation QC/evidence reviews, not pre-generation monitor filters.
-- 38V is the next active task: crosscheck 38S rows against canonical setup_builder output over the same full-feed scope.
-- Backtester and Executor are future gates after candidate-contract tightening, not current active layers.
+- 39A is the current canonical alignment source and its review is complete.
+- The v39A snapshot contract is promoted for descriptive entry-time LLM evidence; remaining promotion items require separate scope.
+- setup_builder is a context generator, not a final setup engine.
+- Sweep must be modeled as a sequence/lifecycle event before new setup logic is added.
+- The 38S 227 rows remain discovery material, not canonical candidates.
+- 38W1 is corrected replay evidence, not edge proof.
+- Chat/manual conclusions are preserved separately from code-confirmed and run-artifact-confirmed facts.
+- Canonical 38U/38V/38W/38W1/38X/38Y audit files are absent in this checkout; their available conclusions remain run-artifact evidence unless another canonical source exists.
+- Executor consumes the snapshot as advisory entry evidence only; trading-policy authority and Backtester promotion remain future gates.
 
 Current research evidence index:
 
@@ -31,7 +37,7 @@ Current research evidence index:
 - `research/canonical/`
 - `market_monitor_runs/`
 
-Archived historical docs are preserved as evidence and must not be used as current implementation plans unless the user explicitly asks for archive review:
+Archived historical docs remain evidence and must not be used as current implementation plans unless the user explicitly asks for archive review:
 
 - `docs/Spec_v1.0.md`
 - `docs/Phase2_Implementation_Plan_AiTrader_v2_2_updated.md`
@@ -41,4 +47,4 @@ Archived historical docs are preserved as evidence and must not be used as curre
 - `docs/Backtesting_Architecture_v0.1.md`
 - `docs/H4_False_Break_Reclaim_Research_Contract_v0.1.md`
 
-New work must keep `README.md`, `AGENTS.md`, `PROJECT_LOG.md`, this file, and `NEXT_TASK_MARKET_MONITOR.md` aligned.
+New work must keep `README.md`, `AGENTS.md`, `PROJECT_LOG.md`, this file, `research/canonical/PROJECT_STATE_CURRENT.md`, and `NEXT_TASK_MARKET_MONITOR.md` aligned.

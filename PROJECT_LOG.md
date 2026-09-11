@@ -194,6 +194,31 @@ Compact handoff log for AiTrader. This file is the index; detailed evidence rema
 - Boundary preserved: Analyzer v1 remains legacy/read-only; Backtester remains future/audit-required; Executor remains future.
 - Next task: `SHI_RESET_38V_FULL_FEED_38S_TO_SETUP_BUILDER_CROSSCHECK_V0`.
 
+### SHI_RESET_38V To 38Y - Candidate Source, Replay Correction, And Traceability
+
+- Run-output roots:
+  - `market_monitor_runs/SHI_RESET_38V_full_feed_38s_to_setup_builder_crosscheck_v0/`
+  - `market_monitor_runs/SHI_RESET_38W_full_feed_setup_builder_outcome_replay_v0/`
+  - `market_monitor_runs/SHI_RESET_38W1_fix_chronological_tp1_stop_labels_v0/`
+  - `market_monitor_runs/SHI_RESET_38X_up_side_stop_symmetry_and_replay_audit_v0/`
+  - `market_monitor_runs/SHI_RESET_38Y_research_audit_to_code_traceability_from_37d_v0/`
+- Canonical audit files for 38U/38V/38W/38W1/38X/38Y are not present in this checkout; these conclusions remain run-artifact evidence.
+- Result: 38V generated 51 setup_builder context rows and matched 10/227 38S rows by its crosscheck categories; 38W1 corrected chronology to 34 valid TP1-before-stop and 17 stop-before-TP1 rows; 38X identified target-reference directionality; 38Y separated reusable code from run-only logic.
+- Boundary: 38S remains discovery-only and 38W1 is replay evidence, not edge proof.
+
+### SHI_RESET_39A - Master Research-To-Monitor Alignment Audit
+
+- Commit: recorded in the historical 39A documentation package.
+- Canonical audit: `research/canonical/SHI_RESET_39A_MASTER_RESEARCH_TO_MONITOR_ALIGNMENT_AUDIT_2026_07_02.md`
+- Companion artifacts:
+  - `research/canonical/SHI_RESET_39A_CONTROL_CASE_LEDGER_2026_07_02.csv`
+  - `research/canonical/SHI_RESET_39A_RESEARCH_TO_CODE_DECISION_MATRIX_2026_07_02.csv`
+  - `docs/SHI_MARKET_MONITOR_TERMINOLOGY_AND_EVENT_LIFECYCLE.md`
+  - `docs/SHI_MARKET_MONITOR_KNOWN_GAPS_AND_NEXT_PROMOTIONS.md`
+- Result: aligned current reusable architecture, run-only research, missing canonical artifacts, manual control cases, lifecycle terminology, and documentation-only promotion candidates.
+- Verification: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q` -> `718 passed, 11 warnings` in 51.65 seconds; `git diff --check` passed; required CSV schemas and row counts were validated; no `feed/` or `feed_recovered/` files changed.
+- Next implication: review 39A before selecting one narrow code-promotion task.
+
 ## Log Maintenance Rule
 
 For every future SHI_RESET task, add a short entry here after the canonical audit is written. The entry should point to the commit, audit file, run-output directory, verification result, and next implication.
