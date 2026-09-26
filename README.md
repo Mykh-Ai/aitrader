@@ -1,5 +1,18 @@
 # AiTrader
 
+## Retired research base — 2026-09-26
+
+Do not begin new Market Monitor work on `main`, including 39B/39C.
+The canonical development branch is `canonical/market-monitor-39a`.
+It combines both 39A histories and preserves the current replay/snapshot implementation.
+
+Read the [canonical base policy](https://github.com/Mykh-Ai/aitrader/blob/canonical/market-monitor-39a/docs/CANONICAL_BASE.md) and
+[branch audit](https://github.com/Mykh-Ai/aitrader/blob/canonical/market-monitor-39a/research/canonical/CANONICAL_BRANCH_AUDIT_2026_09_26.md).
+Fetch the canonical branch, preserve existing work, and use a new worktree/branch
+based on its latest head before editing. Verify canonical ancestry as required there.
+The older state and instructions below are historical context; current development
+instructions live on canonical. This notice does not authorize live or strategy promotion.
+
 ## Project status
 
 RESET AFTER FAILED ANALYZER V1 BRANCH / RESEARCH INFRASTRUCTURE ONLY
