@@ -1,0 +1,33 @@
+{
+  "changes_setup_builder": false,
+  "changes_setup_detection_logic": false,
+  "feed_dir": "feed",
+  "focus_alignment_path": "market_monitor_runs\\SHI_RESET_38G_live_like_bar_by_bar_state_replay_v0\\focus_setup_alignment_check.csv",
+  "focus_setup_count": 5,
+  "focus_setup_rows_only": true,
+  "live_readiness_claim": false,
+  "manual_verdicts_path": "market_monitor_runs\\SHI_RESET_38C_armed_manual_verdict_and_sequence_audit_v0\\armed_setup_manual_verdicts.csv",
+  "output_dir": "market_monitor_runs\\SHI_RESET_38I_policy_replay_fixed_anchors_structural_stops_v0",
+  "outputs": {
+    "manifest_json": "market_monitor_runs\\SHI_RESET_38I_policy_replay_fixed_anchors_structural_stops_v0\\policy_replay_fixed_stop_manifest.json",
+    "policy_replay_fixed_stop_results_csv": "market_monitor_runs\\SHI_RESET_38I_policy_replay_fixed_anchors_structural_stops_v0\\policy_replay_fixed_stop_results.csv",
+    "summary_md": "market_monitor_runs\\SHI_RESET_38I_policy_replay_fixed_anchors_structural_stops_v0\\policy_replay_fixed_stop_summary.md"
+  },
+  "policy_replay_fixed_stops_version": "SHI_RESET_38I_POLICY_REPLAY_WITH_FIXED_ANCHORS_AND_STRUCTURAL_STOPS_V0",
+  "repo_commit": "7aab826b4b631eefb207e04b60a7a2ed685bf9c2",
+  "research_only": true,
+  "result_row_count": 10,
+  "sample_expanded": false,
+  "setup_reference_level_used_as_entry": false,
+  "strategy_promotion": false,
+  "structural_stops_path": "market_monitor_runs\\SHI_RESET_38H_structural_swing_stop_resolver_v0\\structural_stop_reference_candidates.csv",
+  "uses_backtester": false,
+  "uses_entries_exits": false,
+  "uses_executor": false,
+  "uses_orders": false,
+  "uses_pnl": false,
+  "uses_position_sizing": false,
+  "uses_selected_research_stop_reference": true,
+  "uses_tradable_entry_anchor": true,
+  "watch_rows_evaluated": false
+}

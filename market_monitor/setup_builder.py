@@ -42,6 +42,11 @@ SETUP_BUILDER_COLUMNS = [
     "open_interest_change",
     "seller_pressure_score",
     "buyer_response_score",
+    "setup_reference_level",
+    "actual_setup_price",
+    "tradable_entry_anchor",
+    "target_reference",
+    "stop_reference",
     "entry_reference_level",
     "invalidation_level",
     "target_reference_zone",
@@ -185,7 +190,7 @@ def _build_rows(
                 rows.append(candidate)
     deduped: dict[tuple[object, ...], dict[str, object]] = {}
     for row in rows:
-        key = (row["start_timestamp"], row["end_timestamp"], row["setup_type"], row["entry_reference_level"])
+        key = (row["start_timestamp"], row["end_timestamp"], row["setup_type"], row["setup_reference_level"])
         deduped.setdefault(key, row)
     ordered = sorted(deduped.values(), key=lambda row: (str(row["end_timestamp"]), str(row["setup_type"])))
     for index, row in enumerate(ordered, start=1):
@@ -394,10 +399,15 @@ def _row(
         "open_interest_change": _round(raw.get("open_interest_change") if raw is not None else state.get("open_interest_change")),
         "seller_pressure_score": _round(context["seller_pressure_score"]),
         "buyer_response_score": _round(context["buyer_response_score"]),
+        "setup_reference_level": _round(entry_reference_level),
+        "actual_setup_price": "",
+        "tradable_entry_anchor": "",
+        "target_reference": _target_reference_zone(zones, target_side, _float_value(state.get("price_close"))),
+        "stop_reference": _round(invalidation_level),
         "entry_reference_level": _round(entry_reference_level),
         "invalidation_level": _round(invalidation_level),
         "target_reference_zone": _target_reference_zone(zones, target_side, _float_value(state.get("price_close"))),
-        "evidence_summary": _evidence_summary(state, raw, evidence_note),
+        "evidence_summary": _evidence_summary(state, raw, evidence_note) + "; price_reference_semantics=setup_reference_not_tradable_entry; actual_setup_price_requires_feed",
     }
 
 
@@ -535,12 +545,12 @@ def _target_reference_zone(zones: pd.DataFrame, side: str, price: float) -> str:
     if side == "BUY_SIDE":
         candidates = frame[frame["_lower"] >= price] if not pd.isna(price) else frame
         if candidates.empty:
-            candidates = frame
+            return ""
         row = candidates.sort_values(["_lower", "_upper"], kind="mergesort").iloc[0]
     else:
         candidates = frame[frame["_upper"] <= price] if not pd.isna(price) else frame
         if candidates.empty:
-            candidates = frame
+            return ""
         row = candidates.sort_values(["_upper", "_lower"], ascending=[False, False], kind="mergesort").iloc[0]
     return f"{_cell(row.get('zone_id'))}:{side}:{_round(row.get('_lower'))}-{_round(row.get('_upper'))}"
 

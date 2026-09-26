@@ -1,10 +1,20 @@
-# NEXT TASK: SHI_RESET_39A_REVIEW_GATE
+# NEXT TASK: SELECT THE NEXT POST-39A MONITOR PROMOTION
+
+## Canonical base — 2026-09-26
+
+New Market Monitor work, including 39B/39C, MUST start from `canonical/market-monitor-39a`.
+Do not start from old `main`, named 39A, or 38G. Follow `docs/CANONICAL_BASE.md`
+and verify canonical ancestry before editing. Branch audit: `research/canonical/CANONICAL_BRANCH_AUDIT_2026_09_26.md`.
+This base decision does not promote research into trading or live readiness.
 
 ## Status
 
-39A is now the required review gate before any new Market Monitor code promotion.
+The 39A review is complete. On 2026-09-11, one bounded promotion added the
+stateful v39A snapshot used as descriptive entry-time evidence by Executor's
+LLM Trade Judge. It did not implement the unified level lifecycle, sweep
+classifier, setup policy, trade management, or PnL logic.
 
-Read first:
+## Review Set
 
 - `research/canonical/SHI_RESET_39A_MASTER_RESEARCH_TO_MONITOR_ALIGNMENT_AUDIT_2026_07_02.md`
 - `research/canonical/SHI_RESET_39A_CONTROL_CASE_LEDGER_2026_07_02.csv`
@@ -12,33 +22,21 @@ Read first:
 - `docs/SHI_MARKET_MONITOR_TERMINOLOGY_AND_EVENT_LIFECYCLE.md`
 - `docs/SHI_MARKET_MONITOR_KNOWN_GAPS_AND_NEXT_PROMOTIONS.md`
 
-## Gate
+## Selection Questions
 
-No new code promotion should happen until 39A is reviewed.
+- Which one remaining gap has enough control cases for a bounded implementation?
+- What causal acceptance evidence will distinguish useful context from extra prompt volume?
+- How will the change preserve closed-candle cutoff, lineage, and state continuity?
+- Which replay or offline dataset will test usefulness before any trading-policy change?
 
-## Current boundaries
+## Candidate Next Step
 
-- Market Monitor is research infrastructure only.
-- `setup_builder` remains a context candidate generator, not a final setup engine.
-- Sweep must be redefined as a sequence/lifecycle event before new setup logic is added.
-- 38S 227 rows remain discovery material, not candidates.
-- 38W1-style corrected replay evidence remains replay evidence, not edge proof.
-- Chat/manual conclusions are preserved separately from code-confirmed facts.
+Select at most one item from the documented post-39A backlog. The leading
+candidate remains a unified level lifecycle and next-1-3-H1 sequence classifier,
+but it requires an explicit task and control cases before implementation.
 
-## Next possible promotion candidates after review
+## Boundary
 
-Documentation-only backlog, not implemented here:
-
-- level lifecycle memory;
-- sweep sequence classifier with next 1-3 H1 confirmation;
-- counter-sweep invalidation;
-- accepted break vs reclaim classifier;
-- support/resistance blocker for setup_builder;
-- target resolver using market_structure_levels, not only visible selected_zones;
-- last-wagon by prior move distance/maturity;
-- minimum structural risk / meaningful R validation;
-- local sequence direction override versus broad market state.
-
-## Hard prohibitions
-
-No Executor. No live. No orders. No PnL. No position sizing. No old analyzer activation. No old backtester activation. No strategy/edge/live-readiness claims.
+Research-only. The deployed v39A snapshot is descriptive LLM evidence, not an
+edge claim or authority over orders, live trading, PnL, position sizing, stops,
+targets, or trailing.

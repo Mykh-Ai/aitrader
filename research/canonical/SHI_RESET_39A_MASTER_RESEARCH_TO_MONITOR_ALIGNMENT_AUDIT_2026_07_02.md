@@ -1,226 +1,191 @@
-# SHI RESET 39A — Master Research-to-Monitor Alignment Audit
+# SHI RESET 39A Master Research-To-Monitor Alignment Audit
+
+Verdict: `PASS / DOCUMENTATION_ALIGNMENT_CREATED`
 
 Date: 2026-07-02
-Task: SHI_RESET_39A_MASTER_RESEARCH_TO_MONITOR_ALIGNMENT_AUDIT_V0
-Scope: documentation / audit only
 
-## 0. Hard boundary
+Reviewed checkout: `f87cf33787de96bbe3acd39af0d506666a3b9e6a` plus the visible working-tree 38X target-reference change in `market_monitor/setup_builder.py` and its tests. This 39A task did not modify either source file.
 
-This audit is a canonical alignment document only.
+## Scope And Governance
 
-It does not change trading logic, feed data, market_monitor behavior, Executor behavior, old analyzer behavior, or old backtester behavior. It does not promote any setup, pattern, replay result, shortlist row, or manual chart interpretation into strategy/edge/live-readiness.
+This is the canonical master alignment audit for the 38S/38T/38U/38V/38W/38W1/38X/38Y research chain and the current reusable Market Monitor architecture.
 
-Current project state after this audit:
+It is documentation/audit only. It does not change trading logic, add filters, modify feed data, activate Analyzer or Backtester, add Executor behavior, claim PnL, prove edge, or establish live readiness. No new code promotion should occur until this audit is reviewed.
 
-- active candidates: NONE
-- replay candidates: NONE
-- holdout candidates: NONE
-- Executor/live: FORBIDDEN
-- Phase 4 / execution-design readiness: NOT OPEN
-- old analyzer/: LEGACY / FAILED / READ-ONLY
-- old backtester/: LEGACY / AUDIT REQUIRED / NOT ACTIVE FOR CURRENT MONITOR
-- setup_builder: context candidate generator only, not a final setup engine
-
-## 1. Evidence classes
+## Evidence Classes
 
 | Evidence class | Meaning |
-|---|---|
-| CODE_CONFIRMED | Directly visible in reusable market_monitor/setup_builder/replay/policy code available in the reviewed repo snapshot. |
-| RUN_ARTIFACT_CONFIRMED | Visible in generated 38S/38T/38U/38V/38W/38W1/38X/38Y output files available to this audit. |
-| CANONICAL_DOC_CONFIRMED | Already stated in existing canonical docs. |
-| MANUAL_REVIEW_CONCLUSION | Chart/manual/chat-level interpretation preserved for future design, but not current code behavior. |
-| NOT_VERIFIED | Referenced by task or discussion but not found/provable from available files. |
+| --- | --- |
+| `CODE_CONFIRMED` | Directly visible in current reusable `market_monitor/` or related replay/policy code. |
+| `RUN_ARTIFACT_CONFIRMED` | Directly visible in generated 38S-38Y outputs; not automatically reusable code. |
+| `CANONICAL_DOC_CONFIRMED` | Directly stated in an existing file under `research/canonical/`. |
+| `MANUAL_REVIEW_CONCLUSION` | Preserved chart/chat/manual interpretation that is not current code behavior. |
+| `NOT_VERIFIED` | Missing or not provable from the reviewed files. `NOT_FOUND` names a missing path. |
 
-Do not collapse these classes. A run artifact is not reusable code. A manual conclusion is not code behavior. A research replay is not live readiness.
+Classes are not interchangeable. In particular, run scripts under `market_monitor_runs/` are not reusable monitor modules, and manual interpretations are not setup-builder behavior.
 
-## 2. Availability / missing artifact ledger
+## Artifact Availability And Confidence
 
-| Item | Availability | Evidence class | Notes |
-|---|---:|---|---|
-| GitHub `main` README / AGENTS / ACTIVE_DOCS / PROJECT_STATE / NEXT_TASK | FOUND | CANONICAL_DOC_CONFIRMED | GitHub `main` still stated reset/research-only boundaries. |
-| GitHub `main` `PROJECT_LOG.md` | NOT_FOUND | NOT_VERIFIED | The file was requested for update, but was not present on GitHub `main`; this task creates it as a documentation log. |
-| GitHub `main` `docs/SHI_MARKET_MONITOR_CURRENT_ARCHITECTURE.md` | NOT_FOUND | NOT_VERIFIED | Referenced by task, but absent from GitHub `main`; no facts inferred from that path. |
-| Attached repository ZIP `Aitrader.zip` | FOUND | CANONICAL_DOC_CONFIRMED / RUN_ARTIFACT_CONFIRMED / CODE_CONFIRMED | Used as the available repo snapshot containing 38-chain docs/runs and current setup_builder code. |
-| Attached `SHI_RESET_38W_full_feed_setup_builder_outcome_replay_v0.zip` | FOUND | RUN_ARTIFACT_CONFIRMED | Used for 38W replay file availability and summary-level evidence. |
-| `research/canonical/*38S*` in attached repo snapshot | FOUND | CANONICAL_DOC_CONFIRMED | 38S docs exist in attached snapshot; not present on GitHub `main` search. |
-| `research/canonical/*38T*` in attached repo snapshot | FOUND | CANONICAL_DOC_CONFIRMED | 38T quality-control audit exists in attached snapshot. |
-| `research/canonical/*38U*` in attached repo snapshot | FOUND / untracked in local snapshot | CANONICAL_DOC_CONFIRMED with caveat | Present in attached snapshot but local git status showed it untracked; treat as available audit evidence, not merged canonical code state. |
-| `research/canonical/*38V*` | NOT_FOUND in attached repo snapshot search | NOT_VERIFIED | No 38V canonical doc was found in the available attached snapshot search. |
-| `research/canonical/*38W*` | Attached 38W run zip FOUND; canonical 38W doc not found in attached repo snapshot search | RUN_ARTIFACT_CONFIRMED / NOT_VERIFIED | 38W run output is available from attached zip; separate canonical 38W doc not verified. |
-| `research/canonical/*38W1*` | NOT_FOUND in attached repo snapshot search | NOT_VERIFIED | 38W1 corrected conclusions are referenced by task/chat but not verified as a canonical file in the available snapshot. |
-| `research/canonical/*38X*` | NOT_FOUND in attached repo snapshot search | NOT_VERIFIED | Referenced by task/chat, not proven from available files. |
-| `research/canonical/*38Y*` | NOT_FOUND in attached repo snapshot search | NOT_VERIFIED | Referenced by task/chat, not proven from available files. |
-| `market_monitor_runs/SHI_RESET_38S*` | FOUND in attached repo snapshot | RUN_ARTIFACT_CONFIRMED | Run directories available in attached snapshot. |
-| `market_monitor_runs/SHI_RESET_38T*` | FOUND in attached repo snapshot | RUN_ARTIFACT_CONFIRMED | Run directory available in attached snapshot. |
-| `market_monitor_runs/SHI_RESET_38U*` | FOUND in attached repo snapshot | RUN_ARTIFACT_CONFIRMED | Run directory available in attached snapshot. |
-| `market_monitor_runs/SHI_RESET_38V_full_feed_38s_to_setup_builder_crosscheck_v0/` | NOT_FOUND in attached repo snapshot search | NOT_VERIFIED | Requested path was not found in the available snapshot search. |
-| `market_monitor_runs/SHI_RESET_38W_full_feed_setup_builder_outcome_replay_v0/` | FOUND as attached zip | RUN_ARTIFACT_CONFIRMED | Available through the separate attached 38W zip. |
-| `market_monitor_runs/SHI_RESET_38W1_corrected_conclusions_v0/` | NOT_FOUND in attached repo snapshot search | NOT_VERIFIED | Referenced by task/chat, not available as directory in attached snapshot search. |
-| `market_monitor_runs/SHI_RESET_38X_up_side_stop_symmetry_and_replay_audit_v0/` | NOT_FOUND in attached repo snapshot search | NOT_VERIFIED | Referenced by task/chat, not available as directory in attached snapshot search. |
-| `market_monitor_runs/SHI_RESET_38Y_research_audit_to_code_traceability_from_37d_v0/` | NOT_FOUND in attached repo snapshot search | NOT_VERIFIED | Referenced by task/chat, not available as directory in attached snapshot search. |
+| Requested evidence | Availability | Classification and use |
+| --- | --- | --- |
+| 38S canonical audits | FOUND | `CANONICAL_DOC_CONFIRMED` plus run artifacts. |
+| 38T canonical audit | FOUND | `CANONICAL_DOC_CONFIRMED` plus run artifacts. |
+| `research/canonical/*38U*` | `NOT_FOUND` | 38U conclusions are `RUN_ARTIFACT_CONFIRMED` only in this checkout. Existing docs that name a canonical 38U file are stale pointers. |
+| `research/canonical/*38V*` | `NOT_FOUND` | 38V conclusions are `RUN_ARTIFACT_CONFIRMED`. |
+| `research/canonical/*38W*` / `*38W1*` | `NOT_FOUND` | 38W/38W1 conclusions are `RUN_ARTIFACT_CONFIRMED`. |
+| `research/canonical/*38X*` | `NOT_FOUND` | 38X findings are run-artifact evidence plus current visible code/test state. |
+| `research/canonical/*38Y*` | `NOT_FOUND` | 38Y is a documentation run artifact, not a canonical audit. |
+| requested `market_monitor_runs/SHI_RESET_38W1_corrected_conclusions_v0/` | `NOT_FOUND` | The verified available root is `market_monitor_runs/SHI_RESET_38W1_fix_chronological_tp1_stop_labels_v0/`. |
 
-## 3. Current architecture
+No missing canonical artifact was reconstructed from memory.
 
-### 3.1 Aggregator / feed
+## Current Architecture
 
-Evidence class: CANONICAL_DOC_CONFIRMED
+The current research chain is:
 
-The project remains BTC Market State Monitor research infrastructure. The feed and recovered feed are core data-lineage assets. They are not modified by this audit.
+`feed -> normalized Market Monitor feed -> structure levels -> liquidity zones -> zone registry/carry-forward -> event log and post-sweep observation -> significant-zone selection -> hidden-flow windows -> market_structure_state -> setup_builder context rows -> optional qualified H1 sequence/stage gates -> replay/policy evidence -> run-specific QC/manual review`
 
-Raw market data expectations remain descriptive: timestamped OHLCV/order-flow style rows plus available OI/funding/liquidation fields when present. This audit does not add, repair, synthesize, or backfill feed rows.
+| Layer | Current behavior | Evidence class |
+| --- | --- | --- |
+| Feed adapter | Normalizes OHLC, quantity/volume, trades, BuyQty, SellQty, OI, funding, provenance, and timestamps. Missing numeric context fields are zero-filled. | `CODE_CONFIRMED` |
+| Liquidation visibility | `visual_overlay.py` can display `LiqBuyQty`/`LiqSellQty` when present, but the base `feed_adapter.py` output does not carry those columns and current hidden-flow/selector artifacts mark liquidations unavailable. | `CODE_CONFIRMED`; 38V absence is `RUN_ARTIFACT_CONFIRMED` |
+| Structure | Builds daily/session references, confirmed M15/H1/H4 swings, equal levels, and pattern-derived levels. | `CODE_CONFIRMED` |
+| Liquidity and memory | Builds zones and carries a registry with touch/cross counts, first sweep, resweeps, acceptance timestamps, reaction/consumption state, and HTF lifecycle metrics. | `CODE_CONFIRMED` |
+| Events | Emits approaches, touches, crossed-unclassified events, unresolved sweep observations, merges, expiry, and registry lifecycle updates. | `CODE_CONFIRMED` |
+| Zone selection | Scores the full zone inventory, then exposes a bounded `visible_on_snapshot` subset. The 38V support run had 5,338 candidates but only 7 visible zones. | `CODE_CONFIRMED`; count is `RUN_ARTIFACT_CONFIRMED` |
+| Hidden flow | Builds research windows/candidates from price, volume/delta, OI, funding, zone context, and state-like features; labels remain context, not setup proof. | `CODE_CONFIRMED` |
+| Market structure state | Produces `market_state`, active support/resistance, candidate bias/strength, dominant side, and pressure/demand/supply scores used by setup_builder. | `CODE_CONFIRMED` |
+| setup_builder | Generates research context candidates from state, regime/hidden-flow windows, visible zones, and pressure predicates. It requires later replay and forbids execution language. | `CODE_CONFIRMED` |
+| Qualified H1 detector | Evaluates completed H1 penetration at meaningful references, age/separation, prior reaction, wick and close behavior; records volume ratio; searches the next 1-3 H1 bars for a close-back reclaim. | `CODE_CONFIRMED` |
+| Replay/policy | Resolves research stops/targets and enforces event ordering, including stop-before-TP1 and ambiguous same-bar outcomes. | `CODE_CONFIRMED` |
+| 38S/38T/38U/38V/38W/38W1/38Y scripts | Task-specific discovery, QC, crosscheck, replay correction, and traceability logic. | `RUN_ARTIFACT_CONFIRMED` |
 
-### 3.2 Base Market Monitor
+## What The Monitor Sees And What It Does Not Yet Decide
 
-Evidence class: CODE_CONFIRMED / CANONICAL_DOC_CONFIRMED
+The reusable monitor sees price, OHLCV/quantity, trade-side delta inputs, OI, funding, structural levels, zones, touches/crosses, partial zone lifecycle state, hidden-flow context, and broad market-state context. Liquidations are surface-dependent: supported by visual overlay when raw columns exist, but not carried through the base adapter/current hidden-flow pipeline.
 
-The current monitor sees pieces of market behavior:
+The registry already has meaningful memory. Therefore the gap is not “no lifecycle exists.” The gap is the absence of one canonical, setup-consumed per-level event sequence that unifies:
 
-- feed / OHLCV / volume / delta context;
-- OI/funding/liquidation context where source fields exist;
-- structure levels;
-- liquidity zones;
-- zone registry carry-forward;
-- touches / crosses / events;
-- market_structure_state outputs used downstream;
-- selected zones and hidden-flow context used by setup_builder.
+`formed -> touched -> penetrated -> sweep candidate -> reclaimed or accepted break -> retested -> strengthened/weakened/invalidated`
 
-The monitor is still research infrastructure. It does not produce entries, exits, orders, position sizing, PnL, or live instructions.
+Current registry states and M1 events do not yet provide that complete H1 sequence contract to setup_builder. This distinction is `CODE_CONFIRMED`.
 
-### 3.3 Memory state
+## What setup_builder Actually Uses
 
-Evidence class: CODE_CONFIRMED / MANUAL_REVIEW_CONCLUSION
+`run_setup_builder()` directly loads:
 
-Current memory that exists:
+- `market_structure_state_timeline.csv`;
+- regime/hidden-flow windows;
+- `selected_zones.csv`, filtered to `visible_on_snapshot=true`;
+- optional promoted hidden-flow candidates.
 
-- zone registry memory / carry-forward exists;
-- market_structure_state exists and is used by setup_builder;
-- selected-zones visibility exists as one effective downstream context source.
+It then evaluates broad state, dominant side, pressure scores, active support/resistance, raw window labels, close position, and directional target-zone availability. It can emit seller-dominance retest, supply sweep/reclaim, demand sweep/reclaim, and accepted-breakout context rows.
 
-Current memory that remains incomplete:
+This is `CODE_CONFIRMED`. The correct architectural conclusion is that setup_builder is a context candidate generator, not a final setup engine.
 
-- full per-level lifecycle memory is not complete: formed -> touched -> penetrated -> sweep candidate -> reclaim / accepted break -> retest -> strengthened/weakened/invalidated;
-- level behavior is not yet promoted into a strict reusable lifecycle state machine;
-- lower/upper supports or resistances can be hidden from the effective setup_builder context if they are not selected/promoted into the visible context used by builder.
+The following are not complete setup-builder gates:
 
-### 3.4 Setup Builder
+- confirmed sweep lifecycle sequence;
+- counter-sweep invalidation;
+- accepted break versus reclaim classification;
+- prior-move maturity / last-wagon distance;
+- minimum structural risk and meaningful R;
+- full SL/TP/BE policy;
+- all relevant support/resistance blockers from the full structure inventory;
+- local sequence direction override against broad market state.
 
-Evidence class: CODE_CONFIRMED / MANUAL_REVIEW_CONCLUSION
+Because setup_builder receives only visible selected zones, a valid lower support or upper resistance can be absent from its effective context even when it exists elsewhere in `market_structure_levels` or the full zone inventory. The input-boundary mechanism is `CODE_CONFIRMED`; its impact on the 2026-06-05 control case remains a `MANUAL_REVIEW_CONCLUSION` supported by run-artifact symptoms.
 
-The current setup_builder is a downstream context candidate generator. It is not a full setup engine.
+## Sweep And Lifecycle Alignment
 
-It uses market_structure_state timeline, market_regime_windows, selected_zones filtered by visibility, optional hidden_flow candidates if provided, pressure scores and contextual state labels.
+The agreed terminology is canonicalized in `docs/SHI_MARKET_MONITOR_TERMINOLOGY_AND_EVENT_LIFECYCLE.md`.
 
-It does not yet fully implement confirmed sweep as a sequence/lifecycle event, next 1-3 H1 confirmation after penetration, counter-sweep invalidation, accepted break vs reclaim lifecycle classifier, hard support/resistance blocker using all relevant market_structure_levels, target resolver beyond visible selected_zones, last-wagon / prior move maturity, minimum structural risk / meaningful R validation, full SL/TP/BE trade policy as strategy logic, or local sequence direction override versus broad market state.
+Major decisions:
 
-Therefore: setup_builder rows are research candidates/context rows only. They are not trade candidates and are not live-ready.
+1. A raw level penetration is not a confirmed sweep. Evidence class: `CODE_CONFIRMED` in the raw-observation boundary and `MANUAL_REVIEW_CONCLUSION` for the broader terminology decision.
+2. A sweep is a sequence, not one candle. The penetration candle creates `LEVEL_PENETRATION` / `SWEEP_CANDIDATE`; the next 1-3 closed H1 candles decide reclaim, accepted break, or invalidation. The current qualified detector implements a close-back subset, but not the full lifecycle vocabulary. Evidence class: `CODE_CONFIRMED` plus `MANUAL_REVIEW_CONCLUSION` for the expanded target contract.
+3. A close that remains beyond the level belongs to accepted-break classification, not sweep confirmation. Evidence class: partial `CODE_CONFIRMED`; unified classifier is missing.
+4. A counter-sweep inside the confirmation window can invalidate or reverse the earlier directional interpretation. Evidence class: `MANUAL_REVIEW_CONCLUSION`.
+5. “Sweep quality” is not one current setup_builder gate. Several qualities exist in the H1 detector, while volume expansion is informational and 38T weak-sweep logic remains run-only. Evidence class: `CODE_CONFIRMED` and `RUN_ARTIFACT_CONFIRMED`.
 
-### 3.5 Replay / policy layers
+## Research Chain Alignment
 
-Evidence class: CODE_CONFIRMED / RUN_ARTIFACT_CONFIRMED / NOT_VERIFIED where 38W1 is referenced
+| Research stage | Preserved conclusion | Evidence class |
+| --- | --- | --- |
+| 38S | Produced 227 permissive discovery/context rows and 140 policy-allowed sequence rows from a run script; every discovery row was ARMED. They are not old Analyzer rows and are not canonical setup_builder candidates. | `CANONICAL_DOC_CONFIRMED`; counts also `RUN_ARTIFACT_CONFIRMED` |
+| 38T | Post-generation QC found overgeneration, including 29 weak-sweep rejects, 6 bad-R rejects, 17 degraded-data review rows, and 8 specimen-like rows. Its rules are not pre-generation monitor filters. | `CANONICAL_DOC_CONFIRMED` |
+| 38U | Reviewed only the 8 specimen-like rows: 1 strong, 6 partial, 1 numeric-only. It is post-generation evidence review, not a setup source. | `RUN_ARTIFACT_CONFIRMED`; canonical audit `NOT_FOUND` |
+| 38V | Generated 51 setup_builder rows; only 10 of 227 38S rows matched by the crosscheck categories, with just 3 exact-time-and-type matches. The 2026-05-26 specimen survived. | `RUN_ARTIFACT_CONFIRMED` |
+| 38W | Demonstrated that replay can observe reactions, but its original 51/51 TP1-quality reading was chronologically invalid. | `RUN_ARTIFACT_CONFIRMED` |
+| 38W1 | Corrected chronology to 34 valid TP1-before-stop reactions, 17 stop-before-TP1 rows, and 2 target-before-stop continuations. This is corrected replay evidence, not edge proof. | `RUN_ARTIFACT_CONFIRMED` |
+| 38X | Found directional target-reference fallback behavior and changed the currently visible setup_builder helper to return unresolved when no valid directional target exists. The 38W1 artifacts predate that correction and require regeneration before target interpretation. | current helper is `CODE_CONFIRMED`; audit counts are `RUN_ARTIFACT_CONFIRMED` |
+| 38Y | Mapped reusable versus run-only logic and recorded missing canonical 38U-38W files. It is useful traceability evidence but remained a run artifact. | `RUN_ARTIFACT_CONFIRMED` |
 
-Reusable replay/policy files exist in the market_monitor layer, including fixed-stop / policy replay tooling. 38W replay artifacts are available from the attached 38W zip. The task-level conclusion that 38W1 corrected TP1/stop chronology is preserved as a required conclusion, but the specific 38W1 directory/file was not found in the available snapshot and is therefore marked NOT_VERIFIED in this audit.
+## Replay, Risk, And Outcome Discipline
 
-Micro-risk TP1 hits, especially 130-200 USD BTC risk, must not be treated as structural trade-quality evidence without minimum structural-risk validation. This is a preserved manual/research conclusion, not a current code-enforced rule.
+Chronological stop/TP1/target handling exists in reusable replay/policy code. A selected stop before TP1 is terminal; same-bar stop/TP1 is ambiguous rather than a rescued success. That is `CODE_CONFIRMED`.
 
-## 4. Old analyzer and old backtester
+38W1 is the corrected full-feed run evidence. It does not prove edge. Small-risk TP1 touches, especially roughly 130-200 USD BTC structural-risk distances, cannot establish structural setup quality without a minimum-risk and market-structure validation rule. The replay values are `RUN_ARTIFACT_CONFIRMED`; the structural-quality interpretation is `MANUAL_REVIEW_CONCLUSION` and is not implemented.
 
-Evidence class: CANONICAL_DOC_CONFIRMED
+## Control Cases
 
-Old analyzer/ remains legacy / failed / read-only. It is not the active source of current 38-chain candidates. It must not be used to explain 38S/38T/38V/38W outputs as current architecture behavior.
+The detailed ledger is `SHI_RESET_39A_CONTROL_CASE_LEDGER_2026_07_02.csv`.
 
-Old backtester/ remains legacy / audit-required / possible future reusable parts only. It is not the active validation engine for current Market Monitor. Running old Backtester replay campaigns remains out of scope.
+| Case | Aligned conclusion | Evidence class |
+| --- | --- | --- |
+| 2026-05-26 | Valid upper failed-break/reclaim research specimen with DOWN continuation; remains research evidence only. | `CANONICAL_DOC_CONFIRMED` |
+| 2026-05-29 14:59 | Support penetration/reaction can be a valid event without becoming a valid long; following seller response must be classified first. | `MANUAL_REVIEW_CONCLUSION` |
+| 2026-05-29 17:59-18:59 | Counter-sweep/seller response invalidates the earlier automatic UP continuation reading. | `MANUAL_REVIEW_CONCLUSION` |
+| 2026-05-31 | Local crossings/unresolved sweeps are noisy pseudo-sweep controls and must not auto-promote. | `MANUAL_REVIEW_CONCLUSION` supported by run events and 38V rejections |
+| 2026-06-01 | Accepted breakdown through the 72.6K support region is a DOWN continuation control, not a reclaim. | `MANUAL_REVIEW_CONCLUSION` |
+| 2026-06-05 | Late short into support demonstrates the visible-zone blocker gap; small-R TP1 reaction is not structural-quality proof. | `MANUAL_REVIEW_CONCLUSION` with run-artifact replay values |
+| 2026-06-09 | Local 61.15K support sequence is closer to failed breakdown/support reclaim than the broad-state DOWN builder row. | `MANUAL_REVIEW_CONCLUSION`; builder/replay disagreement is `RUN_ARTIFACT_CONFIRMED` |
+| 2026-06-10 | Repeated reactions around 61.15K support strengthen the level-behavior interpretation but are not a coded setup rule. | `MANUAL_REVIEW_CONCLUSION` |
 
-## 5. 38-chain alignment
+## Current Gaps
 
-### 5.1 38S / 38T / 38U
+The following are confirmed gaps or conservative non-promotions:
 
-Evidence class: CANONICAL_DOC_CONFIRMED / RUN_ARTIFACT_CONFIRMED / MANUAL_REVIEW_CONCLUSION
+- no unified level lifecycle consumed by setup_builder (`CODE_CONFIRMED`);
+- no full accepted-break/reclaim/counter-sweep sequence classifier (`CODE_CONFIRMED`);
+- visible-zone-only setup context can omit a structural blocker (`CODE_CONFIRMED`);
+- target resolver does not query the full market-structure level inventory (`CODE_CONFIRMED`);
+- no prior-move maturity / last-wagon gate (`CODE_CONFIRMED`);
+- no minimum structural-risk gate (`CODE_CONFIRMED`);
+- no local sequence direction override against broad market state (`CODE_CONFIRMED`);
+- 38W1 full-feed correction is still run-script logic rather than one reusable full-feed replay module (`RUN_ARTIFACT_CONFIRMED`);
+- canonical 38U-38Y audit files are absent (`NOT_VERIFIED` / `NOT_FOUND`).
 
-38S/38T/38U are research/audit artifacts, not strategy code.
+## Documentation-Only Promotion Candidates
 
-Preserved conclusions:
+Promotion candidates are recorded in `docs/SHI_MARKET_MONITOR_KNOWN_GAPS_AND_NEXT_PROMOTIONS.md` and the decision matrix. They are backlog items only:
 
-- 38S 227 rows were permissive discovery/context rows, not canonical setup_builder candidates.
-- 38T/38S contain useful local sweep/reclaim research logic but overgenerate pseudo-sweeps.
-- 38U specimen-like review was post-generation evidence review, not a pre-filter and not a live setup source.
-- 31.05-like rows are weak pseudo-sweeps/local noise and should not become confirmed sweep events without lifecycle proof.
-- 29.05-like and 09.06-like rows show useful local sweep/reclaim behavior, but require sequence/lifecycle classification before promotion.
-- 38S/38T must not be used as source candidates without a stricter event lifecycle classifier.
+1. unified level lifecycle memory;
+2. next-1-3-H1 sweep sequence classifier;
+3. counter-sweep invalidation;
+4. accepted break versus reclaim classification;
+5. setup_builder structural blocker from the full level/zone inventory;
+6. target resolver using market structure levels, not only visible zones;
+7. last-wagon / prior-move maturity;
+8. minimum structural risk and meaningful R validation;
+9. local sequence direction override versus broad state.
 
-### 5.2 38V / 38W / 38W1 / 38X / 38Y
+No item was implemented or tested in 39A.
 
-Evidence class: RUN_ARTIFACT_CONFIRMED for attached 38W zip; NOT_VERIFIED for unavailable 38V/38W1/38X/38Y files/directories
+## Verification
 
-38W outcome/policy replay artifacts are available from the attached 38W zip and are preserved as run-artifact evidence only. They are not edge proof and do not create live readiness.
+- `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q`: `718 passed, 11 warnings` in 51.65 seconds.
+- The warnings are existing deprecation/future warnings in `binance_aggregator_shi.py` and `analyzer/events.py`; no test failed.
+- Repository-integrity checks are recorded after the final documentation edit in `PROJECT_LOG.md`.
 
-38V, 38W1, 38X, and 38Y are referenced by the task and chat-level conclusions, but the requested directories/canonical files were not found in the available repository snapshot search. Their conclusions are therefore preserved only as MANUAL_REVIEW_CONCLUSION or NOT_VERIFIED unless later files are supplied.
+## Final Boundary Verdict
 
-## 6. Agreed terminology
-
-Evidence class: MANUAL_REVIEW_CONCLUSION / PROMOTION_BACKLOG
-
-Sweep-quality is not a gate. A raw level penetration is not yet a sweep. Sweep is not a candle. Sweep is a sequence.
-
-Canonical event sequence:
-
-1. The penetration candle creates `LEVEL_PENETRATION` / `SWEEP_CANDIDATE` only.
-2. Final classification requires the next 1-3 H1 candles.
-3. If following candles close beyond the broken level, classify as `ACCEPTED_BREAKDOWN` / `ACCEPTED_BREAKOUT`.
-4. If following candles reclaim the level, classify as `FAILED_BREAK_RECLAIM` / `CONFIRMED_SWEEP_RECLAIM`.
-5. If a counter-sweep appears inside the confirmation window, the previous directional setup can be invalidated or reversed.
-6. A support sweep can be a valid event but still fail to become a long setup if the following sequence creates counter-sweep/seller response.
-
-This terminology is expanded in `docs/SHI_MARKET_MONITOR_TERMINOLOGY_AND_EVENT_LIFECYCLE.md`.
-
-## 7. Control-case conclusions
-
-Evidence class: MANUAL_REVIEW_CONCLUSION unless otherwise noted in the ledger
-
-The control-case ledger created with this audit is the canonical place to preserve case-level interpretation without presenting it as current code behavior.
-
-High-level conclusions:
-
-- 2026-05-26: valid upper sweep / failed breakout / DOWN continuation specimen.
-- 2026-05-29 14:59: support sweep event with volume/wick/reaction, but not automatically a valid long setup because following sequence created counter-sweep/seller response.
-- 2026-05-29 17:59-18:59: counter-sweep / seller response after failed UP continuation.
-- 2026-05-31: pseudo-sweeps / local noise; should not become confirmed sweep events.
-- 2026-06-01: accepted breakdown through 72.6K support zone; valid DOWN continuation case.
-- 2026-06-05: late short into support / lower support plate not treated as effective Major blocker by setup_builder; small-R TP1 reaction is not structural trade-quality evidence.
-- 2026-06-09: multi-H1 support sweep/reclaim around 61.15K; builder read it as DOWN, but local sequence is closer to UP support reclaim / failed breakdown.
-- 2026-06-10: repeated retests/reactions around 61.15K confirming level behavior.
-
-## 8. Implementation promotion candidates
-
-Evidence class: MANUAL_REVIEW_CONCLUSION / PROMOTION_BACKLOG
-
-These are documentation-only future candidates. They are not implemented by 39A and no tests are created for them here.
-
-1. Level lifecycle memory.
-2. Sweep sequence classifier with next 1-3 H1 confirmation.
-3. Counter-sweep invalidation.
-4. Accepted break vs reclaim classifier.
-5. Support/resistance blocker for setup_builder.
-6. Target resolver using market_structure_levels, not only visible selected_zones.
-7. Last-wagon by prior move distance/maturity.
-8. Minimum structural risk / meaningful R validation.
-9. Local sequence direction override versus broad market state.
-
-The detailed backlog is in `docs/SHI_MARKET_MONITOR_KNOWN_GAPS_AND_NEXT_PROMOTIONS.md`.
-
-## 9. Final 39A verdict
-
-Evidence class: CANONICAL_DOC_CONFIRMED / MANUAL_REVIEW_CONCLUSION
-
-39A becomes the current source-of-truth alignment audit after review.
-
-No new code promotion should happen until this audit is reviewed. The next promotion must first decide whether to implement the lifecycle/sweep terminology as code, and must not reuse 38S/38T rows directly as candidates.
-
-Final state:
-
-- documentation aligned around research-only Market Monitor;
-- setup_builder remains context generator, not final setup engine;
-- sweep must be redefined as sequence/lifecycle event before new setup logic is added;
+- setup_builder remains a context generator, not a final setup engine;
+- sweep must be treated as a sequence/lifecycle event before new setup logic is added;
 - 38S 227 rows remain discovery-only;
-- 38W/38W1-style replay evidence remains replay evidence, not edge proof;
-- chat/manual conclusions are preserved separately from code-confirmed facts;
-- missing/unavailable artifacts are explicitly marked NOT_FOUND / NOT_VERIFIED.
+- 38W1 remains corrected replay evidence, not edge proof;
+- manual/chat conclusions are preserved separately from code and run facts;
+- Analyzer v1 remains legacy/read-only;
+- Backtester remains inactive/audit-required;
+- Executor/live/readiness/PnL/position sizing remain out of scope;
+- no code or feed behavior changed in this audit.

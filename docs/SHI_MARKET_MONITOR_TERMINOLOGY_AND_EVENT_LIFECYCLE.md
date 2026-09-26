@@ -1,96 +1,54 @@
-# SHI Market Monitor Terminology and Event Lifecycle
+# SHI Market Monitor Terminology And Event Lifecycle
 
-Date: 2026-07-02
-Status: Canonical terminology reference / documentation only
+Status: canonical terminology target after SHI_RESET_39A
 
-This document defines event language for future Market Monitor promotion work. It does not implement code, filters, tests, strategy logic, live trading, or Executor behavior.
+This document defines research terminology. It does not claim that every term is implemented in current code. Current implementation status is stated explicitly.
 
-## Evidence boundary
+## Governing Rule
 
-These definitions are documentation-level terminology. Until implemented and tested in market_monitor code, they are not current code behavior.
+A sweep is a sequence, not a candle.
 
-## Core principle
+The first candle can show a touch or penetration. It cannot by itself decide whether the market rejected the level, accepted beyond it, reversed through a counter-sweep, or merely produced local noise. Final classification uses subsequent closed candles, normally the next 1-3 H1 candles for the current research contract.
 
-A sweep is not a candle. A sweep is a sequence.
+## Lifecycle Terms
 
-A single candle can only create a touch, penetration, or sweep candidate. Final event classification requires follow-through/reclaim evidence from the next 1-3 H1 candles or another explicitly defined confirmation window.
+| Term | Definition | Current status |
+| --- | --- | --- |
+| `LEVEL_TOUCH` | Price reaches a level/zone boundary without a meaningful excursion through the far side. A touch is interaction evidence, not a setup. | Partial equivalent `LIQUIDITY_ZONE_TOUCHED` is `CODE_CONFIRMED`. |
+| `LEVEL_PENETRATION` | Price trades meaningfully beyond the referenced boundary. It records geometry only; direction is not yet confirmed. | Crossed/unresolved observations are `CODE_CONFIRMED`; this canonical name is a 39A target term. |
+| `SWEEP_CANDIDATE` | A level penetration that has sufficient reference, age, reaction, penetration, wick, or related evidence to enter a confirmation window. It is not yet a confirmed sweep. | Qualified-H1 preconditions are partially `CODE_CONFIRMED`; the exact lifecycle state is not unified. |
+| `CONFIRMED_SWEEP_RECLAIM` | A sweep candidate followed by a close back through the level within the confirmation window, with the local sequence still directionally valid. | Close-back detection is `CODE_CONFIRMED`; counter-sweep-aware final classification is not implemented. |
+| `FAILED_BREAK_RECLAIM` | A failed attempt to break/accept beyond a level, followed by a close back to the prior side. This is the structural interpretation of a confirmed reclaim; it still does not guarantee a setup. | Partial close-back subset is `CODE_CONFIRMED`. |
+| `ACCEPTED_BREAKDOWN` | Price penetrates support and subsequent closed candles remain/accept below it instead of reclaiming. | Acceptance metrics exist in zone registry, but no unified setup-consumed classifier exists. |
+| `ACCEPTED_BREAKOUT` | Price penetrates resistance and subsequent closed candles remain/accept above it instead of reclaiming. | Acceptance metrics and a broad builder context type exist, but no unified lifecycle classifier exists. |
+| `COUNTER_SWEEP_INVALIDATION` | During the confirmation window, price sweeps the opposing side or produces an opposite failed-break sequence that invalidates or reverses the earlier directional setup interpretation. | `MANUAL_REVIEW_CONCLUSION`; not current reusable behavior. |
+| `RETEST_REACTION` | After reclaim or accepted break, price revisits the level/zone and responds away from it. | Touch/reaction metrics exist; the unified lifecycle transition is partial. |
+| `LEVEL_CONFIRMED_BY_REACTION` | Repeated, separated retest reactions increase confidence that the level is behaviorally meaningful. | `MANUAL_REVIEW_CONCLUSION`; registry counts exist but are not this builder gate. |
+| `LEVEL_STRENGTHENED` | New valid reactions add evidence without acceptance through the level. Strength is contextual and must not grow from duplicate/noisy touches. | Not a unified current state; promotion candidate. |
+| `LEVEL_WEAKENED` | Repeated penetrations, time spent through/inside, failed reactions, or consumption reduce confidence before final invalidation. | Consumption/chop metrics are partial `CODE_CONFIRMED`; unified state is missing. |
+| `LEVEL_INVALIDATED` | The level is no longer valid for the intended directional role because acceptance, consumption, expiry, or a structurally contradictory transition has occurred. | Registry invalidation/expiry exists; setup-consumed lifecycle invalidation is partial. |
 
-## Terms
+## Setup-Context Terms
 
-### LEVEL_TOUCH
+| Term | Definition | Current status |
+| --- | --- | --- |
+| `LAST_WAGON` / `PRIOR_MOVE_MATURITY` | A candidate appears late after a material directional move, leaving limited clean distance before opposing structure or making continuation structurally mature. It must be measured from prior move distance, duration, and remaining space, not assigned from one visual impression. | `MANUAL_REVIEW_CONCLUSION`; not implemented. |
+| `SHORT_INTO_MAJOR_SUPPORT` | A short context whose entry/review area is too close to meaningful support for the proposed risk/target path. The blocker must be checked against the full eligible structure inventory, not only visible snapshot zones. | Gap confirmed; blocker rule not implemented. |
+| `LONG_INTO_MAJOR_RESISTANCE` | A long context whose entry/review area is too close to meaningful resistance for the proposed risk/target path. The blocker must be checked against the full eligible structure inventory, not only visible snapshot zones. | Gap confirmed; blocker rule not implemented. |
 
-Price reaches or overlaps a known level/zone without a confirmed penetration beyond that level. A touch can produce useful reaction evidence but is not a sweep.
+## Sequence Decision Model
 
-### LEVEL_PENETRATION
+1. `LEVEL_TOUCH`: record interaction.
+2. `LEVEL_PENETRATION`: record excursion through the boundary.
+3. `SWEEP_CANDIDATE`: open a bounded confirmation window only if reference and penetration quality are sufficient.
+4. Inspect the next 1-3 closed H1 candles:
+   - close back through the level with no counter invalidation -> `CONFIRMED_SWEEP_RECLAIM` / `FAILED_BREAK_RECLAIM`;
+   - continued closes beyond support -> `ACCEPTED_BREAKDOWN`;
+   - continued closes beyond resistance -> `ACCEPTED_BREAKOUT`;
+   - opposing sequence inside the window -> `COUNTER_SWEEP_INVALIDATION`;
+   - insufficient evidence -> remain unresolved or expire without setup promotion.
+5. Later returns may create `RETEST_REACTION`, `LEVEL_CONFIRMED_BY_REACTION`, strengthening, weakening, or invalidation.
 
-Price moves beyond a known support/resistance level or liquidity-zone boundary. This is the first mechanical break of the level. It is not yet a confirmed sweep, accepted breakout, or accepted breakdown.
+## Current Boundary
 
-### SWEEP_CANDIDATE
-
-A level penetration that may become a sweep if the following confirmation sequence reclaims the broken level. The penetration candle can create this candidate, but cannot finalize it alone.
-
-### CONFIRMED_SWEEP_RECLAIM
-
-A sweep candidate where the following 1-3 H1 candles reclaim the broken level and hold back inside/above/below the prior structure in the direction consistent with a failed break. This confirms the sweep/reclaim event, not automatically a trade setup.
-
-### FAILED_BREAK_RECLAIM
-
-A failed breakout or failed breakdown where price penetrates a level and then returns back through it. This is a lifecycle classification. It can be bullish or bearish depending on which side failed.
-
-### ACCEPTED_BREAKDOWN
-
-A support penetration where following candles close and hold below the broken support instead of reclaiming it. This invalidates a bullish sweep interpretation and supports a continuation/breakdown interpretation.
-
-### ACCEPTED_BREAKOUT
-
-A resistance penetration where following candles close and hold above the broken resistance instead of rejecting/reclaiming below it. This invalidates a bearish sweep interpretation and supports a continuation/breakout interpretation.
-
-### COUNTER_SWEEP_INVALIDATION
-
-A second sweep/penetration sequence appears inside the confirmation window and invalidates or reverses the previous directional interpretation. Example: a support sweep starts, but a later upper sweep/seller response blocks the long setup interpretation.
-
-### RETEST_REACTION
-
-After a break/reclaim/accepted break, price returns to the level and reacts. A retest reaction can confirm the level behavior, but it still needs lifecycle context.
-
-### LEVEL_CONFIRMED_BY_REACTION
-
-A level shows repeated meaningful reactions after touch, penetration, reclaim, accepted break, or retest. This strengthens confidence that the market is respecting the level.
-
-### LEVEL_STRENGTHENED
-
-A level gains importance because of repeated reactions, clean reclaims, clean accepted breaks followed by retests, or sustained structural influence.
-
-### LEVEL_WEAKENED
-
-A level loses importance because of repeated failed reactions, messy overlap, shallow/noisy pseudo-sweeps, or inability to produce directional response.
-
-### LEVEL_INVALIDATED
-
-A level is no longer useful as active structure because price has accepted beyond it, reactions stopped mattering, or later lifecycle evidence superseded it.
-
-### LAST_WAGON / PRIOR_MOVE_MATURITY
-
-A setup risk context where price has already travelled far in the intended direction before the candidate forms. A late continuation candidate after a mature prior move requires special caution and should not be promoted without a prior-move distance/maturity model.
-
-### SHORT_INTO_MAJOR_SUPPORT
-
-A short-context candidate whose target or continuation path runs directly into nearby major support. This is a blocker/risk context unless future code explicitly resolves the target and structural-risk conditions.
-
-### LONG_INTO_MAJOR_RESISTANCE
-
-A long-context candidate whose target or continuation path runs directly into nearby major resistance. This is a blocker/risk context unless future code explicitly resolves the target and structural-risk conditions.
-
-## Canonical classification flow
-
-1. Detect level touch / penetration.
-2. If penetration occurs, create `SWEEP_CANDIDATE` only.
-3. Inspect next 1-3 H1 candles.
-4. If reclaimed: classify as `FAILED_BREAK_RECLAIM` / `CONFIRMED_SWEEP_RECLAIM`.
-5. If accepted beyond level: classify as `ACCEPTED_BREAKDOWN` or `ACCEPTED_BREAKOUT`.
-6. If opposite/counter event appears: classify as `COUNTER_SWEEP_INVALIDATION` and stop direct promotion of the original directional setup.
-7. Track retests and reactions to strengthen/weaken/invalidate the level over time.
-
-## Non-goals
-
-This document does not define entries, exits, position sizing, stop-loss rules, take-profit rules, PnL, live readiness, or Executor behavior.
+Current code implements pieces of this model across zone registry, event log, qualified H1 sweep/reclaim, setup_builder, and replay. It does not yet implement this document as one reusable lifecycle engine. Therefore these terms must not be backfilled into historical rows as if they were already emitted.

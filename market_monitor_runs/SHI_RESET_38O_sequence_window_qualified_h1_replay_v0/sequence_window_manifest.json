@@ -1,0 +1,29 @@
+{
+  "classification_path": "market_monitor_runs\\SHI_RESET_38J_wider_research_window_2026_05_23_to_2026_06_10_v0\\wider_setup_classification_corrected.csv",
+  "end": "2026-06-10",
+  "feed_dir": "feed",
+  "h1_candidate_evaluations": 81,
+  "lookback_h1_bars": 8,
+  "outputs": {
+    "manifest": "market_monitor_runs\\SHI_RESET_38O_sequence_window_qualified_h1_replay_v0\\sequence_window_manifest.json",
+    "sequence_window_qualified_h1_events": "market_monitor_runs\\SHI_RESET_38O_sequence_window_qualified_h1_replay_v0\\sequence_window_qualified_h1_events.csv",
+    "sequence_window_setup_links": "market_monitor_runs\\SHI_RESET_38O_sequence_window_qualified_h1_replay_v0\\sequence_window_setup_links.csv",
+    "sequence_window_vs_manual_verdicts": "market_monitor_runs\\SHI_RESET_38O_sequence_window_qualified_h1_replay_v0\\sequence_window_vs_manual_verdicts.csv",
+    "summary": "market_monitor_runs\\SHI_RESET_38O_sequence_window_qualified_h1_replay_v0\\sequence_window_summary.md"
+  },
+  "qualified_layer_version": "SHI_RESET_38M_QUALIFIED_H1_SWEEP_RECLAIM_V0",
+  "qualified_sequence_links": 1,
+  "research_only": true,
+  "run_version": "SHI_RESET_38O_SEQUENCE_WINDOW_QUALIFIED_H1_REPLAY_V0",
+  "setup_rows_evaluated": 9,
+  "start": "2026-05-23",
+  "uses_entries_exits": false,
+  "uses_executor": false,
+  "uses_live_readiness": false,
+  "uses_live_trading": false,
+  "uses_orders": false,
+  "uses_pnl": false,
+  "uses_position_sizing": false,
+  "uses_strategy_promotion": false,
+  "valid_sequence_links": 1
+}

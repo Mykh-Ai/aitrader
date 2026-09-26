@@ -1,0 +1,27 @@
+{
+  "changes_setup_builder": false,
+  "changes_setup_detection_logic": false,
+  "focus_alignment_path": "market_monitor_runs\\SHI_RESET_38G_live_like_bar_by_bar_state_replay_v0\\focus_setup_alignment_check.csv",
+  "live_like_replay_path": "market_monitor_runs\\SHI_RESET_38G_live_like_bar_by_bar_state_replay_v0\\live_like_bar_by_bar_state_replay.csv",
+  "live_readiness_claim": false,
+  "manual_verdicts_path": "market_monitor_runs\\SHI_RESET_38C_armed_manual_verdict_and_sequence_audit_v0\\armed_setup_manual_verdicts.csv",
+  "output_dir": "market_monitor_runs\\SHI_RESET_38H_structural_swing_stop_resolver_v0",
+  "outputs": {
+    "manifest_json": "market_monitor_runs\\SHI_RESET_38H_structural_swing_stop_resolver_v0\\structural_stop_resolver_manifest.json",
+    "structural_stop_reference_candidates_csv": "market_monitor_runs\\SHI_RESET_38H_structural_swing_stop_resolver_v0\\structural_stop_reference_candidates.csv",
+    "summary_md": "market_monitor_runs\\SHI_RESET_38H_structural_swing_stop_resolver_v0\\structural_stop_resolver_summary.md"
+  },
+  "repo_commit": "8678c870a1bcdabb86b284213f7bc33ab26711ae",
+  "research_only": true,
+  "row_count": 5,
+  "sample_expanded": false,
+  "strategy_promotion": false,
+  "structural_stop_resolver_version": "SHI_RESET_38H_STRUCTURAL_SWING_STOP_RESOLVER_V0",
+  "uses_backtester": false,
+  "uses_entries_exits": false,
+  "uses_executor": false,
+  "uses_existing_38g_focus_setups_only": true,
+  "uses_orders": false,
+  "uses_pnl": false,
+  "uses_position_sizing": false
+}
