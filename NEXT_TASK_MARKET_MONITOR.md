@@ -40,3 +40,13 @@ but it requires an explicit task and control cases before implementation.
 Research-only. The deployed v39A snapshot is descriptive LLM evidence, not an
 edge claim or authority over orders, live trading, PnL, position sizing, stops,
 targets, or trailing.
+
+## Separate user-scoped experiment — 2026-10-11
+
+Peak_Ai delta-triggered H1 implementation is isolated from the canonical promotion backlog. Review its implementation audit and run evidence before interpreting results; no automatic promotion follows.
+
+Peak_Ai delta-H1 v1 historical run completed: 210 simulated closed portfolio trades, net -1242.08 USDC; negative research result. Evidence: `market_monitor_runs/PEAK_AI_DELTA_H1_V1_v0/SUMMARY.md`. Review sequence semantics; no live promotion.
+
+## 2026-10-11 — Correction: both delta signs trigger the same H1 SHORT setup
+
+The prior Peak_Ai H1 v1 excluded negative deltas and was incomplete for the user's intended hypothesis. Correction audit: `research/canonical/PEAK_AI_H1_BOTH_SIGNS_CORRECTION_AUDIT_2026_10_11.md`. Both signs share the same SHORT rule, pending state and portfolio. Replay implementation: `33f1cd9`; native adapter unchanged. Corrected historical run completed: 226 closed simulated SHORT trades, net -1401.95 USDC; positive group -995.77 and negative group -406.18 USDC. Both groups negative. Evidence: `market_monitor_runs/PEAK_AI_H1_BOTH_SIGNS_V2/SUMMARY.md`. No live promotion.

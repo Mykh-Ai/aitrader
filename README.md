@@ -302,3 +302,17 @@ Current targeted 38-chain tests:
 ```bash
 python -m pytest -q tests/test_stage_gate_replay.py tests/test_policy_replay_fixed_stops.py tests/test_qualified_h1_sweep_reclaim.py tests/test_sequence_window_h1_replay.py
 ```
+
+## Bounded research experiment — 2026-10-11
+
+An isolated Peak_Ai delta-triggered H1 adapter is documented in `research/canonical/PEAK_AI_DELTA_H1_V1_IMPLEMENTATION_AUDIT_2026_10_11.md`. It uses individual H1/H4 references and is not the full v39A snapshot or an approved trading policy. Current canonical architecture and production boundaries remain as documented above.
+
+Peak_Ai delta-H1 v1 historical run completed: 210 simulated closed portfolio trades, net -1242.08 USDC; negative research result. Evidence: `market_monitor_runs/PEAK_AI_DELTA_H1_V1_v0/SUMMARY.md`. Review sequence semantics; no live promotion.
+
+## 2026-10-11 — Correction: both delta signs trigger the same H1 SHORT setup
+
+The prior Peak_Ai H1 v1 excluded negative deltas and was incomplete for the user's intended hypothesis. Correction audit: `research/canonical/PEAK_AI_H1_BOTH_SIGNS_CORRECTION_AUDIT_2026_10_11.md`. Both signs share the same SHORT rule, pending state and portfolio. Replay implementation: `33f1cd9`; native adapter unchanged. Corrected historical run completed: 226 closed simulated SHORT trades, net -1401.95 USDC; positive group -995.77 and negative group -406.18 USDC. Both groups negative. Evidence: `market_monitor_runs/PEAK_AI_H1_BOTH_SIGNS_V2/SUMMARY.md`. No live promotion.
+
+## Peak_Ai research consolidation
+
+Start at [PEAK_AI_RESEARCH_INDEX.md](PEAK_AI_RESEARCH_INDEX.md) for the corrected both-sign SHORT result and links to all earlier evidence. This research consolidation does not supersede the canonical Monitor architecture.
