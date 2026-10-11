@@ -544,7 +544,7 @@ def _registry_merge_sources_compatible(
     return True
 
 
-def _update_lifecycle(registry: pd.DataFrame, feed: pd.DataFrame) -> pd.DataFrame:
+def _update_lifecycle(registry: pd.DataFrame, feed: pd.DataFrame, *, closed_htf_only: bool = False) -> pd.DataFrame:
     registry = _normalize_registry(registry)
     if registry.empty or feed.empty:
         return registry
@@ -570,7 +570,7 @@ def _update_lifecycle(registry: pd.DataFrame, feed: pd.DataFrame) -> pd.DataFram
         row["last_updated_at"] = effective_seen
         row["age_bars"] = _age_bars(row["first_seen_at"], frame)
         row["age_days"] = _age_days(row["first_seen_at"], effective_seen)
-        row.update(_consumption_fields(row, frame))
+        row.update(_consumption_fields(row, frame, closed_htf_only=closed_htf_only))
         if row["consumption_status"] == "REACTED":
             row["status"] = "REACTED"
         if status in CARRY_FORWARD_STATUSES:
@@ -606,7 +606,7 @@ def _path_status(row: dict[str, object], feed: pd.DataFrame) -> tuple[str, str, 
     return "ACTIVE", "", ""
 
 
-def _consumption_fields(row: dict[str, object], feed: pd.DataFrame) -> dict[str, object]:
+def _consumption_fields(row: dict[str, object], feed: pd.DataFrame, *, closed_htf_only: bool = False) -> dict[str, object]:
     after_first_seen = feed[feed["Timestamp"] >= pd.Timestamp(row["first_seen_at"])].sort_values(
         "Timestamp", kind="mergesort"
     )
@@ -703,7 +703,7 @@ def _consumption_fields(row: dict[str, object], feed: pd.DataFrame) -> dict[str,
     is_broad = structural_zone_mode in BROAD_STRUCTURAL_MODES
     has_htf = _has_htf_source(row)
     m1_interaction_count = _m1_interaction_count(row, after_first_seen, lower, upper)
-    htf_metrics = _htf_lifecycle_metrics(row, feed, lower, upper)
+    htf_metrics = _htf_lifecycle_metrics(row, feed, lower, upper, closed_htf_only=closed_htf_only)
     htf_sweep_count = htf_metrics["htf_sweep_count"]
     htf_close_through_count = htf_metrics["htf_close_through_count"]
     htf_acceptance_count = htf_metrics["htf_acceptance_count"]
@@ -873,7 +873,7 @@ def _threshold_reached_at(
     alternating = 0
     inside_count = 0
     previous = ""
-    for idx, (_, row) in enumerate(frame.iterrows()):
+    for idx, timestamp in enumerate(frame["Timestamp"]):
         position = positions[idx]
         if cross_through[idx]:
             cross_count += 1
@@ -884,11 +884,11 @@ def _threshold_reached_at(
         if position != "INSIDE":
             previous = position
         if threshold_kind == "cross_through" and cross_count >= MAX_CROSS_THROUGH_COUNT:
-            return _format_ts(row["Timestamp"])
+            return _format_ts(timestamp)
         if threshold_kind == "alternating_close" and alternating >= MAX_ALTERNATING_CLOSE_COUNT:
-            return _format_ts(row["Timestamp"])
+            return _format_ts(timestamp)
         if threshold_kind == "inside_bars" and inside_count >= MAX_BARS_INSIDE_ZONE_LIFETIME:
-            return _format_ts(row["Timestamp"])
+            return _format_ts(timestamp)
     return _format_ts(frame.iloc[-1]["Timestamp"])
 
 
@@ -901,9 +901,9 @@ def _sweep_transition_timestamps(
         swept = pd.to_numeric(frame["LowPrice"], errors="coerce") < lower
     timestamps: list[str] = []
     previous = False
-    for is_swept, (_, candle) in zip(swept.tolist(), frame.iterrows()):
+    for is_swept, timestamp in zip(swept.tolist(), frame["Timestamp"]):
         if is_swept and not previous:
-            timestamps.append(_format_ts(candle["Timestamp"]))
+            timestamps.append(_format_ts(timestamp))
         previous = bool(is_swept)
     return timestamps
 
@@ -923,7 +923,8 @@ def _m1_interaction_count(
 
 
 def _htf_lifecycle_metrics(
-    row: dict[str, object], feed: pd.DataFrame, lower: float, upper: float
+    row: dict[str, object], feed: pd.DataFrame, lower: float, upper: float,
+    *, closed_htf_only: bool = False,
 ) -> dict[str, object]:
     previous_sweeps = int(float(row.get("htf_sweep_count", 0) or 0))
     previous_close_through = int(float(row.get("htf_close_through_count", 0) or 0))
@@ -941,6 +942,20 @@ def _htf_lifecycle_metrics(
     metric_timeframe = _htf_metric_timeframe(row)
     try:
         htf_frame = aggregate_timeframe(feed, metric_timeframe)
+        if closed_htf_only and not htf_frame.empty:
+            # Opt-in research adapter: inputs here have minute-OPEN labels.
+            # A partial hour, missing minute or duplicate cannot confirm HTF state.
+            minutes = {"M15": 15, "H1": 60, "H4": 240}[metric_timeframe]
+            rule = {"M15": "15min", "H1": "h", "H4": "4h"}[metric_timeframe]
+            grouped = feed.groupby(feed["Timestamp"].dt.floor(rule))["Timestamp"]
+            counts, unique = grouped.size(), grouped.nunique()
+            complete = (
+                htf_frame["Timestamp"].map(counts).eq(minutes)
+                & htf_frame["Timestamp"].map(unique).eq(minutes)
+                & htf_frame["source_start"].eq(htf_frame["Timestamp"])
+                & htf_frame["source_end"].eq(htf_frame["Timestamp"] + pd.Timedelta(minutes=minutes - 1))
+            )
+            htf_frame = htf_frame.loc[complete].copy()
     except Exception:
         htf_frame = pd.DataFrame()
     if htf_frame.empty:
@@ -1010,10 +1025,10 @@ def _accepted_run_count(flags: list[bool]) -> int:
 
 def _consecutive_threshold_at(frame: pd.DataFrame, flags: list[bool]) -> str:
     count = 0
-    for is_flagged, (_, candle) in zip(flags, frame.iterrows()):
+    for is_flagged, timestamp in zip(flags, frame["Timestamp"]):
         count = count + 1 if is_flagged else 0
         if count >= ACCEPTANCE_CLOSE_BARS:
-            return _format_ts(candle["Timestamp"])
+            return _format_ts(timestamp)
     return ""
 
 

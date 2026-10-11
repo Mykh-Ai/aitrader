@@ -231,3 +231,19 @@ Compact handoff log for AiTrader. This file is the index; detailed evidence rema
 ## Log Maintenance Rule
 
 For every future SHI_RESET task, add a short entry here after the canonical audit is written. The entry should point to the commit, audit file, run-output directory, verification result, and next implication.
+
+## 2026-10-11 — Peak_Ai delta-triggered H1 research adapter
+
+Added a bounded, causal H1/H4 adapter from canonical 39A for the user-scoped DELTA_MAX → four-hour H1 reclaim experiment. See `research/canonical/PEAK_AI_DELTA_H1_V1_IMPLEMENTATION_AUDIT_2026_10_11.md`. Verification: 145 targeted tests, 250 loop-equivalence checks and checkpoint parity. Run evidence: `market_monitor_runs/PEAK_AI_DELTA_H1_V1_v0/`. No production or full-Monitor promotion.
+
+## Completed historical result — 2026-10-11
+
+Implementation commits: Monitor `fbcdce2`, Scout Replay `94abe8f`. Completed run: 400 confirmed candidates, 210 closed simulated portfolio trades, net **-1242.08 USDC**, PF 0.563; doubled-slippage net -1352.95 USDC. Gross was already negative (-193.75 USDC). All 41 ledger checks passed, in addition to the 145 tests and 250 parity checks. See `market_monitor_runs/PEAK_AI_DELTA_H1_V1_v0/SUMMARY.md` and `REPORT_UA.md`. This bounded SHORT adapter failed this historical test; no LONG, unused-period validation or without-delta control was performed. Review sequence semantics before specifying any new experiment. No live promotion.
+
+## 2026-10-11 — Correction: both delta signs trigger the same H1 SHORT setup
+
+The prior Peak_Ai H1 v1 excluded negative deltas and was incomplete for the user's intended hypothesis. Correction audit: `research/canonical/PEAK_AI_H1_BOTH_SIGNS_CORRECTION_AUDIT_2026_10_11.md`. Both signs share the same SHORT rule, pending state and portfolio. Replay implementation: `33f1cd9`; native adapter unchanged. Corrected historical run completed: 226 closed simulated SHORT trades, net -1401.95 USDC; positive group -995.77 and negative group -406.18 USDC. Both groups negative. Evidence: `market_monitor_runs/PEAK_AI_H1_BOTH_SIGNS_V2/SUMMARY.md`. No live promotion.
+
+## 2026-10-11 — User-requested Peak_Ai branch consolidation
+
+Consolidate the complete adapter implementation, original positive-only audit and corrected both-sign SHORT evidence into `codex/peak-ai-research-consolidated-2026-10-11`. Cross-repository index: `PEAK_AI_RESEARCH_INDEX.md`. The canonical base remains unchanged; research has no live promotion.

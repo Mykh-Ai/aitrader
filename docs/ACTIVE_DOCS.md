@@ -55,3 +55,9 @@ Archived historical docs remain evidence and must not be used as current impleme
 - `docs/H4_False_Break_Reclaim_Research_Contract_v0.1.md`
 
 New work must keep `README.md`, `AGENTS.md`, `PROJECT_LOG.md`, this file, `research/canonical/PROJECT_STATE_CURRENT.md`, and `NEXT_TASK_MARKET_MONITOR.md` aligned.
+
+## Isolated Peak_Ai research adapter
+
+`research/canonical/PEAK_AI_DELTA_H1_V1_IMPLEMENTATION_AUDIT_2026_10_11.md` records the explicitly scoped delta-triggered H1 experiment and its limitations. This does not supersede 39A or promote the lifecycle backlog.
+
+Peak_Ai scope correction: `research/canonical/PEAK_AI_H1_BOTH_SIGNS_CORRECTION_AUDIT_2026_10_11.md` (both signs, SHORT only; research).
