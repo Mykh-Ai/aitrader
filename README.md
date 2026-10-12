@@ -48,6 +48,159 @@ The current intended architecture is:
 
 Current reusable work includes the Market Monitor research chain and the bounded v39A entry snapshot. Backtester validation and any Executor trading-policy authority remain future gates.
 
+## Running Market Monitor Correctly
+
+Market Monitor is stateful at the liquidity-zone registry boundary. A prior registry affects zone lifecycle and event construction; merely placing a registry file in an output directory does not load it. The canonical single-run entrypoint is `python -m market_monitor.run_market_monitor`, and a stateful invocation must pass the previous checkpoint explicitly with `--registry-in` and write the new checkpoint with `--registry-out`.
+
+The current registry is not a complete checkpoint for every Monitor component. `liquidity_zone_registry.csv` carries the liquidity-zone registry, while structure levels, volume/delta state, market-state timeline, events, post-sweep observations, qualified sweep/reclaim state, and setup context are rebuilt from the supplied feed or handled by later layers. The procedures below preserve the registry contract; they must not be described as complete live-like state restoration.
+
+### Case 1 — Sequential full-day batch research
+
+Run from a clean checkout of `canonical/market-monitor-39a` or its verified descendant. This example stays outside the known recovered-data interval:
+
+```powershell
+Set-Location D:\Project_V\Aitrader
+
+python -m market_monitor.run_batch_research `
+  --feed-dir feed `
+  --output market_monitor_runs\BATCH_2026_07_12_TO_2026_10_11 `
+  --start-date 2026-07-12 `
+  --end-date 2026-10-11 `
+  --run-timestamp 2026-10-11T23:59:00Z
+
+if ($LASTEXITCODE -ne 0) { throw "Market Monitor batch failed" }
+
+Import-Csv market_monitor_runs\BATCH_2026_07_12_TO_2026_10_11\batch_manifest.csv |
+  Select-Object date,status,reason,registry_in,registry_out,input_rows,data_quality_summary |
+  Format-Table -AutoSize
+```
+
+Within one batch invocation, the first processed day is an initialization run with blank `registry_in`. Every later processed day receives the previous processed day's `registry_out`; `batch_manifest.csv` is the audit record. A degraded day is skipped by default and does not advance the registry. Use `--include-degraded` only when degraded evidence is intentionally in scope. A missing date in an explicit range fails by default; `--skip-missing` explicitly permits a gap and carries the last processed registry to the next available day.
+
+The canonical branch's batch CLI reads one `--feed-dir`; it does not resolve `feed/` versus `feed_recovered/` automatically. Do not run it blindly across `2026-04-23 17:05:00 UTC` through `2026-05-06 22:51:00 UTC`. Such a run requires a separately audited selected-input directory that uses recovered files without modifying either protected source, plus `--include-degraded`. This is a current limitation, not permission to copy recovered rows into `feed/`.
+
+### Case 2 — Causal intraday snapshot from a previous-day checkpoint
+
+The snapshot must process the current-day prefix exactly once on top of the previous state. Never modify the authoritative daily feed, never reuse an output directory, and never feed older rows already represented by the checkpoint.
+
+The following worked example uses the 11 October 2026 feed through 12:00 UTC and the known 10 October checkpoint:
+
+```powershell
+Set-Location D:\Project_V\Aitrader
+
+$targetDate = "2026-10-11"
+$cutoffText = "2026-10-11 12:00:00"
+$runTimestamp = "2026-10-11T12:00:00Z"
+$sourceFeed = "feed\2026-10-11.csv"
+$registryIn = "market_monitor_runs\MONITOR_WARMUP_2026_07_12_TO_2026_10_11\daily\2026-10-10\liquidity_zone_registry.csv"
+$snapshotRoot = "market_monitor_runs\CAUSAL_SNAPSHOT_2026_10_11_1200UTC"
+$dailyRoot = Join-Path $snapshotRoot "daily"
+$snapshotOut = Join-Path $dailyRoot $targetDate
+$cutoffFeed = Join-Path $snapshotRoot "input\2026-10-11.csv"
+$registryOut = Join-Path $snapshotOut "liquidity_zone_registry.csv"
+$selectorOut = Join-Path $snapshotRoot "significant_zones"
+
+if (-not (Test-Path -LiteralPath $sourceFeed)) { throw "Source feed not found: $sourceFeed" }
+if (-not (Test-Path -LiteralPath $registryIn)) { throw "Previous registry not found: $registryIn" }
+if (Test-Path -LiteralPath $snapshotRoot) { throw "Use a new snapshot root: $snapshotRoot" }
+
+New-Item -ItemType Directory -Force -Path (Split-Path $cutoffFeed) | Out-Null
+$culture = [Globalization.CultureInfo]::InvariantCulture
+$cutoff = [datetime]::ParseExact($cutoffText, "yyyy-MM-dd HH:mm:ss", $culture)
+$dayStart = [datetime]::ParseExact("$targetDate 00:00:00", "yyyy-MM-dd HH:mm:ss", $culture)
+$sourceRows = Import-Csv -LiteralPath $sourceFeed
+$cutoffRows = @($sourceRows | Where-Object {
+  [datetime]::ParseExact($_.Timestamp, "yyyy-MM-dd HH:mm:ss", $culture) -le $cutoff
+})
+$expectedRows = [int](($cutoff - $dayStart).TotalMinutes) + 1
+$futureRows = @($cutoffRows | Where-Object {
+  [datetime]::ParseExact($_.Timestamp, "yyyy-MM-dd HH:mm:ss", $culture) -gt $cutoff
+})
+$lastRow = $cutoffRows | Select-Object -Last 1
+
+if ($cutoffRows.Count -ne $expectedRows) { throw "Cutoff row count mismatch: $($cutoffRows.Count) != $expectedRows" }
+if ($futureRows.Count -ne 0) { throw "Cutoff feed contains future rows" }
+if ($lastRow.Timestamp -ne $cutoffText) { throw "Latest cutoff row is $($lastRow.Timestamp), expected $cutoffText" }
+
+$cutoffRows | Export-Csv -LiteralPath $cutoffFeed -NoTypeInformation -Encoding utf8
+
+python -m market_monitor.run_market_monitor `
+  --input $cutoffFeed `
+  --output $snapshotOut `
+  --run-timestamp $runTimestamp `
+  --registry-in $registryIn `
+  --registry-out $registryOut
+
+if ($LASTEXITCODE -ne 0) { throw "Market Monitor snapshot failed" }
+```
+
+Validate the Monitor artifact before running any selector or interpreting it:
+
+```powershell
+$summaryPath = Join-Path $snapshotOut "market_summary.md"
+$summary = Get-Content -LiteralPath $summaryPath -Raw
+
+function Get-SummaryValue([string]$label) {
+  $match = [regex]::Match($summary, "(?m)^- " + [regex]::Escape($label) + ": (.+)$")
+  if (-not $match.Success) { throw "Missing summary field: $label" }
+  return $match.Groups[1].Value.Trim()
+}
+
+$actualRegistryIn = Get-SummaryValue "Registry input"
+$actualRegistryOut = Get-SummaryValue "Registry output"
+$carriedZones = [int](Get-SummaryValue "Carried zones loaded")
+$actualRows = [int](Get-SummaryValue "Input row count")
+$actualClose = [double]::Parse((Get-SummaryValue "Latest close price"), $culture)
+$expectedClose = [double]::Parse($lastRow.Close, $culture)
+
+if ($actualRegistryIn -ne $registryIn) { throw "INVALID_STATEFUL_SNAPSHOT: unexpected registry input" }
+if ($actualRegistryOut -ne $registryOut) { throw "INVALID_STATEFUL_SNAPSHOT: unexpected registry output" }
+if ($carriedZones -le 0) { throw "INVALID_STATEFUL_SNAPSHOT: no carried zones loaded" }
+if ($actualRows -ne $expectedRows) { throw "INVALID_STATEFUL_SNAPSHOT: input row count mismatch" }
+if ([math]::Abs($actualClose - $expectedClose) -gt 0.000001) { throw "INVALID_STATEFUL_SNAPSHOT: latest close mismatch" }
+if ($futureRows.Count -ne 0 -or $lastRow.Timestamp -ne $cutoffText) { throw "INVALID_STATEFUL_SNAPSHOT: cutoff violation" }
+
+Select-String -LiteralPath $summaryPath -Pattern "Registry input","Registry output","Carried zones loaded","Input row count","Latest close price"
+```
+
+Only after those checks pass, run the significant-zone selector against the generated daily root:
+
+```powershell
+python -m market_monitor.run_significant_zone_selector `
+  --start $targetDate `
+  --end $targetDate `
+  --input-root $dailyRoot `
+  --out-dir $selectorOut `
+  --max-visible-zones 7
+
+if ($LASTEXITCODE -ne 0) { throw "Significant-zone selector failed" }
+```
+
+A valid stateful summary must show the exact expected checkpoint and output paths, a positive carried-zone count, the expected cutoff row count, and the cutoff's closing price. It must also be independently established that the cutoff CSV has no later timestamp.
+
+If continuity was expected but the summary contains:
+
+```text
+Registry input: none
+Carried zones loaded: 0
+```
+
+label the artifact `INVALID_STATEFUL_SNAPSHOT`. Do not use it for market or trade interpretation. Copying a previous registry into the output directory is not a substitute for `--registry-in`, and calling `write_outputs()` without `registry_in_path` is a reset.
+
+### Case 3 — Explicit diagnostic reset
+
+A single run without `--registry-in` intentionally initializes an empty registry. Make that boundary visible in the artifact name:
+
+```powershell
+python -m market_monitor.run_market_monitor `
+  --input market_monitor_runs\DIAGNOSTIC_INPUT\2026-10-11_cutoff.csv `
+  --output market_monitor_runs\DIAGNOSTIC_RESET_2026_10_11_1200UTC `
+  --run-timestamp 2026-10-11T12:00:00Z `
+  --registry-out market_monitor_runs\DIAGNOSTIC_RESET_2026_10_11_1200UTC\liquidity_zone_registry.csv
+```
+
+For this explicitly intended reset, `Registry input: none` and `Carried zones loaded: 0` are legitimate. The result is diagnostic only and must not be presented as a registry-continuous or live-like snapshot.
+
 ## 38S 227 Rows: What They Are And What They Are Not
 
 38S generated 227 discovery rows with:

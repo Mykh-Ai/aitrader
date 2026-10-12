@@ -82,6 +82,19 @@ For live-like research runs:
 
 Market logic should model a live market as state that changes with each new closed candle and new trades. It should not infer setup quality from an isolated slice that lacks prior structure, liquidity, and state memory.
 
+## Canonical Market Monitor Run Contract
+
+- Run new Monitor work only from `canonical/market-monitor-39a` or a verified descendant; perform the ancestry checks in `docs/CANONICAL_BASE.md` first.
+- Market Monitor is stateful at the liquidity-zone registry boundary. For a stateful single snapshot, use `python -m market_monitor.run_market_monitor` and explicitly pass the known-good previous checkpoint with `--registry-in` plus a different destination with `--registry-out`.
+- Never improvise this path from memory. Do not replace `--registry-in` by copying a registry CSV into the output directory: `write_outputs()` loads only its explicit `registry_in_path`, and otherwise starts with an empty registry before overwriting the output registry.
+- Do not call `write_outputs()` or another lower-level helper for a stateful snapshot unless every state parameter is explicitly supplied and tests prove equivalence to the CLI.
+- Feed a causal intraday run only the target-day prefix through the UTC cutoff. The checkpoint must precede those rows. Do not replay rows already incorporated into that checkpoint; the registry has no processed-watermark guard against double application.
+- For sequential full-day research, use `python -m market_monitor.run_batch_research`; its runner carries each processed day's `registry_out` into the next processed day's `registry_in`. Check `batch_manifest.csv` rather than assuming continuity.
+- Run `python -m market_monitor.run_significant_zone_selector` only after the Monitor daily artifact exists and registry continuity has passed verification.
+- Before interpretation, inspect `market_summary.md`. A run that expected continuity but reports `Registry input: none` or `Carried zones loaded: 0` is `INVALID_STATEFUL_SNAPSHOT` and must not be used for market or trade conclusions.
+- A run without `--registry-in` is an intentional reset/initialization diagnostic only. Put `RESET` or `DIAGNOSTIC` in its artifact path; `Carried zones loaded: 0` is legitimate only in that explicitly labelled case.
+- Current limitation: `liquidity_zone_registry.csv` preserves liquidity-zone registry lifecycle only. Structure levels, volume/delta state, event/observation tables, market-state timeline, qualified sweep/reclaim state, and setup context are rebuilt from the supplied feed or handled elsewhere. Registry continuity alone is not a complete checkpoint for every Market Monitor state component and must not be described as full live-like state continuity.
+
 ## Post-39A Architecture Rules
 
 - Never treat `analyzer/` as an active source of current 38-chain candidates.
