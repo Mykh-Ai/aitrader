@@ -9,10 +9,10 @@ from typing import Iterable
 
 import pandas as pd
 
+from market_monitor.feed_source import FeedSourceError, resolve_daily_feed_source
+
 
 RESEARCH_VERSION = "SHI_RESET_37D_EPISODE_CONTEXT_CLASSIFIER_V0"
-OUTAGE_START = pd.Timestamp("2026-04-23T17:05:00Z")
-OUTAGE_END = pd.Timestamp("2026-05-06T22:51:00Z")
 WINDOWS_CSV = "market_regime_windows.csv"
 CANDIDATES_CSV = "hidden_flow_candidates.csv"
 FUTURE_LABELS_CSV = "hidden_flow_future_labels.csv"
@@ -335,20 +335,26 @@ def _load_feed(feed_dir: Path, start_date: date, end_date: date, *, required_sta
     parts = []
     recovered_days: list[str] = []
     skipped_context_days: list[str] = []
+    selected_sources: list[dict[str, str]] = []
     for day in _date_range(start_date, end_date):
-        base_path = feed_dir / f"{day.isoformat()}.csv"
-        recovered_path = feed_dir.parent / "feed_recovered" / f"{day.isoformat()}.csv"
-        day_start = pd.Timestamp(day.isoformat(), tz="UTC")
-        day_end = day_start + pd.Timedelta(days=1) - pd.Timedelta(minutes=1)
-        use_recovered = recovered_path.exists() and day_start <= OUTAGE_END and day_end >= OUTAGE_START
-        path = recovered_path if use_recovered else base_path
-        if not path.exists():
+        try:
+            selected = resolve_daily_feed_source(feed_dir, day)
+        except FeedSourceError as exc:
             if day < required_start:
                 skipped_context_days.append(day.isoformat())
                 continue
-            raise HiddenFlowResearchError(f"missing feed file: {path}")
-        if use_recovered:
+            raise HiddenFlowResearchError(str(exc)) from exc
+        path = selected.path
+        if selected.source_class == "RECOVERED_DEGRADED":
             recovered_days.append(day.isoformat())
+        selected_sources.append(
+            {
+                "date": day.isoformat(),
+                "selected_path": str(path),
+                "source_class": selected.source_class,
+                "selection_reason": selected.selection_reason,
+            }
+        )
         frame = pd.read_csv(path)
         normalized = pd.DataFrame(
             {
@@ -382,6 +388,7 @@ def _load_feed(feed_dir: Path, start_date: date, end_date: date, *, required_sta
         "recovered_feed_days": recovered_days,
         "skipped_missing_context_days": skipped_context_days,
         "recovered_feed_caveat": "RECOVERED_DEGRADED" if recovered_days else "",
+        "selected_feed_sources": selected_sources,
     }
     return out, notes
 

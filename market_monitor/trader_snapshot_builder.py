@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
+
+from market_monitor.feed_source import FeedSourceError, resolve_daily_feed_source
 from PIL import Image, ImageDraw, ImageFont
 
 
@@ -176,9 +178,10 @@ def _visible_zones(selected: pd.DataFrame) -> pd.DataFrame:
 def _load_price_path(feed_dir: Path, start_date: date, end_date: date) -> pd.DataFrame:
     frames = []
     for day in _date_range(start_date, end_date):
-        path = feed_dir / f"{day.isoformat()}.csv"
-        if not path.exists():
-            raise TraderSnapshotBuilderError(f"missing feed file: {path}")
+        try:
+            path = resolve_daily_feed_source(feed_dir, day).path
+        except FeedSourceError as exc:
+            raise TraderSnapshotBuilderError(str(exc)) from exc
         frame = pd.read_csv(path)
         required = {"Timestamp", "Open", "High", "Low", "Close"}
         missing = sorted(required - set(frame.columns))

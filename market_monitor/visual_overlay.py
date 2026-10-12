@@ -9,6 +9,7 @@ from typing import Iterable
 import pandas as pd
 
 from market_monitor.feed_adapter import load_feed
+from market_monitor.feed_source import resolve_daily_feed_source
 from market_monitor.zone_registry import (
     LOCAL_CONTEXT_ACTIVE_FORWARD_ROLES,
     local_session_context_role,
@@ -131,9 +132,10 @@ def _load_visual_data(run_dir: Path, feed_file: Path) -> _VisualData:
     if missing:
         raise FileNotFoundError(f"Missing required Market Monitor output: {missing[0]}")
 
-    feed_has_liquidations = _csv_has_columns(feed_file, {"LiqBuyQty", "LiqSellQty"})
-    feed = load_feed(feed_file)
-    raw_feed = pd.read_csv(feed_file)
+    selected_feed = _resolve_visual_feed(feed_file)
+    feed_has_liquidations = _csv_has_columns(selected_feed, {"LiqBuyQty", "LiqSellQty"})
+    feed = load_feed(selected_feed)
+    raw_feed = pd.read_csv(selected_feed)
     for column in ["LiqBuyQty", "LiqSellQty"]:
         if column in raw_feed.columns:
             feed[column] = pd.to_numeric(raw_feed[column], errors="coerce").fillna(0.0)
@@ -152,6 +154,14 @@ def _load_visual_data(run_dir: Path, feed_file: Path) -> _VisualData:
         pattern_structures=_read_csv_if_exists(run_dir / "pattern_structures.csv"),
         feed_has_liquidations=feed_has_liquidations,
     )
+
+
+def _resolve_visual_feed(feed_file: Path) -> Path:
+    try:
+        day = pd.Timestamp(feed_file.stem).date()
+    except (TypeError, ValueError):
+        return feed_file
+    return resolve_daily_feed_source(feed_file.parent, day).path
 
 
 def _build_full_day_chart(data: _VisualData, options: VisualOverlayOptions) -> tuple[str, dict[str, str]]:

@@ -4,6 +4,7 @@ Active docs are only reset / feed contract / Market State Monitor research-infra
 
 Current active documents, in source-of-truth order:
 
+- `docs/MARKET_MONITOR_CONTINUOUS_CONTEXT_AND_GAP_POLICY_ADR.md` for the isolated production-continuity package only
 - `README.md`
 - `AGENTS.md`
 - `STAGE_1_FAILED_RESEARCH_SUMMARY.md`
@@ -32,3 +33,7 @@ These files are preserved in `_archive/FAILED_ANALYZER_V1_RESEARCH_BRANCH_2026_0
 Do not revive Analyzer v1, run Backtester research, open Phase 4, or write Market Monitor implementation from archived docs.
 
 New Market Monitor feature work is allowed only when explicitly scoped as research infrastructure and when these active source-of-truth docs remain aligned. Labels such as `SWEEP_REJECTED` and `SWEEP_ACCEPTED` are descriptive research labels only and imply no trading action.
+
+The approved production-continuity package changes only feed selection,
+causal context, and data-quality reporting. It does not change the descriptive
+event/scoring/setup definitions above.

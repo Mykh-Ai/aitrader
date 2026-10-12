@@ -77,7 +77,7 @@ def test_runs_multiple_days_carries_registry_and_writes_batch_artifacts(tmp_path
     )
 
 
-def test_degraded_day_is_skipped_without_breaking_next_registry_carry(tmp_path: Path):
+def test_synthetic_day_is_processed_and_registry_progression_continues(tmp_path: Path):
     feed_dir = tmp_path / "feed"
     _write_feed(feed_dir / "2026-05-07.csv", "2026-05-07", close_base=100)
     _write_feed(feed_dir / "2026-05-08.csv", "2026-05-08", close_base=100, degraded=True)
@@ -93,12 +93,12 @@ def test_degraded_day_is_skipped_without_breaking_next_registry_carry(tmp_path: 
     )
 
     manifest = pd.read_csv(output_dir / "batch_manifest.csv")
-    assert manifest["status"].tolist() == ["PROCESSED", "SKIPPED", "PROCESSED"]
-    assert manifest.loc[1, "reason"] == "DEGRADED_DATA_EXCLUDED"
-    assert manifest.loc[2, "registry_in"] == "daily/2026-05-07/liquidity_zone_registry.csv"
-    assert result.processed_days == 2
-    assert result.skipped_days == 1
-    assert not (output_dir / "daily" / "2026-05-08" / "market_summary.md").exists()
+    assert manifest["status"].tolist() == ["PROCESSED", "PROCESSED", "PROCESSED"]
+    assert manifest.loc[1, "data_quality_summary"] == "SYNTHETIC=6"
+    assert manifest.loc[2, "registry_in"] == "daily/2026-05-08/liquidity_zone_registry.csv"
+    assert result.processed_days == 3
+    assert result.skipped_days == 0
+    assert (output_dir / "daily" / "2026-05-08" / "market_summary.md").exists()
 
 
 def test_degraded_day_can_be_included_explicitly(tmp_path: Path):
@@ -115,8 +115,8 @@ def test_degraded_day_can_be_included_explicitly(tmp_path: Path):
 
     manifest = pd.read_csv(result.manifest_path)
     assert manifest.loc[0, "status"] == "PROCESSED"
-    assert manifest.loc[0, "data_quality_summary"] == "RECOVERED_DEGRADED=6"
-    assert "Degraded days processed: 1" in result.summary_path.read_text(encoding="utf-8")
+    assert manifest.loc[0, "data_quality_summary"] == "SYNTHETIC=6"
+    assert "Processed days: 1" in result.summary_path.read_text(encoding="utf-8")
 
 
 def test_missing_files_inside_explicit_range_fail_fast_with_manifest(tmp_path: Path):

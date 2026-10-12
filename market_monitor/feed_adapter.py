@@ -32,6 +32,7 @@ OUTPUT_COLUMNS = [
     "OpenInterest",
     "FundingRate",
     "DataQuality",
+    "SourceClass",
     "SourceFile",
 ]
 
@@ -50,7 +51,11 @@ NUMERIC_COLUMNS = [
 ]
 
 
-def load_feed(paths: str | Path | Iterable[str | Path]) -> pd.DataFrame:
+def load_feed(
+    paths: str | Path | Iterable[str | Path],
+    *,
+    deduplicate: bool = False,
+) -> pd.DataFrame:
     files = _resolve_input_paths(paths)
     frames = [_read_one_csv(path) for path in files]
     if not frames:
@@ -60,7 +65,8 @@ def load_feed(paths: str | Path | Iterable[str | Path]) -> pd.DataFrame:
     combined = combined.sort_values(
         ["Timestamp", "SourceFile", "_source_order"], kind="mergesort"
     )
-    combined = combined.drop_duplicates(subset=["Timestamp"], keep="last")
+    if deduplicate:
+        combined = combined.drop_duplicates(subset=["Timestamp"], keep="last")
     combined = combined.sort_values(["Timestamp"], kind="mergesort")
     combined = combined[OUTPUT_COLUMNS].reset_index(drop=True)
     return combined
@@ -119,19 +125,36 @@ def _read_one_csv(path: Path) -> pd.DataFrame:
         if frame[column].isna().any():
             raise FeedContractError(f"Invalid numeric values in column: {column}")
 
-    frame["DataQuality"] = _data_quality_for(path, frame)
+    source_class = _source_class_for(path)
+    frame["SourceClass"] = source_class
+    frame["DataQuality"] = _data_quality_for(source_class, frame)
     frame["SourceFile"] = path.name
     frame["_source_order"] = range(len(frame))
     return frame
 
 
-def _data_quality_for(path: Path, frame: pd.DataFrame) -> str:
+def deduplicate_feed(feed: pd.DataFrame) -> pd.DataFrame:
+    """Deterministically deduplicate only after callers record diagnostics."""
+    if feed.empty:
+        return feed.copy()
+    return (
+        feed.sort_values(["Timestamp", "SourceFile"], kind="mergesort")
+        .drop_duplicates(subset=["Timestamp"], keep="last")
+        .sort_values("Timestamp", kind="mergesort")
+        .reset_index(drop=True)
+    )
+
+
+def _source_class_for(path: Path) -> str:
     path_parts = {part.lower() for part in path.parts}
     if "feed_recovered" in path_parts:
         return "RECOVERED_DEGRADED"
-    if "IsSynthetic" in frame.columns:
-        synthetic = pd.to_numeric(frame["IsSynthetic"], errors="coerce").fillna(0)
-        if (synthetic != 0).any():
-            return "RECOVERED_DEGRADED"
     return "RAW"
 
+
+def _data_quality_for(source_class: str, frame: pd.DataFrame) -> pd.Series:
+    quality = pd.Series(source_class, index=frame.index, dtype="object")
+    if "IsSynthetic" in frame.columns:
+        synthetic = pd.to_numeric(frame["IsSynthetic"], errors="coerce").fillna(0)
+        quality.loc[synthetic != 0] = "SYNTHETIC"
+    return quality

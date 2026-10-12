@@ -30,6 +30,7 @@ def test_load_feed_maps_historical_schema_without_mutating_source(tmp_path: Path
         "OpenInterest",
         "FundingRate",
         "DataQuality",
+        "SourceClass",
         "SourceFile",
     ]
     assert feed["Timestamp"].is_monotonic_increasing
@@ -56,5 +57,5 @@ def test_load_feed_marks_synthetic_rows_degraded(tmp_path: Path):
 
     feed = load_feed(source)
 
-    assert feed.loc[0, "DataQuality"] == "RECOVERED_DEGRADED"
-
+    assert feed.loc[0, "DataQuality"] == "SYNTHETIC"
+    assert feed.loc[0, "SourceClass"] == "RAW"

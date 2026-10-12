@@ -1,5 +1,16 @@
 # AiTrader
 
+## Approved production-continuity exception — 2026-10-12
+
+The isolated branch `codex/market-monitor-production-continuity-v1` is approved to
+correct Market Monitor input continuity on top of `origin/main`.  Its scope is
+limited to causal cross-day context, row/window data quality, and governed
+raw/recovered source selection.  It does not promote research logic, trading
+semantics, Backtester, Executor, liquidation scoring, or checkpoint redesign.
+
+The governing decision is
+`docs/MARKET_MONITOR_CONTINUOUS_CONTEXT_AND_GAP_POLICY_ADR.md`.
+
 ## Retired research base — 2026-09-26
 
 Do not begin new Market Monitor work on `main`, including 39B/39C.
