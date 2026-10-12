@@ -65,3 +65,15 @@ Do not copy recovered rows into `feed/` and do not overwrite primary feed eviden
 Every artifact that uses recovered rows must mark the source as `RECOVERED_DEGRADED` and state the caveat in the report. If recovered data is also missing or invalid, report the data gap instead of synthesizing rows or forcing a phase/liquidity conclusion.
 
 Future Market State Monitor work must use an adaptor/contract layer, not ad-hoc column assumptions.
+
+## Continuous-context and quality contract
+
+Historical Market Monitor entry points select daily files through the governed
+source resolver. Required recovered days fail loudly when the recovered file is
+missing; base feed is not a fallback inside the known outage interval.
+
+`DataQuality` is row-level: `RAW`, `RECOVERED_DEGRADED`, or `SYNTHETIC`.
+`SourceClass` separately preserves raw versus recovered lineage. Exact rolling
+window diagnostics retain duplicates until they have been counted and report
+missing timestamps instead of silently treating sparse rows as a complete
+window. A degraded row does not remove the rest of its day from progression.

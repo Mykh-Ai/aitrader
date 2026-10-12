@@ -10,6 +10,8 @@ from typing import Iterable
 
 import pandas as pd
 
+from market_monitor.feed_source import FeedSourceError, resolve_daily_feed_source
+
 
 STATE_VERSION = "SHI_RESET_37E_ONLINE_MARKET_STRUCTURE_STATE_MEMORY_V0"
 
@@ -251,9 +253,10 @@ def _load_feed_window(
 ) -> pd.DataFrame:
     frames = []
     for day in _date_range(start_date, end_date):
-        path = feed_dir / f"{day.isoformat()}.csv"
-        if not path.exists():
-            raise MarketStructureStateError(f"missing feed file: {path}")
+        try:
+            path = resolve_daily_feed_source(feed_dir, day).path
+        except FeedSourceError as exc:
+            raise MarketStructureStateError(str(exc)) from exc
         frame = pd.read_csv(path)
         frame = _normalize_feed(frame)
         frames.append(frame)

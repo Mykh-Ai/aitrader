@@ -683,9 +683,13 @@ def _source_ids_for_level(level: pd.Series) -> list[str]:
 
 
 def _quality_values(values) -> str:
-    unique = set(values)
+    unique = {str(value) for value in values}
     if unique == {"RAW"}:
         return "RAW"
+    if "PARTIAL" in unique:
+        return "PARTIAL"
+    if "SYNTHETIC" in unique:
+        return "SYNTHETIC"
     if "RECOVERED_DEGRADED" in unique:
         return "RECOVERED_DEGRADED"
     return sorted(unique)[0]

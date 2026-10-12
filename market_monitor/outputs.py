@@ -4,6 +4,11 @@ from pathlib import Path
 
 import pandas as pd
 
+from market_monitor.feed_quality import (
+    WINDOW_QUALITY_COLUMNS,
+    build_window_quality,
+    causal_slice,
+)
 from market_monitor.events import (
     EVENT_LOG_COLUMNS,
     MARKET_MOVE_GROUP_COLUMNS,
@@ -92,6 +97,7 @@ REQUIRED_CSV_SCHEMAS = {
     "sweep_label_taxonomy.csv": SWEEP_LABEL_TAXONOMY_COLUMNS,
     "sweep_label_summary.csv": SWEEP_LABEL_SUMMARY_COLUMNS,
     "liquidity_zone_registry.csv": REGISTRY_COLUMNS,
+    "window_quality.csv": WINDOW_QUALITY_COLUMNS,
 }
 
 
@@ -103,18 +109,35 @@ def write_outputs(
     input_files: list[str],
     registry_in_path: Path | None = None,
     registry_out_path: Path | None = None,
+    calculation_feed: pd.DataFrame | None = None,
+    window_quality: pd.DataFrame | None = None,
 ) -> dict[str, pd.DataFrame]:
     output_dir.mkdir(parents=True, exist_ok=True)
-    latest_close = None if feed.empty else float(feed.iloc[-1]["ClosePrice"])
+    progression_feed = feed.sort_values("Timestamp", kind="mergesort").copy()
+    if progression_feed.empty:
+        raise ValueError("Progression feed must contain at least one row")
+    cutoff = progression_feed["Timestamp"].max()
+    context_feed = calculation_feed if calculation_feed is not None else progression_feed
+    context_feed = causal_slice(context_feed, cutoff).sort_values("Timestamp", kind="mergesort")
+    latest_close = float(progression_feed.iloc[-1]["ClosePrice"])
     registry_out_path = registry_out_path or output_dir / "liquidity_zone_registry.csv"
 
-    structure_levels = build_structure_levels(feed)
+    structure_levels = _structure_levels_for_progression(
+        build_structure_levels(context_feed), progression_feed
+    )
     liquidity_map = build_liquidity_map(structure_levels, latest_close)
     registry_in = load_registry(registry_in_path)
-    volume_delta_state = build_volume_delta_state(feed)
+    volume_delta_state = _volume_state_for_progression(
+        build_volume_delta_state(context_feed), progression_feed
+    )
+    window_quality = (
+        build_window_quality(context_feed, cutoff)
+        if window_quality is None
+        else window_quality.reindex(columns=WINDOW_QUALITY_COLUMNS).copy()
+    )
     liquidity_zone_registry, registry_stats = build_zone_registry(
         liquidity_map=liquidity_map,
-        feed=feed,
+        feed=progression_feed,
         registry_in=registry_in,
     )
     pattern_structures = build_pattern_structures(
@@ -124,21 +147,21 @@ def write_outputs(
     forward_liquidity_map = forward_liquidity_from_registry(liquidity_zone_registry, latest_close)
     event_log = build_event_log(
         registry=liquidity_zone_registry,
-        feed=feed,
+        feed=progression_feed,
         volume_delta_state=volume_delta_state,
         previous_registry=registry_in,
     )
     market_move_groups = build_market_move_groups(event_log)
     post_sweep_observation = build_post_sweep_observations(
         event_log=event_log,
-        feed=feed,
+        feed=progression_feed,
         volume_delta_state=volume_delta_state,
     )
     sweep_label_taxonomy, sweep_label_summary = build_sweep_label_frames(
         observations=post_sweep_observation,
         market_move_groups=market_move_groups,
     )
-    market_state_timeline = build_market_state_timeline(feed)
+    market_state_timeline = build_market_state_timeline(progression_feed)
     accumulation_zones = pd.DataFrame(columns=ACCUMULATION_ZONES_COLUMNS)
 
     frames = {
@@ -154,6 +177,7 @@ def write_outputs(
         "sweep_label_taxonomy.csv": sweep_label_taxonomy,
         "sweep_label_summary.csv": sweep_label_summary,
         "liquidity_zone_registry.csv": liquidity_zone_registry,
+        "window_quality.csv": window_quality,
     }
     for filename, columns in REQUIRED_CSV_SCHEMAS.items():
         frame = frames[filename].reindex(columns=columns)
@@ -165,7 +189,7 @@ def write_outputs(
 
     write_market_summary(
         output_dir / "market_summary.md",
-        feed=feed,
+        feed=progression_feed,
         liquidity_map=forward_liquidity_map,
         structure_levels=structure_levels,
         event_log=event_log,
@@ -190,8 +214,9 @@ def build_volume_delta_state(feed: pd.DataFrame) -> pd.DataFrame:
     frame = feed.sort_values("Timestamp", kind="mergesort").copy()
     delta = frame["BuyQty"] - frame["SellQty"]
     total_qty = frame["TotalQty"]
-    volume_zscore = _rolling_zscore(total_qty)
-    delta_zscore = _rolling_zscore(delta)
+    volume_zscore = _rolling_zscore(total_qty, frame["Timestamp"])
+    delta_zscore = _rolling_zscore(delta, frame["Timestamp"])
+    minute_contiguous = frame["Timestamp"].diff().eq(pd.Timedelta(minutes=1))
     result = pd.DataFrame(
         {
             "timestamp": frame["Timestamp"].map(_format_ts),
@@ -203,7 +228,7 @@ def build_volume_delta_state(feed: pd.DataFrame) -> pd.DataFrame:
             "volume_zscore": volume_zscore,
             "delta_zscore": delta_zscore,
             "oi": frame["OpenInterest"].astype(float),
-            "oi_change": frame["OpenInterest"].diff().fillna(0).astype(float),
+            "oi_change": frame["OpenInterest"].diff().where(minute_contiguous).astype(float),
             "funding_rate": frame["FundingRate"].astype(float),
             "data_quality": frame["DataQuality"],
         }
@@ -215,7 +240,13 @@ def build_market_state_timeline(feed: pd.DataFrame) -> pd.DataFrame:
     if feed.empty:
         return pd.DataFrame(columns=MARKET_STATE_TIMELINE_COLUMNS)
 
-    quality = "RAW" if set(feed["DataQuality"]) == {"RAW"} else "RECOVERED_DEGRADED"
+    qualities = set(feed["DataQuality"].astype(str))
+    if qualities == {"RAW"}:
+        quality = "RAW"
+    elif "SYNTHETIC" in qualities:
+        quality = "SYNTHETIC"
+    else:
+        quality = "RECOVERED_DEGRADED"
     row = {
         "state_id": "state_000001",
         "start_timestamp": _format_ts(feed["Timestamp"].min()),
@@ -229,11 +260,38 @@ def build_market_state_timeline(feed: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame([row], columns=MARKET_STATE_TIMELINE_COLUMNS)
 
 
-def _rolling_zscore(series: pd.Series, window: int = 20) -> pd.Series:
+def _rolling_zscore(
+    series: pd.Series, timestamps: pd.Series, window: int = 20
+) -> pd.Series:
     rolling_mean = series.rolling(window=window, min_periods=window).mean()
     rolling_std = series.rolling(window=window, min_periods=window).std(ddof=0)
     zscore = (series - rolling_mean) / rolling_std.mask(rolling_std == 0)
-    return zscore.fillna(0).astype(float)
+    zscore = zscore.mask(rolling_std == 0, 0.0)
+    contiguous_steps = timestamps.diff().eq(pd.Timedelta(minutes=1)).astype(int)
+    complete = contiguous_steps.rolling(window=window - 1, min_periods=window - 1).sum().eq(window - 1)
+    return zscore.where(complete).astype(float)
+
+
+def _structure_levels_for_progression(
+    structure_levels: pd.DataFrame, progression_feed: pd.DataFrame
+) -> pd.DataFrame:
+    if structure_levels.empty:
+        return structure_levels
+    start = progression_feed["Timestamp"].min()
+    end = progression_feed["Timestamp"].max() + pd.Timedelta(minutes=1)
+    created = pd.to_datetime(structure_levels["created_at"], utc=True)
+    return structure_levels.loc[(created >= start) & (created <= end)].reset_index(drop=True)
+
+
+def _volume_state_for_progression(
+    volume_delta_state: pd.DataFrame, progression_feed: pd.DataFrame
+) -> pd.DataFrame:
+    if volume_delta_state.empty:
+        return volume_delta_state
+    start = progression_feed["Timestamp"].min()
+    end = progression_feed["Timestamp"].max()
+    timestamps = pd.to_datetime(volume_delta_state["timestamp"], utc=True)
+    return volume_delta_state.loc[(timestamps >= start) & (timestamps <= end)].reset_index(drop=True)
 
 
 def _format_ts(value) -> str:
