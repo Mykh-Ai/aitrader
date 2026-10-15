@@ -1,0 +1,491 @@
+{
+  "books": {
+    "continuous_binance": [
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 1490
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 1793
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 2001
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 2098
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 2196
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 2390
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 2486
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "EXPIRY",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 2560
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 2782
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "EXPIRY",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 2812
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 3152
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 3255
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 3511
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 3705
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 3803
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 4143
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 4238
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 4287
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 4408
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 5080
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "TARGET",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 5300
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 6028
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "EXPIRY",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 6108
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "TARGET",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 6541
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 6708
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "EXPIRY",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 6784
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 7952
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 7983
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 8126
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 8294
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 8514
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 9417
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "EXPIRY",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 9603
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 9843
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 10189
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "EXPIRY",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 10450
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 10768
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "EXPIRY",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 11083
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "EXPIRY",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 11295
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 11483
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 11798
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "TARGET",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 12268
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "TARGET",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 12398
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 13207
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 13371
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 13624
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "EXPIRY",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 13921
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "TARGET",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 14288
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "EXPIRY",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 14387
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 14766
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "TARGET",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 15062
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 15372
+      }
+    ],
+    "matched_SHI": [
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 339
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "EXPIRY",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 654
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "EXPIRY",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 866
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 1734
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "TARGET",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 1839
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "TARGET",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 1969
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 2942
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 3195
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "EXPIRY",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 3492
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "TARGET",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 3859
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "EXPIRY",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 3958
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 4337
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "TARGET",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 4633
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 4943
+      }
+    ],
+    "matched_binance": [
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 339
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "EXPIRY",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 654
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "EXPIRY",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 866
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "TARGET",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 1839
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "TARGET",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 1969
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 2778
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 2942
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 3195
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "EXPIRY",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 3492
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "TARGET",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 3859
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "EXPIRY",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 3958
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 4337
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "TARGET",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 4633
+      },
+      {
+        "censor_detected_at": null,
+        "exit_reason": "STOP",
+        "first_touch_and_cash_verified": true,
+        "signal_index": 4943
+      }
+    ]
+  },
+  "status": "PASS"
+}

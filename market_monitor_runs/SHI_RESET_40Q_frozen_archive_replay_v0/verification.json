@@ -1,0 +1,22 @@
+{
+  "archives": 65,
+  "core_code_unchanged_after_freeze": true,
+  "entered_paths_independently_verified": 80,
+  "normalized_files": 652,
+  "normalized_rows": 938879,
+  "prior_files_unchanged": true,
+  "source_comparison": {
+    "H1_states_compared": 5218,
+    "final_direction_mismatches": 2,
+    "full_decision_agreement_pct": 99.94250670755078,
+    "raw_direction_mismatches": 2,
+    "raw_or_final_mismatches": 3,
+    "source_parity_accepted": false
+  },
+  "source_parity_accepted": false,
+  "status": "PASS",
+  "tests": {
+    "test_contracts.xml": 27,
+    "test_regression.xml": 798
+  }
+}

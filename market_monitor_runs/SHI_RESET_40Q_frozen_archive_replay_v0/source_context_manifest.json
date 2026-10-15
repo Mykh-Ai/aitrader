@@ -1,0 +1,30 @@
+{
+  "archives": [
+    {
+      "archive_path": "official_archives/klines/BTCUSDT-1m-2025-01.zip",
+      "binance_checksum_sha256": "b69ca5b2c2d1ae00d68d2790d09138cb2a44085ff19e0da5dc98b569ea7e489e",
+      "bytes": 1917878,
+      "cadence": "monthly",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-01.zip.CHECKSUM",
+      "date": "2025-01",
+      "filename": "BTCUSDT-1m-2025-01.zip",
+      "first_exchange_open": "2025-01-01 00:00:00+00:00",
+      "first_normalized_timestamp": "2025-01-01 00:01:00+00:00",
+      "http_status": 200,
+      "interval": "1m",
+      "last_exchange_open": "2025-01-31 23:59:00+00:00",
+      "last_normalized_timestamp": "2025-02-01 00:00:00+00:00",
+      "local_sha256": "b69ca5b2c2d1ae00d68d2790d09138cb2a44085ff19e0da5dc98b569ea7e489e",
+      "market": "USD_M_PERPETUAL_FUTURES",
+      "row_count": 44640,
+      "source_type": "klines",
+      "status": "CHECKSUM_VERIFIED",
+      "symbol": "BTCUSDT",
+      "timestamp_unit": "ms",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-01.zip"
+    }
+  ],
+  "plan_sha256": "2b28a1d69d9b21c57ac44f5d84e585fcfda1d2cfdb17646a76c15e378f122ef8",
+  "reused_40P_source_manifest_path": "market_monitor_runs\\SHI_RESET_40P_binance_futures_history_acquisition_v0\\source_manifest.json",
+  "reused_40P_source_manifest_sha256": "1cb90bae176992997f26a095d02204779f847d5389b49b26e2feeb46f8da0fb3"
+}

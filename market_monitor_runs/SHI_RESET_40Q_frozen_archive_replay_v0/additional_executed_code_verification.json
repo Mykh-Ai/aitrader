@@ -1,0 +1,6 @@
+{
+  "expected_hashes_preexist_in_prior40O_and_pre_result_context_plan": true,
+  "market_monitor_runs/SHI_RESET_40L_chronological_replay_through_2026_10_14_v0/policy.py": "9796d866c060648a46a0fe8f66f6f1c2796b9c567e146cd4a9aaa32b62657fbb",
+  "market_monitor_runs\\SHI_RESET_40O_binance_futures_archive_oos_validation_v0\\archive_source.py": "2b0144c3fd3b3abf5b0d6f6d9c9eec5ad38d5e76d16bca002a311c6579242266",
+  "post_result_verifier_sha256": "0289a41697d3e1c58cbdbf23bb0f7969d93a6b8ec5f8fbb7ff67aec21cfc57cc"
+}

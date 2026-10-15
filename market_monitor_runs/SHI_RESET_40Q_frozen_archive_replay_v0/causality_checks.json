@@ -1,0 +1,25 @@
+{
+  "H4_confirmations_available_by_decision": true,
+  "all_feature_windows_end_at_decision": true,
+  "financial_returns_read_before_checks": false,
+  "future_leakage_detected": false,
+  "matched_raw_signals_equal_immutable40L_calendar_helper": true,
+  "precise_entry_helper_does_not_read_future_hour_path": true,
+  "real_prefix_results": [
+    {
+      "closed_H1": 4332,
+      "features_H4_candidates_gates_stops_identical": true,
+      "raw_candidates": 49,
+      "source_prefix_end": "2025-06-30 12:30:00+00:00"
+    },
+    {
+      "closed_H1": 13452,
+      "features_H4_candidates_gates_stops_identical": true,
+      "raw_candidates": 167,
+      "source_prefix_end": "2026-07-15 12:30:00+00:00"
+    }
+  ],
+  "source_parity_accepted": false,
+  "source_timestamp": "exchangeopen+60s right-close",
+  "status": "PASS"
+}

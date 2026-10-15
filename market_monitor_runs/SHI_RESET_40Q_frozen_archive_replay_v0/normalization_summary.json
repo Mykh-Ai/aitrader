@@ -1,0 +1,10 @@
+{
+  "archives": 65,
+  "daily_files": 652,
+  "first": "2025-01-01 00:01:00+00:00",
+  "last": "2026-10-14 23:59:00+00:00",
+  "missing_or_duplicate_minutes": 0,
+  "nontraded_minutes": 37,
+  "rows": 938879,
+  "source_parity_accepted": false
+}

@@ -1,0 +1,6 @@
+{
+  "original40H13trades_reproduced": true,
+  "original_control_net_usdc": 1090.8118508490645,
+  "precise_entry_time_price_unchanged": true,
+  "unused_future_hour_aggregates_not_read_by_adapter": true
+}

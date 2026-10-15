@@ -1,0 +1,12 @@
+{
+  "OOS_strategy_outcomes_read": false,
+  "adapter_sha256": "2b0144c3fd3b3abf5b0d6f6d9c9eec5ad38d5e76d16bca002a311c6579242266",
+  "date": "2025-01",
+  "interval": "1m",
+  "market": "USD_M_PERPETUAL_FUTURES",
+  "reason": "Frozen H4 inventory keeps references for 30 days plus delayed confirmation; February2025 has only28 days. January supplies >30 days before March1 without inspecting strategy outcomes.",
+  "role": "TECHNICAL_WARMUP_ONLY",
+  "scored_start_unchanged": "2025-03-01T00:00:00Z",
+  "symbol": "BTCUSDT",
+  "warmup_start_right_close": "2025-01-01 00:01:00+00:00"
+}

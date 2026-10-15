@@ -1,0 +1,4 @@
+timestamp,raw_direction_SHI,final_direction_SHI,raw_direction_binance,final_direction_binance,_merge,decision_equal
+2026-05-22 20:00:00+00:00,-1,-1,-1,0,both,False
+2026-06-17 12:00:00+00:00,0,0,-1,0,both,False
+2026-07-05 08:00:00+00:00,0,0,1,1,both,False

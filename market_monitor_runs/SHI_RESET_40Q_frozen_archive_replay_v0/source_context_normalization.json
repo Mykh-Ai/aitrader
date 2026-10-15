@@ -1,0 +1,8 @@
+{
+  "OOS_strategy_outcomes_read": false,
+  "file": "january_warmup_minutes.csv",
+  "first": "2025-01-01 00:01:00+00:00",
+  "last": "2025-01-31 23:59:00+00:00",
+  "rows": 44639,
+  "sha256": "ddd0198124c2c56dbcc045cec5a3232e6bdc58badc88091be385056df26ed003"
+}

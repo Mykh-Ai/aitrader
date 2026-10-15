@@ -1,0 +1,11 @@
+{
+  "admission_applied_separately": "Continuous archive decisions March2025 through October14 2026; matched source comparison uses the frozen40L calendar",
+  "all_noncalendar_formula_AST_unchanged": true,
+  "noncalendar_formula_AST_sha256": "acfd898876724ce5fc3afb4b87aa78a07019701fadfe859a227d51f9bab368d2",
+  "removed_calendar_statements": [
+    "quality &= bars.timestamp.ge(pd.Timestamp('2026-03-18T14:00:00Z'))",
+    "quality &= ~bars.timestamp.between(pd.Timestamp('2026-04-23T17:05:00Z'), pd.Timestamp('2026-05-10T00:00:00Z'), inclusive='left')",
+    "for start, end in [('2026-06-22', '2026-06-29'), ('2026-08-25', '2026-09-01'), ('2026-10-01', '2026-10-13')]:\n    quality &= ~bars.timestamp.between(pd.Timestamp(start, tz='UTC'), pd.Timestamp(end, tz='UTC'), inclusive='left')"
+  ],
+  "removed_count": 3
+}

@@ -1,0 +1,10 @@
+{
+  "matched_binance": {
+    "raw_candidates": 61,
+    "policy_gate_passing_candidates": 22
+  },
+  "matched_SHI": {
+    "raw_candidates": 59,
+    "policy_gate_passing_candidates": 22
+  }
+}

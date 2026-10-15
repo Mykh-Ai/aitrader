@@ -1,0 +1,8 @@
+{
+  "H1_states_compared": 5218,
+  "final_direction_mismatches": 2,
+  "full_decision_agreement_pct": 99.94250670755078,
+  "raw_direction_mismatches": 2,
+  "raw_or_final_mismatches": 3,
+  "source_parity_accepted": false
+}
