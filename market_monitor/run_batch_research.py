@@ -17,7 +17,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--include-degraded",
         action="store_true",
-        help="Process RECOVERED_DEGRADED daily feeds instead of skipping them.",
+        help="Deprecated compatibility flag. Row-level degraded data is always progressed.",
     )
     parser.add_argument(
         "--skip-missing",

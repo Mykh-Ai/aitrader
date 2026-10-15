@@ -78,3 +78,5 @@ Archived historical docs remain evidence and must not be used as current impleme
 - `docs/H4_False_Break_Reclaim_Research_Contract_v0.1.md`
 
 New work must keep `README.md`, `AGENTS.md`, `PROJECT_LOG.md`, this file, `research/canonical/PROJECT_STATE_CURRENT.md`, and `NEXT_TASK_MARKET_MONITOR.md` aligned.
+
+40N publication preserves both the40M research handoff and the existing production-continuity ADR`docs/MARKET_MONITOR_CONTINUOUS_CONTEXT_AND_GAP_POLICY_ADR.md`. Read `research/canonical/SHI_RESET_40N_GIT_PUBLICATION_AUDIT_2026_10_15.md` for exact snapshot reproduction after the merge; do not rewrite historical source/code hashes to match current runtime files.

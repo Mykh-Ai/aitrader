@@ -5,3 +5,13 @@
 *.json text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
+
+# Frozen research manifests identify exact bytes, including historical CRLF.
+market_monitor_runs/SHI_RESET_40*/** -text
+market_monitor_runs/SHI_RESET_38W1_fix_chronological_tp1_stop_labels_v0/** -text
+research/active_own_signal_selection.json -text
+research/latest_own_signal_replay.json -text
+research/own_signal_run/** -text
+research/strategy_search/** -text
+market_monitor/qualified_h1_sweep_reclaim.py -text
+PROJECT_LOG.md -text

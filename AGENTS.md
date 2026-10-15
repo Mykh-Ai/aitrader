@@ -2,6 +2,8 @@
 
 ## Purpose
 
+Publication40N records the user's explicit request to push this research to`main`. Read `research/canonical/SHI_RESET_40N_GIT_PUBLICATION_AUDIT_2026_10_15.md` for commit`0862342` offline reproduction and byte-preserving transfer. The existing production-continuity package/ADR is preserved on main. Publishing here does not alter the retired-main research-base policy or authorize live promotion; future work still follows the task's explicitly selected base and scope.
+
 This file tells a new agent how to work in this repository. It is not the project history and it is not the research log. For the project story and current state, read `README.md`. For commit/task summaries and links to evidence folders, read `PROJECT_LOG.md`.
 
 Current work is BTC Market Monitor research after the Analyzer v1 reset. The 39A master research-to-monitor alignment audit remains the canonical architecture source. Its review is complete, and the bounded v39A snapshot contract was promoted on 2026-09-11 for descriptive Executor LLM entry evidence. Remaining lifecycle promotions still require separate scope and evidence.

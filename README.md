@@ -1,5 +1,7 @@
 # AiTrader
 
+Publication40N: the user explicitly requested publishing the research to`main`. Read [40N publication/reproduction notes](research/canonical/SHI_RESET_40N_GIT_PUBLICATION_AUDIT_2026_10_15.md) with the40M roadmap. The preserved research snapshot is commit`0862342`; current main also retains the existing [production-continuity ADR](docs/MARKET_MONITOR_CONTINUOUS_CONTEXT_AND_GAP_POLICY_ADR.md). Historical replay uses the frozen snapshot and raw inputs, not rehashed current runtime code.
+
 AiTrader is a BTCUSDT research system that has gone through three major eras:
 
 1. data collection and Analyzer v1 setup research;

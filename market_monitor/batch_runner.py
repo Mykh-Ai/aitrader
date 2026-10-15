@@ -6,7 +6,15 @@ from pathlib import Path
 
 import pandas as pd
 
-from market_monitor.feed_adapter import FeedContractError, load_feed
+from market_monitor.feed_adapter import FeedContractError, deduplicate_feed, load_feed
+from market_monitor.feed_quality import build_window_quality, causal_slice
+from market_monitor.feed_source import (
+    FeedSourceError,
+    RequiredRecoveredFeedMissing,
+    discover_daily_dates,
+    previous_day,
+    resolve_daily_feed_source,
+)
 from market_monitor.events import MARKET_MOVE_GROUP_WINDOW_MINUTES
 from market_monitor.label_taxonomy import (
     SWEEP_ACCEPTED,
@@ -27,6 +35,8 @@ from market_monitor.research_summary import (
 MANIFEST_COLUMNS = [
     "date",
     "feed_file",
+    "source_class",
+    "selection_reason",
     "status",
     "reason",
     "output_dir",
@@ -91,6 +101,9 @@ class BatchRunResult:
 class _DailyInput:
     day: date
     path: Path | None
+    source_class: str = ""
+    selection_reason: str = ""
+    error_reason: str = ""
 
 
 def run_batch_research(
@@ -149,9 +162,21 @@ def run_batch_research(
 
     for item in considered:
         if item.path is None:
-            row = _manifest_row(item.day, None, FAILED, "NO_FILE")
+            reason = item.error_reason or "NO_FILE"
+            row = _manifest_row(
+                item.day,
+                None,
+                FAILED,
+                reason,
+                source_class=item.source_class,
+                selection_reason=item.selection_reason,
+            )
             manifest_rows.append(row)
-            first_failure = first_failure or f"No feed file found for {item.day.isoformat()}"
+            if reason == "NO_FILE":
+                failure = f"No feed file found for {item.day.isoformat()}"
+            else:
+                failure = f"Feed source selection failed for {item.day.isoformat()}: {reason}"
+            first_failure = first_failure or failure
             if fail_fast:
                 break
             continue
@@ -160,29 +185,20 @@ def run_batch_research(
         registry_out = daily_output / "liquidity_zone_registry.csv"
         registry_in = previous_registry_out
         try:
-            feed = load_feed(item.path)
+            feed, calculation_feed, window_quality, context_paths = _load_day_inputs(
+                feed_root, item
+            )
             quality_summary = _quality_summary(feed)
-            has_degraded = "RECOVERED_DEGRADED" in set(feed["DataQuality"].astype(str))
-            if has_degraded and not include_degraded:
-                manifest_rows.append(
-                    _manifest_row(
-                        item.day,
-                        item.path,
-                        SKIPPED,
-                        "DEGRADED_DATA_EXCLUDED",
-                        input_rows=len(feed),
-                        data_quality_summary=quality_summary,
-                    )
-                )
-                continue
 
             frames = write_outputs(
                 feed,
                 daily_output,
                 run_timestamp=run_ts,
-                input_files=[item.path.name],
+                input_files=[str(path) for path in context_paths],
                 registry_in_path=registry_in,
                 registry_out_path=registry_out,
+                calculation_feed=calculation_feed,
+                window_quality=window_quality,
             )
             processed_dirs.append(daily_output)
             previous_registry_out = registry_out
@@ -196,15 +212,19 @@ def run_batch_research(
                     feed=feed,
                     frames=frames,
                     batch_root=batch_root,
+                    source_class=item.source_class,
+                    selection_reason=item.selection_reason,
                 )
             )
-        except (FeedContractError, FileNotFoundError, OSError, ValueError) as exc:
+        except (FeedContractError, FeedSourceError, FileNotFoundError, OSError, ValueError) as exc:
             manifest_rows.append(
                 _manifest_row(
                     item.day,
                     item.path,
                     FAILED,
                     "RUN_ERROR",
+                    source_class=item.source_class,
+                    selection_reason=item.selection_reason,
                     output_dir=_relative_output(daily_output, batch_root),
                     registry_in=_relative_output(registry_in, batch_root),
                     registry_out=_relative_output(registry_out, batch_root),
@@ -257,48 +277,82 @@ def _considered_daily_inputs(
     max_days,
     skip_missing: bool,
 ) -> list[_DailyInput]:
-    files = _discover_daily_files(feed_root)
+    available_days = discover_daily_dates(feed_root)
     if start or end:
-        lower = start or min(files) if files else start
-        upper = end or max(files) if files else end
+        lower = start or min(available_days) if available_days else start
+        upper = end or max(available_days) if available_days else end
         if lower is None or upper is None:
-            considered: list[_DailyInput] = []
-        elif skip_missing:
-            considered = [
-                _DailyInput(day, files[day])
-                for day in sorted(files)
-                if lower <= day <= upper
-            ]
+            days: list[date] = []
         else:
-            considered = [
-                _DailyInput(day, files.get(day))
-                for day in _date_range(lower, upper)
-            ]
+            days = _date_range(lower, upper)
     else:
-        considered = [_DailyInput(day, files[day]) for day in sorted(files)]
+        days = available_days
+
+    considered = []
+    for day in days:
+        try:
+            selected = resolve_daily_feed_source(feed_root, day)
+            considered.append(
+                _DailyInput(
+                    day=day,
+                    path=selected.path,
+                    source_class=selected.source_class,
+                    selection_reason=selected.selection_reason,
+                )
+            )
+        except RequiredRecoveredFeedMissing:
+            considered.append(
+                _DailyInput(
+                    day=day,
+                    path=None,
+                    source_class="RECOVERED_DEGRADED",
+                    selection_reason="KNOWN_OUTAGE_RECOVERED_REQUIRED",
+                    error_reason="REQUIRED_RECOVERED_MISSING",
+                )
+            )
+        except FeedSourceError:
+            if not skip_missing:
+                considered.append(_DailyInput(day=day, path=None, error_reason="NO_FILE"))
     if max_days is not None:
         considered = considered[: int(max_days)]
     return considered
 
 
-def _discover_daily_files(feed_root: Path) -> dict[date, Path]:
-    if not feed_root.exists():
-        return {}
-    files: dict[date, Path] = {}
-    for path in feed_root.iterdir():
-        if not path.is_file() or path.suffix.lower() != ".csv":
-            continue
-        parsed = _date_from_filename(path)
-        if parsed is not None:
-            files[parsed] = path
-    return dict(sorted(files.items()))
+def _load_day_inputs(
+    feed_root: Path, item: _DailyInput
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, list[Path]]:
+    if item.path is None:
+        raise FeedSourceError(f"feed source unresolved for {item.day.isoformat()}")
 
+    day_start = pd.Timestamp(item.day.isoformat(), tz="UTC")
+    day_end = day_start + pd.Timedelta(days=1) - pd.Timedelta(nanoseconds=1)
+    progression_raw = load_feed(item.path, deduplicate=False)
+    progression_raw = progression_raw.loc[
+        (progression_raw["Timestamp"] >= day_start)
+        & (progression_raw["Timestamp"] <= day_end)
+    ].copy()
+    if progression_raw.empty:
+        raise FeedContractError(f"selected feed has no rows for {item.day.isoformat()}: {item.path}")
 
-def _date_from_filename(path: Path) -> date | None:
+    context_paths: list[Path] = []
     try:
-        return datetime.strptime(path.stem, "%Y-%m-%d").date()
-    except ValueError:
-        return None
+        prior = resolve_daily_feed_source(feed_root, previous_day(item.day))
+        context_paths.append(prior.path)
+    except RequiredRecoveredFeedMissing:
+        # Optional warm-up context may be absent.  Do not substitute raw data;
+        # window diagnostics will mark affected calculations PARTIAL.
+        pass
+    except FeedSourceError:
+        pass
+    context_paths.append(item.path)
+
+    context_raw = load_feed(context_paths, deduplicate=False)
+    cutoff = progression_raw["Timestamp"].max()
+    context_raw = causal_slice(context_raw, cutoff)
+    quality = build_window_quality(context_raw, cutoff)
+    calculation_feed = deduplicate_feed(context_raw)
+    progression_feed = deduplicate_feed(progression_raw)
+    return progression_feed, calculation_feed, quality, context_paths
 
 
 def _date_range(start: date, end: date) -> list[date]:
@@ -329,6 +383,8 @@ def _processed_manifest_row(
     feed: pd.DataFrame,
     frames: dict[str, pd.DataFrame],
     batch_root: Path,
+    source_class: str,
+    selection_reason: str,
 ) -> dict[str, object]:
     event_log = frames["event_log.csv"]
     market_move_groups = frames["market_move_groups.csv"]
@@ -348,6 +404,8 @@ def _processed_manifest_row(
         feed_file,
         PROCESSED,
         "OK",
+        source_class=source_class,
+        selection_reason=selection_reason,
         output_dir=_relative_output(daily_output, batch_root),
         registry_in=_relative_output(registry_in, batch_root),
         registry_out=_relative_output(registry_out, batch_root),
@@ -387,6 +445,8 @@ def _manifest_row(
     status: str,
     reason: str,
     *,
+    source_class: str = "",
+    selection_reason: str = "",
     output_dir: str = "",
     registry_in: str = "",
     registry_out: str = "",
@@ -417,6 +477,8 @@ def _manifest_row(
     return {
         "date": day.isoformat(),
         "feed_file": _relative_path(feed_file),
+        "source_class": source_class,
+        "selection_reason": selection_reason,
         "status": status,
         "reason": reason,
         "output_dir": output_dir,

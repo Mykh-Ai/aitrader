@@ -89,3 +89,17 @@ The2026 official spot epoch is microseconds. Normalize candle-open UTC to a righ
 Futures feed features/H4 state generate decisions. Spot minute open/high/low/close determines execution. In the primary40G contract, futures structural levels/ATR are mapped to USDC using the last known BTCUSDC spot close divided by last known BTCUSDT futures close at the signal decision, each no older than one minute. Never use the later entry open to estimate that mapping. A native-spot stop-source sensitivity is a different declared contract. Record market, symbol, quote currency, reference timestamps, conversion and omissions in the journal.
 
 The user model is3,000 USDC notional,5 USDC commission per completed trade and2bps adverse slippage per fill, with dollar display assuming USDC/USD parity. Futures funding is not a spot trading charge. Short requires BTC margin borrowing; actual historical loan availability/rates and exchange charging are not established by spot OHLCV.40G keeps hypothetical borrowing sensitivities separate from its fee/slippage result. Candle-price replay also does not prove orderbook liquidity or actual account fills.
+
+## Continuous-context and quality contract
+
+Historical Market Monitor entry points select daily files through the governed
+source resolver. Required recovered days fail loudly when the recovered file is
+missing; base feed is not a fallback inside the known outage interval.
+
+`DataQuality` is row-level: `RAW`, `RECOVERED_DEGRADED`, or `SYNTHETIC`.
+`SourceClass` separately preserves raw versus recovered lineage. Exact rolling
+window diagnostics retain duplicates until they have been counted and report
+missing timestamps instead of silently treating sparse rows as a complete
+window. A degraded row does not remove the rest of its day from progression.
+
+40N publication preserves both the40M research handoff and the existing production-continuity ADR`docs/MARKET_MONITOR_CONTINUOUS_CONTEXT_AND_GAP_POLICY_ADR.md`. Read `research/canonical/SHI_RESET_40N_GIT_PUBLICATION_AUDIT_2026_10_15.md` for exact snapshot reproduction after the merge; do not rewrite historical source/code hashes to match current runtime files.

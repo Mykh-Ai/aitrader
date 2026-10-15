@@ -2,6 +2,12 @@
 
 Compact handoff log for AiTrader. This file is the index; detailed evidence remains in `research/canonical/` and generated outputs under `market_monitor_runs/`.
 
+## 2026-10-15 - SHI_RESET_40N user-directed Git publication to main
+
+- User explicitly requested push to main. Frozen research snapshot commit`0862342` records40A–40M documents/code/results/all trials and40M inventory; raw primary/recovered232source files stay external/unmodified. Existing remote main had3unique commits/research23; regular merge preserves production-continuity fix`d753f05`/`bf2e9f0` and research snapshot history. No force-push, order/deployment or production-policy promotion.
+- Merge preserves main row quality/SourceClass/dedup/causal windows and research liquidation transport; docs link both40M roadmap and existing continuity ADR.762tests before merge,771after,11existing warnings. Initial missing-basetemp setup error corrected before successful full suite. Historical40H/L contracts/results/pointers unchanged; snapshot1466published files plus131original-byte overlay and232external source hashes verified exactly.
+- Canonical:`research/canonical/SHI_RESET_40N_GIT_PUBLICATION_AUDIT_2026_10_15.md`; run:`market_monitor_runs/SHI_RESET_40N_git_publication_v0/`. Frozen replay now uses helper`reproduce_snapshot.py` to recover`0862342`bytes in a new offline directory; do not rehash historical manifests against merged runtime. Scoped attributes preserve artifact bytes without broad line-ending rewrites. Final main commit/push identity is recorded by Git/remote verification.
+
 ## 2026-10-15 - SHI_RESET_40M canonical research and deployment roadmap
 
 - User requested one canonical document with all research/ideas/results and links for a future server/exchange-API agent. Created `research/canonical/SHI_RESET_40M_RESEARCH_AND_DEPLOYMENT_ROADMAP_AUDIT_2026_10_15.md`:40A–40L decision register, historical reset/39A boundary, selected40H full entry/delta/H4/SL/TP/one-book/cost rules, latest40L money, discarded hypotheses, data/clock/calendar constraints and source/module map. March1trade/April–September12/October1 reconciles all14/+1060.907640USDC.

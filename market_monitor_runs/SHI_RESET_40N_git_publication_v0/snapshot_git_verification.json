@@ -1,0 +1,11 @@
+{
+  "status": "PASS_FROZEN_RESEARCH_SNAPSHOT",
+  "snapshot_commit": "0862342",
+  "published_inventory_files_verified": 1466,
+  "original_checkout_byte_overlay_files": 131,
+  "external_frozen_raw_inputs_required": 232,
+  "external_raw_inputs_verified": 232,
+  "raw_feed_published_to_Git": false,
+  "destination": null,
+  "historical_strategy_files_recovered_from_snapshot_not_current_merged_runtime": true
+}
