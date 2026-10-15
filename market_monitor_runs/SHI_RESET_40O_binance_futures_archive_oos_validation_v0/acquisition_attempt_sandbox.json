@@ -1,0 +1,39 @@
+{
+  "OOS_downloaded": false,
+  "OOS_outcomes_read": false,
+  "archives": [
+    {
+      "cadence": "monthly",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-07.zip.CHECKSUM",
+      "date": "2026-07",
+      "error": "<urlopen error [Errno 11001] getaddrinfo failed>",
+      "error_type": "URLError",
+      "filename": "BTCUSDT-1m-2026-07.zip",
+      "http_status": null,
+      "interval": "1m",
+      "market": "USD_M_PERPETUAL_FUTURES",
+      "source_type": "klines",
+      "status": "ACQUISITION_FAILED",
+      "symbol": "BTCUSDT",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-07.zip"
+    },
+    {
+      "cadence": "monthly",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-09.zip.CHECKSUM",
+      "date": "2026-09",
+      "error": "<urlopen error [Errno 11001] getaddrinfo failed>",
+      "error_type": "URLError",
+      "filename": "BTCUSDT-1m-2026-09.zip",
+      "http_status": null,
+      "interval": "1m",
+      "market": "USD_M_PERPETUAL_FUTURES",
+      "source_type": "klines",
+      "status": "ACQUISITION_FAILED",
+      "symbol": "BTCUSDT",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-09.zip"
+    }
+  ],
+  "official_base": "https://data.binance.vision/data/futures/um",
+  "official_schema": "https://github.com/binance/binance-public-data/blob/master/README.md#futures",
+  "phase": "KNOWN_2026_SOURCE_VALIDATION_ONLY"
+}

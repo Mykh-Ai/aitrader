@@ -1,0 +1,21 @@
+{
+  "OOS_observations_or_returns_accessed": false,
+  "clock": "Original SHI receipt/flush right-close labels versus archive exchange open+60s right-close labels; no fitted shift",
+  "no_future_entry_used_in_H4_gate": true,
+  "real_prefix_results": [
+    {
+      "all_features_H4_candidates_filters_identical": true,
+      "closed_H1_steps": 3023,
+      "prefix_cutoff": "2026-07-15 12:30:00+00:00",
+      "source": "SHI"
+    },
+    {
+      "all_features_H4_candidates_filters_identical": true,
+      "closed_H1_steps": 3023,
+      "prefix_cutoff": "2026-07-15 12:30:00+00:00",
+      "source": "BINANCE_KLINES"
+    }
+  ],
+  "rolling_window": "(decision-h,decision]",
+  "status": "PASS"
+}

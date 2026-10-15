@@ -1,0 +1,12 @@
+{
+  "OOS_download_permitted": false,
+  "OOS_execution_permitted": false,
+  "exact_spot_replay_next_step": false,
+  "live_trading_blocked": true,
+  "optimization_performed": false,
+  "server_shadow_next_phase_justified": false,
+  "state": "TERMINAL_SOURCE_PARITY_FAILED",
+  "strategy_count": 1,
+  "strategy_rule_change": false,
+  "verdict": "BINANCE_KLINE_SURROGATE_PARITY_FAILED"
+}

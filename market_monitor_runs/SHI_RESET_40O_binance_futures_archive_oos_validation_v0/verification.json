@@ -1,0 +1,21 @@
+{
+  "OOS_unseen_no_attempt_marker": true,
+  "all232protected_source_hashes_unchanged": true,
+  "all27official_checksums_match": true,
+  "all_OOS_metrics_null_and_outputs_not_run": true,
+  "all_executed_code_hashes_recorded": true,
+  "all_normalized_source_hashes_match": true,
+  "all_old40D40H40L_artifact_hashes_unchanged": true,
+  "candidate_gate_mismatch_independently_counted": true,
+  "canonical_local_links_checked": 14,
+  "optimization": false,
+  "original_strategy_control_exactly_reproduced": true,
+  "real_prefix_causality_checks_pass": true,
+  "status": "PASS_TERMINAL_SOURCE_GATE_AND_ARTIFACTS_VERIFIED",
+  "tests": {
+    "test_contracts.xml": 23,
+    "test_regression.xml": 784
+  },
+  "variants": 1,
+  "verdict": "BINANCE_KLINE_SURROGATE_PARITY_FAILED"
+}

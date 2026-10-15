@@ -12,6 +12,8 @@ The current project is not starting from zero. The feed, aggregator, tests, audi
 
 ## Current State
 
+40O source-validation gate failed before historical OOS:official BTCUSDT USD-M1m archives reproduce99.865591% of July decisions and100% of September, with one extra allowed long onJuly5 08:00UTC. Required100% parity is unmet. All27checksums/frozen40H identities pass; original13-row40H control reproduces;784tests and real-prefix checks pass. Older2025-03-01–2026-03-09OOS remains undownloaded/unseen; no strategy tuning or production advancement. Read [40O canonical audit](research/canonical/SHI_RESET_40O_BINANCE_FUTURES_ARCHIVE_OOS_VALIDATION_AUDIT_2026_10_15.md) and [result](market_monitor_runs/SHI_RESET_40O_binance_futures_archive_oos_validation_v0/result.md) before continuing the40M deployment roadmap. Source semantics require resolution first; live remains blocked.
+
 Canonical own-signal research and deployment handoff: [40M roadmap](research/canonical/SHI_RESET_40M_RESEARCH_AND_DEPLOYMENT_ROADMAP_AUDIT_2026_10_15.md). It records the40A–40L decisions and results, exact selected40H entry/SL/TP/book rules, latest40L journal, rejected alternatives, reproducibility commands, working-tree/ignored-artifact transfer inventory with SHA256, and staged server/API work with acceptance criteria. This is documentation, not deployment or production promotion. Start here when preparing the next server-integration task.
 
 Current active stage: post-39A Market Monitor promotion and validation.

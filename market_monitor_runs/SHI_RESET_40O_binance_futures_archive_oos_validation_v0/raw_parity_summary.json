@@ -1,0 +1,113 @@
+{
+  "Trades_count_equality_required": false,
+  "Trades_exact_count_is_strategy_relevant": false,
+  "minutes_with_any_mismatch": 72690,
+  "numeric_comparison_only_for_mutually_real_traded_minutes": true,
+  "quantity_tolerance_reason": "Each SHI quantity rounded independently at6dec; allow1e-6 combined quantization tolerance. Price2dec exact within1e-8.",
+  "total_aligned_rows": 87840,
+  "traded_semantics_compared": true,
+  "windows": [
+    {
+      "end": "2026-07-31 23:59:00+00:00",
+      "fields": {
+        "BuyQty": {
+          "compared_real_minutes": 44631,
+          "maximum_absolute_deviation": 3754.2769999999996,
+          "mismatches": 27591,
+          "tolerance": 1.0001e-06
+        },
+        "ClosePrice": {
+          "compared_real_minutes": 44631,
+          "maximum_absolute_deviation": 328.3999999999942,
+          "mismatches": 15998,
+          "tolerance": 1e-08
+        },
+        "HiPrice": {
+          "compared_real_minutes": 44631,
+          "maximum_absolute_deviation": 389.5,
+          "mismatches": 1465,
+          "tolerance": 1e-08
+        },
+        "LowPrice": {
+          "compared_real_minutes": 44631,
+          "maximum_absolute_deviation": 385.3000000000029,
+          "mismatches": 1339,
+          "tolerance": 1e-08
+        },
+        "OpenPrice": {
+          "compared_real_minutes": 44631,
+          "maximum_absolute_deviation": 328.3000000000029,
+          "mismatches": 14945,
+          "tolerance": 1e-08
+        },
+        "SellQty": {
+          "compared_real_minutes": 44631,
+          "maximum_absolute_deviation": 3729.084,
+          "mismatches": 27841,
+          "tolerance": 1.0001e-06
+        },
+        "TotalQty": {
+          "compared_real_minutes": 44631,
+          "maximum_absolute_deviation": 6834.639,
+          "mismatches": 37510,
+          "tolerance": 1.0001e-06
+        }
+      },
+      "missing_or_extra_timestamps": 0,
+      "start": "2026-07-01 00:00:00+00:00",
+      "timestamps": 44640,
+      "traded_status_mismatches": 9
+    },
+    {
+      "end": "2026-09-30 23:59:00+00:00",
+      "fields": {
+        "BuyQty": {
+          "compared_real_minutes": 43198,
+          "maximum_absolute_deviation": 758.1979999999999,
+          "mismatches": 24797,
+          "tolerance": 1.0001e-06
+        },
+        "ClosePrice": {
+          "compared_real_minutes": 43198,
+          "maximum_absolute_deviation": 256.6999999999971,
+          "mismatches": 14426,
+          "tolerance": 1e-08
+        },
+        "HiPrice": {
+          "compared_real_minutes": 43198,
+          "maximum_absolute_deviation": 102.90000000000873,
+          "mismatches": 1171,
+          "tolerance": 1e-08
+        },
+        "LowPrice": {
+          "compared_real_minutes": 43198,
+          "maximum_absolute_deviation": 192.89999999999418,
+          "mismatches": 1137,
+          "tolerance": 1e-08
+        },
+        "OpenPrice": {
+          "compared_real_minutes": 43198,
+          "maximum_absolute_deviation": 257.0,
+          "mismatches": 13290,
+          "tolerance": 1e-08
+        },
+        "SellQty": {
+          "compared_real_minutes": 43198,
+          "maximum_absolute_deviation": 511.5999999999999,
+          "mismatches": 24660,
+          "tolerance": 1.0001e-06
+        },
+        "TotalQty": {
+          "compared_real_minutes": 43198,
+          "maximum_absolute_deviation": 1269.7979999999998,
+          "mismatches": 34318,
+          "tolerance": 1.0001e-06
+        }
+      },
+      "missing_or_extra_timestamps": 0,
+      "start": "2026-09-01 00:00:00+00:00",
+      "timestamps": 43200,
+      "traded_status_mismatches": 2
+    }
+  ]
+}

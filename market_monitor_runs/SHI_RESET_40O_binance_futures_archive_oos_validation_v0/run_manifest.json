@@ -1,0 +1,80 @@
+{
+  "OOS_boundary_policy": "No entry before scored start; no observation after scored end; unresolved tail separate, never forced future expiry. Raw candidates restricted to scored decision clocks with observed eligible entry.",
+  "OOS_download_before_parity_allowed": false,
+  "OOS_result_attempt_limit": 1,
+  "OOS_returns_before_parity_allowed": false,
+  "OOS_scored_end": "2026-03-09T23:59:00Z",
+  "OOS_scored_start": "2025-03-01T00:00:00Z",
+  "OOS_warmup_start": "2025-02-01T00:00:00Z",
+  "branch": "codex/SHI_RESET_40O_binance_futures_archive_oos_validation_v0",
+  "calendar_adapter_if_OOS_allowed": "Date-neutral admission only: replace fixed2026 warmup/outage calendar with declared OOS warmup/start/end, keeping every causal formula/rolling lookback unchanged and real UTC clocks. Original frozen source remains immutable; adapter/formula AST equality recorded before OOS.",
+  "completed_trade_fee_quote_equivalent": 5,
+  "cooldown_minutes": 3,
+  "date": "2026-10-15",
+  "entry_latency_minutes": 1,
+  "execution_market": "FUTURES_PRICE_PROXY",
+  "fallback": "One official aggTrades diagnostic only if kline taker-buy/sell discrepancy changes decisions; no trading-rule change.",
+  "filter_manifest_sha256": "32ff407d64201aeeae83f2bfbccb080f350822d15f7add37ebaa8ecef7cd0c56",
+  "frozen_reproduction_commit": "0862342",
+  "gate": "100percent final candidate/gate decision parity; unexplained feature/state/stop/target crossings fail. Raw mismatches all retained.",
+  "immutable_source_and_strategy_hashes": {
+    "binance_aggregator_shi.py": "bb8e4133a888b9448775c87e9e3033df89e6743a4909ac66372d3fce176e47f8",
+    "market_monitor_runs/SHI_RESET_40F_direction_expiry_stop_interventions_v0/interventions.py": "e6a81090662ab4e210201595c2cba5e51b8197b7b5bc28dd54db09306de41949",
+    "market_monitor_runs/SHI_RESET_40H_loss_metrics_filter_study_v0/filter_manifest.json": "32ff407d64201aeeae83f2bfbccb080f350822d15f7add37ebaa8ecef7cd0c56",
+    "market_monitor_runs/SHI_RESET_40H_loss_metrics_filter_study_v0/filters.py": "ee30c96985677283176bdab15b1ce853b12bb0cd04b7cc95377376670da4c6f4",
+    "market_monitor_runs/SHI_RESET_40H_loss_metrics_filter_study_v0/selected_research_contract.json": "7d9338cf606e539baeaaf003267c24585019b74f7952e4cf2f97c5231b03f993",
+    "market_monitor_runs/SHI_RESET_40H_loss_metrics_filter_study_v0/study.py": "82656655cbf1857654048d09c4e01e73118dbda444a486c510c71bdf62fa22a7",
+    "market_monitor_runs/SHI_RESET_40L_chronological_replay_through_2026_10_14_v0/policy.py": "9796d866c060648a46a0fe8f66f6f1c2796b9c567e146cd4a9aaa32b62657fbb",
+    "research/active_own_signal_selection.json": "e6e618cebe1b36eb488b86d3295baa32d4ce622541a1233edf6bb40df71cf1de",
+    "research/latest_own_signal_replay.json": "743956f4f1ac5ebcbae3d0285de8d1c7f00b06363009f42028806961d1e486a2",
+    "research/own_signal_run/feed.py": "17687465a0dd8a5a20e10ca28433f03809261162381b435f53c12d23ad3c48de",
+    "research/strategy_search/__init__.py": "7d4e5d761a1c528b4b0e89883a1a98839a616148ab4ca6c8d044ec34f1c326f6",
+    "research/strategy_search/__main__.py": "ba9f964ed9b5f29df1d6a80b09c2f3d199f1cedd3e2c3842a1ae24f4e96c354c",
+    "research/strategy_search/features.py": "e8a89f29a96097ee7cbba1ae88517b2656422948567addf3249567a395a94cb3",
+    "research/strategy_search/hybrid.py": "44d547d3b732b0fed20514ed0d17ab881223a6400b1cdf4f56f563cbd9b406e0",
+    "research/strategy_search/replay.py": "a48af0986e81c1c36cd159ad3a5003faf9e34dd2abfd43e0f52cab10e0c0b7e8"
+  },
+  "live_orders_borrow_deploy_API_keys_allowed": false,
+  "mode": "RESEARCH_VALIDATION_ONLY",
+  "normalization_initial_code_sha256": "2b0144c3fd3b3abf5b0d6f6d9c9eec5ad38d5e76d16bca002a311c6579242266",
+  "notional_quote_equivalent": 3000,
+  "one_global_book": true,
+  "optimization_allowed": false,
+  "production_promotion": false,
+  "publication_commit_preserved": "def5060680b31b6639c39d3e00b061ccf147d4c9",
+  "rules_sha256": "ee30c96985677283176bdab15b1ce853b12bb0cd04b7cc95377376670da4c6f4",
+  "slippage_bps_per_fill": 2,
+  "source_context_plan": "If both validation archives exist, independently archive-reconstruct known SHI history fromMarch11 13:45 throughSeptember30; dailyMarch11-31 plus monthlyApril-September; noMarch1-9 archive during parity.",
+  "source_validation_windows": [
+    [
+      "2026-07-01T00:00:00Z",
+      "2026-07-31T23:59:00Z"
+    ],
+    [
+      "2026-09-01T00:00:00Z",
+      "2026-09-30T23:59:00Z"
+    ]
+  ],
+  "spot_download_allowed": false,
+  "starting_commit": "def5060680b31b6639c39d3e00b061ccf147d4c9",
+  "strategy_count": 1,
+  "strategy_variant": "LONG_DELTA4_POS_BOTH_BAND4",
+  "strategy_version": "SHI_RESET_40H_DELTA_FILTER_RESEARCH_V1",
+  "task": "SHI_RESET_40O_BINANCE_FUTURES_ARCHIVE_OOS_VALIDATION_V0",
+  "variant_search_allowed": false,
+  "verdict_criteria": {
+    "BINANCE_ARCHIVE_SOURCE_NOT_REPLAYABLE": "Official required overlap archive/source unavailable or invalid; no OOS replay",
+    "BINANCE_KLINE_SURROGATE_PARITY_FAILED": "Required strategy decision/source parity fails; no OOS replay",
+    "OOS_INSUFFICIENT_SAMPLE": "completed<12; no tuning",
+    "OOS_REJECTS_CURRENT_CANDIDATE": "completed>=12 but financial robustness criterion fails",
+    "OOS_SUPPORTS_CONTINUED_VALIDATION": {
+      "completed_trades_minimum": 12,
+      "net_excluding_best_two_strictly_greater_than": 0,
+      "net_strictly_greater_than": 0,
+      "no_causality_violation": true,
+      "no_strategy_rule_hash_change": true,
+      "profit_factor_minimum": 1.25,
+      "source_parity_passed_first": true
+    }
+  }
+}

@@ -103,3 +103,7 @@ missing timestamps instead of silently treating sparse rows as a complete
 window. A degraded row does not remove the rest of its day from progression.
 
 40N publication preserves both the40M research handoff and the existing production-continuity ADR`docs/MARKET_MONITOR_CONTINUOUS_CONTEXT_AND_GAP_POLICY_ADR.md`. Read `research/canonical/SHI_RESET_40N_GIT_PUBLICATION_AUDIT_2026_10_15.md` for exact snapshot reproduction after the merge; do not rewrite historical source/code hashes to match current runtime files.
+
+## 40O archive surrogate validation status
+
+OfficialBTCUSDT USD-M1m klines were separately normalized under the40Oresearch run (exchangeopen+60s right-close,prices2dec/quantities6dec,taker-buy base and total-minus-buy). OI/funding/liquidations are not required selected40Hfeatures; exact kline trade count need not match SHI callback-event count.27official checksums pass, but July/September2026source comparisons fail the required100%strategy decision parity becauseJuly5 08:00has one extra archive long. SHI prior96quality and rollingdelta24 differ; broad OHLC/flow differences exceed rounding. Archive event-time normalization is therefore not an accepted equivalent SHI source. No protected feed/aggregator was changed, no timestamp offset fitted, no historical SHI gaps masked, and OOS remains unopened. Read `research/canonical/SHI_RESET_40O_BINANCE_FUTURES_ARCHIVE_OOS_VALIDATION_AUDIT_2026_10_15.md` before any source replacement or OOS continuation.

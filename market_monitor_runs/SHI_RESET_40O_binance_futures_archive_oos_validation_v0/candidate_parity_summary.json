@@ -1,0 +1,35 @@
+{
+  "decision_mismatches": 1,
+  "final_gate_decision_parity_pct": 99.93169398907104,
+  "full_candidate_gate_decision_parity_pct": 99.93169398907104,
+  "windows": [
+    {
+      "H1_rows": 744,
+      "archive_raw_candidates": 9,
+      "blocker_reason_mismatches": 1,
+      "end": "2026-07-31 23:59:00+00:00",
+      "final_allowed_direction_parity_pct": 99.86559139784946,
+      "final_direction_mismatches": 1,
+      "full_candidate_gate_decision_parity_pct": 99.86559139784946,
+      "raw_candidate_mismatches": 1,
+      "shi_raw_candidates": 8,
+      "start": "2026-07-01 00:00:00+00:00",
+      "union_candidate_decision_parity_pct": 88.88888888888889,
+      "union_raw_candidates": 9
+    },
+    {
+      "H1_rows": 720,
+      "archive_raw_candidates": 6,
+      "blocker_reason_mismatches": 0,
+      "end": "2026-09-30 23:59:00+00:00",
+      "final_allowed_direction_parity_pct": 100.0,
+      "final_direction_mismatches": 0,
+      "full_candidate_gate_decision_parity_pct": 100.0,
+      "raw_candidate_mismatches": 0,
+      "shi_raw_candidates": 6,
+      "start": "2026-09-01 00:00:00+00:00",
+      "union_candidate_decision_parity_pct": 100.0,
+      "union_raw_candidates": 6
+    }
+  ]
+}

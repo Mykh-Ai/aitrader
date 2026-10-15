@@ -35,6 +35,8 @@ If a tool-level sandbox approval is required by the environment, request it only
 
 ## Start Every Task Here
 
+40O is inserted before server shadow/production/API integration. Read `research/canonical/SHI_RESET_40O_BINANCE_FUTURES_ARCHIVE_OOS_VALIDATION_AUDIT_2026_10_15.md`:strict official-kline source parity failed onJuly5 08:00UTC (one extra allowed long), despite frozen40H control/27checksums/prefix checks passing. Verdict`BINANCE_KLINE_SURROGATE_PARITY_FAILED`; older OOS remains undownloaded/outcome-unseen. Do not proceed to OOS or shadow by bypassing the gate, retune40H, discard bad SHI history, fit timestamp offsets or treat this as a measured OOS loss. Preserve the failure; any next source-semantics investigation requires its own declared scope. Existing40H/L pointers/rules/results stay immutable.784regression tests pass; no live promotion is implied.
+
 Before changing anything, read in this order:
 
 1. `README.md`

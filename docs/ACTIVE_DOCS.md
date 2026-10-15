@@ -35,6 +35,8 @@ Current status:
 
 Current research evidence index:
 
+- [40O official Binance Futures source-parity audit](../research/canonical/SHI_RESET_40O_BINANCE_FUTURES_ARCHIVE_OOS_VALIDATION_AUDIT_2026_10_15.md) — **BINANCE_KLINE_SURROGATE_PARITY_FAILED**:July one extra allowed long/99.865591%parity,September100%,required100%unmet.27checksums/frozen40H13-row reproduction/causal prefixes/784tests pass. OOS remains undownloaded/unseen, no tuning; source-equivalence resolution precedes server shadow/API stages. [Run result](../market_monitor_runs/SHI_RESET_40O_binance_futures_archive_oos_validation_v0/result.md).
+
 - [40M canonical research and deployment roadmap](../research/canonical/SHI_RESET_40M_RESEARCH_AND_DEPLOYMENT_ROADMAP_AUDIT_2026_10_15.md) — consolidated40A–40L evidence/decisions, exact selected40H rules/latest40L money, rejected alternatives, offline reproduction and byte-verified transfer inventory, proposed server/API milestones. Documentation handoff only;39A architecture and all research/live boundaries remain unchanged. Run:`market_monitor_runs/SHI_RESET_40M_research_deployment_handoff_v0/`.
 
 - `research/canonical/SHI_RESET_40L_CHRONOLOGICAL_REPLAY_AUDIT_2026_10_15.md`, `research/latest_own_signal_replay.json` and `market_monitor_runs/SHI_RESET_40L_chronological_replay_through_2026_10_14_v0/result.md` (latest completed40H continuation throughOctober14;14closed/8wins/6losses/+1060.91USDC, October−29.90, no open/data-censored positions; all13control trades retained,15tests/14paths/prefix and source identity verified; frozen chosen-rule pointer unchanged)
