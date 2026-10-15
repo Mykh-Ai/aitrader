@@ -1,0 +1,9 @@
+{
+  "backtester_promotion_gate_enabled": false,
+  "candidate_decisions_sha256": "60c9320f13512b5ddc6f71cee85787ba34566b40f82c1ba71c4dbbae7a3e029f",
+  "contract_sha256": "b2ff1ff9fb9f9d9ad9261479420f6328175873b3825770c7c7c96ec54351b428",
+  "costs_verified": false,
+  "execution_market": "BTCUSDT_FEED_PRICE_PROXY",
+  "ledger_rows": 63,
+  "live_authority": false
+}

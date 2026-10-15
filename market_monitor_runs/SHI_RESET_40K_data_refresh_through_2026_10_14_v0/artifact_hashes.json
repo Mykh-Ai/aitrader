@@ -1,0 +1,20 @@
+{
+  "before_refresh/feed/2026-10-13.csv": "5ef33ec1e36aebe94d49d991fa0309de50e1e4ef35da7a3adc314b540e64e55a",
+  "data_readiness.json": "2830f9e7c0e367e7c9af8f320c71b7594359541f84e90f21e8aea4165be0cc93",
+  "feed_refresh_verification.json": "e87c7f3e099b26a86eace09e6d1b271912ed8ea10278ccde7702399cadece0bf",
+  "final_verification.json": "6b31685aed18c1f9b9a997c034d6ad91b533ddf8b64691f475c69e08dd6c4005",
+  "refresh.py": "fe204467d0bf6b66dba35889c64efa7f1dfce7f8425feeac3ca77ed6cf92560d",
+  "result.md": "94e66305351a3ee993f9768d6b4718c6ed475495c8aa62fc270d5e0f0c7a5e9f",
+  "server_acquisition.json": "9c49b311e15943311a517981f3b225aa8deae49f4312d638cd660b48ac1f75ad",
+  "server_download/2026-10-13.csv": "f402a66b5493f5ed29482e4d5de691a9d497bbfe879428f925705d682f96b34b",
+  "server_download/2026-10-14.csv": "5b7c9537627aa357bafcaa5fca3e352a54aaca01fa0d13567dda204ea252377d",
+  "spot_BTCUSDC/raw/BTCUSDC-1m-2026-10-13.zip": "ea2d02d740c51bb04f4133d524136a66814e76b9db1f6d859710034012308afb",
+  "spot_BTCUSDC/raw/BTCUSDC-1m-2026-10-13.zip.CHECKSUM": "1563d3f079e91707ec9aa2019f42f3c4024b1b1a9106823a2c83cb4ea7f012d0",
+  "spot_BTCUSDC/raw/BTCUSDC-1m-2026-10-14.zip": "11a4ebb565c513a39c6e42b3ead90ecbfaa95feb4f21cd2b615a025a5e080df0",
+  "spot_BTCUSDC/raw/BTCUSDC-1m-2026-10-14.zip.CHECKSUM": "de329a120e00a38b2d49b6bfba2f633697bbeed6713288f6641894791db3a07d",
+  "spot_BTCUSDC/spot_minutes.csv": "82b1f11886b1a92927af4fa717d09088231db9105e8acf9ab7fa39a18f0f3643",
+  "spot_acquisition.json": "ebab2ed2505855f1210eecd378a74b1f78141cc0f7f66b79981ab67b5adad631",
+  "updated_futures_source_inventory.csv": "c6d3f5655f6f1b174ef0d861fc47b8b1932f506e4602020a0b6e1338ebb995f8",
+  "verification_output.txt": "9c0d3981a890699ce427aba003f9198c2947ce38cb7c83954d5c4d2ff869715a",
+  "verify_refresh.py": "c6060892c793ddce02ff7976a30223e5dcc296b5e8a3fc84524c7aba32fdd127"
+}

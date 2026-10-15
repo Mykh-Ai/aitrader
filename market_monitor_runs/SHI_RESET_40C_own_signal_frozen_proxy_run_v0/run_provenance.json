@@ -1,0 +1,19 @@
+{
+  "frozen_contract_version": "SHI_RESET_40B_OWN_SIGNAL_RESEARCH_V1_SINGLE_MINUTE_SKIP",
+  "preparation_artifact_hashes": {
+    "degraded_minutes.csv": "3f29da8eaa4408994285aa5b22e847e157dcef69266ac9ec59c4264b64629f2e",
+    "feed_gaps.csv": "8cd6e51cbef3af5ed99f3dfc3c61b10cd46a5a6532d7b24257237e6cfd7501dd",
+    "feed_inventory.csv": "e90452016f212fd5ef96086cb837e6631bfe49b68bcea9b4b4aba5c82eacf44e",
+    "frozen_contract.json": "5cbc554bf29e98bd48e45f7c107b36cdd3621f31bc713056c19dad86332b38a7",
+    "preparation_manifest.json": "28ffa277cf7dd501546a455067a6b7fe7dccc354e35f94844e73da96e24f8899",
+    "readiness.json": "23b94dce11d528e998e5cf3c49da9717add7b176fe88650c1f303ba5af3de09c",
+    "validation_checks.json": "540f90a97b43516169a9e6e2f5ef4a7dc75ee8f251ff3cc71a229d50a2f7fdb6"
+  },
+  "rule_changes": [],
+  "selected_minutes": 310213,
+  "source_and_code_verified_before_run": true,
+  "source_preparation": "market_monitor_runs/SHI_RESET_40B_own_signal_run_preparation_v1",
+  "status": "FROZEN_RUN_AUTHORIZED",
+  "task_id": "SHI_RESET_40C_OWN_SIGNAL_FROZEN_PROXY_RUN",
+  "user_authorization": "2026-10-14: роби прогін"
+}

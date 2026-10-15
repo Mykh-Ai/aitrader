@@ -1,0 +1,3 @@
+side,total_trades,stops,stop_rate,stop_gross_loss_usd,stop_net_loss_usd,total_net_usd,median_hours_to_stop,median_stop_mfe_R,stop_no_0_5R,stop_reached_1R,stop_reached_2R,stop_reached_3R,early_reference_failure_stops,early_reference_failure_nonstops,atr_anchored_stops,structure_anchored_stops,stop_opposing_h4_within1R,nonstop_opposing_h4_within1R
+LONG,14,8,0.5714285714285714,-306.3807989265032,-355.9195227667179,442.4433094264622,6.958333333333333,0.058421487016317095,6,0,0,0,6,1,5,3,6,4
+SHORT,12,8,0.6666666666666666,-468.3470874750209,-518.0407568925159,69.83270509576697,57.141666666666666,0.8595688210447475,2,3,0,0,2,2,0,8,6,1

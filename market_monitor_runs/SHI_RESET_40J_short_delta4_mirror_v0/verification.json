@@ -1,0 +1,13 @@
+{
+  "all_candidate_delta_metrics_match_frozen40H": true,
+  "all_first_touches_cash_cost_risk_target_and_global_books_checked": true,
+  "all_inputs_and_selected40H_pointer_unchanged": true,
+  "all_market_state_reset_flags": false,
+  "baseline13rows_exactly_reproduced": true,
+  "both_streams_and_metrics_real_prefix_invariant": true,
+  "declared_variants": 2,
+  "independent_trade_paths_checked": 25,
+  "isolated_minutes_continue_with_actual_UTC": true,
+  "prefix_cutoff": "2026-07-22 17:30:00+00:00",
+  "production_promoted": false
+}

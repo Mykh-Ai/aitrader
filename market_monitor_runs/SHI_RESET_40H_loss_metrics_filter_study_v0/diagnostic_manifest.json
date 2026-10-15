@@ -1,0 +1,68 @@
+{
+  "baseline_hashes": {
+    "market_monitor/market_structure_state.py": "2a122465abfea2c119226e917224b33d72837190974123425fc078a952603278",
+    "market_monitor_runs/SHI_RESET_40F_direction_expiry_stop_interventions_v0/interventions.py": "e6a81090662ab4e210201595c2cba5e51b8197b7b5bc28dd54db09306de41949",
+    "market_monitor_runs/SHI_RESET_40G_futures_signals_spot_execution_v0/cross_market.py": "ec059a7ced512c6a1fd1509918fc53286ee6a6485435d4f131f7e2878446cecb",
+    "market_monitor_runs/SHI_RESET_40G_futures_signals_spot_execution_v0/execution_manifest_v1.json": "6d6ddf3f2268ba2d83ed8e6398e31365e6bf74d432e77d105747dbb65ded2af2",
+    "market_monitor_runs/SHI_RESET_40G_futures_signals_spot_execution_v0/selected_spot_contract.json": "88673018222e87b459a0c3d75cb304eb36bc8f101dd5cbc0b986799f03b56fdc",
+    "market_monitor_runs/SHI_RESET_40G_futures_signals_spot_execution_v0/selected_spot_result.json": "d04454ecd75e28b63991ea752a596011b26a2925caa96c6e6e459852cc69b953",
+    "market_monitor_runs/SHI_RESET_40G_futures_signals_spot_execution_v0/selected_spot_trade_ledger.csv": "bf1880e939c6136c994eb1b3453dc86cf88418c5b2d70dcc3b5db5585d38492a",
+    "market_monitor_runs/SHI_RESET_40G_futures_signals_spot_execution_v0/spot_BTCUSDC/spot_minutes.csv": "5497128e6ceb42788eb256c0e0e2a72768f7b8fbd1cae37162fbd845a3305ac9",
+    "research/strategy_search/__init__.py": "7d4e5d761a1c528b4b0e89883a1a98839a616148ab4ca6c8d044ec34f1c326f6",
+    "research/strategy_search/__main__.py": "ba9f964ed9b5f29df1d6a80b09c2f3d199f1cedd3e2c3842a1ae24f4e96c354c",
+    "research/strategy_search/features.py": "e8a89f29a96097ee7cbba1ae88517b2656422948567addf3249567a395a94cb3",
+    "research/strategy_search/hybrid.py": "44d547d3b732b0fed20514ed0d17ab881223a6400b1cdf4f56f563cbd9b406e0",
+    "research/strategy_search/replay.py": "a48af0986e81c1c36cd159ad3a5003faf9e34dd2abfd43e0f52cab10e0c0b7e8"
+  },
+  "bins": {
+    "UTC_and_Budapest_hours": "4h:00-04,04-08,08-12,12-16,16-20,20-24; 8h:00-08,08-16,16-24",
+    "delta24_pct": [
+      "< -4",
+      "[-4,0)",
+      "[0,4)",
+      "[4,8)",
+      ">=8"
+    ],
+    "oi24_pct": [
+      "negative",
+      "zero",
+      "positive"
+    ],
+    "range_position24": [
+      "[0,.25)",
+      "[.25,.5)",
+      "[.5,.75)",
+      "[.75,1]"
+    ],
+    "volume_ratio": [
+      "[1.3,2)",
+      "[2,3)",
+      "[3,4)",
+      ">=4"
+    ]
+  },
+  "clock": "Closed futures observations <= decision; planned entry decision+1m. Real UTC and Europe/Budapest DST. No outcome feature in entry filters.",
+  "code_hash": "82656655cbf1857654048d09c4e01e73118dbda444a486c510c71bdf62fa22a7",
+  "limitations": [
+    "Previously selected history, only21 baseline trades; adaptive filters are exploratory, not pristine holdout.",
+    "Fixed3000USDC notional,5USDC/trade fee,2bps/fill slip; actual borrowing/orderbook unverified.",
+    "Full causal candidate stream and global book must be rerun; do not sum row-deleted baseline as new portfolio."
+  ],
+  "metrics": [
+    "H1/H4/H24/H72 weighted delta",
+    "24h raw delta BTC",
+    "prior-volume ratio",
+    "24h OI percent/quantity change",
+    "current/24h-mean funding",
+    "24h liquidations and ratio",
+    "24h Monitor range/close-position/price change",
+    "EMA24/72 separation, EMA168 slope, distance to EMA24, 24h efficiency",
+    "decision-close stop-risk estimate",
+    "entry hour, four-hour/eight-hour UTC/local buckets, weekday/weekend",
+    "confirmed H4 regime"
+  ],
+  "monitor_scope": "Reuse actual _window_metrics for closed (decision-24h,decision] observations; additional explicit raw aggregates. No full Monitor lifecycle replay or historical snapshot joins.",
+  "phase": "DIAGNOSTIC_DEFINITIONS_FROZEN_BEFORE_GROUP_RESULTS",
+  "task": "SHI_RESET_40H_LOSS_METRICS_FILTER_STUDY",
+  "units": "delta percent=100*(sumBuy-sumSell)/sumVolume, NOT mean minute percentages; OI pct=100*(last/first-1)."
+}

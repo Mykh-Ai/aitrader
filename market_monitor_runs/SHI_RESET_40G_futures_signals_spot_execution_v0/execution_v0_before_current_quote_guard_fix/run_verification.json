@@ -1,0 +1,12 @@
+{
+  "all_13_declared_runs_completed": true,
+  "all_official_archive_checksums_verified": true,
+  "asof_mapping_no_future_quotes": true,
+  "both_futures_controls_reproduced": true,
+  "execution_is_spot_price_model_not_borrow_or_orderbook_proof": true,
+  "futures_and_spot_sources_separate": true,
+  "global_book_fill_cash_and_amendment_clocks_verified": true,
+  "real_prefix_future_feature_h4_regime_and_basis_invariance": true,
+  "source_and_original_artifacts_unchanged": true,
+  "study_code_unchanged": true
+}

@@ -1,0 +1,778 @@
+{
+  "code_hashes": {
+    "events.py": "de43dff6afcd39c9081f565b2e60d72b3bd47582b3be785702eb1f7645439c41",
+    "run_events.py": "b50d990043a1c69f31f8b31e01fe9c8888e95db4d03dc2ba6bac95135ab8d667"
+  },
+  "first_batch_result_sha256": "c574450f638daa186c3855e7694a112ce8f5f2f57776c9267617521435226dc7",
+  "gates": "Extra events use2ATR distance and2.5ATR range caps. Extra short retests require negative rolling4h delta.40H core gates stay unchanged; extra24h-band4/6 declared separately.",
+  "phase": "SECOND_FINITE_BATCH_FIXED_AFTER74_RELAXATION_RESULTS_BEFORE_NEW_EVENT_RETURNS",
+  "reason": "74 simple relaxations add mostly losses, no strong success. Test additional first-break long/short, accepted-range long and mirrored short-retest events.",
+  "selection": "Same24Apr-Sep trades/$500 minimum and strong criteria fixed in first manifest; all failures retained. History already exposed.",
+  "unchanged": "Same two feeds, quality/calendar, asof mapping, one global position, fixed stop/targets/hold/costs. No sweep shortcut or new calendar exclusion.",
+  "variants": [
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.04,
+          "lookback": 24,
+          "side": 1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_L_ACCEPTED_BREAK_24_V13_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.04,
+          "lookback": 24,
+          "side": 1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_L_ACCEPTED_BREAK_24_V13_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.04,
+          "lookback": 24,
+          "side": 1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_L_ACCEPTED_BREAK_24_V11_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.04,
+          "lookback": 24,
+          "side": 1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_L_ACCEPTED_BREAK_24_V11_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_L_ACCEPTED_BREAK_48_V13_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_L_ACCEPTED_BREAK_48_V13_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_L_ACCEPTED_BREAK_48_V11_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_L_ACCEPTED_BREAK_48_V11_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 24,
+          "side": 1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_L_BREAKOUT_24_V13_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 24,
+          "side": 1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_L_BREAKOUT_24_V13_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 24,
+          "side": 1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_L_BREAKOUT_24_V11_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 24,
+          "side": 1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_L_BREAKOUT_24_V11_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_L_BREAKOUT_48_V13_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_L_BREAKOUT_48_V13_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_L_BREAKOUT_48_V11_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_L_BREAKOUT_48_V11_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 24,
+          "side": -1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_S_BREAKOUT_24_V13_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 24,
+          "side": -1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_S_BREAKOUT_24_V13_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 24,
+          "side": -1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_S_BREAKOUT_24_V11_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 24,
+          "side": -1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_S_BREAKOUT_24_V11_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": -1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_S_BREAKOUT_48_V13_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": -1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_S_BREAKOUT_48_V13_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": -1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_S_BREAKOUT_48_V11_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": -1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_S_BREAKOUT_48_V11_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "TREND_RETEST",
+          "flow": 0.04,
+          "lookback": 96,
+          "side": -1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_S_RETEST_V13_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "TREND_RETEST",
+          "flow": 0.04,
+          "lookback": 96,
+          "side": -1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_S_RETEST_V13_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "TREND_RETEST",
+          "flow": 0.04,
+          "lookback": 96,
+          "side": -1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_S_RETEST_V11_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "TREND_RETEST",
+          "flow": 0.04,
+          "lookback": 96,
+          "side": -1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_S_RETEST_V11_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.3
+        },
+        {
+          "family": "TREND_RETEST",
+          "flow": 0.04,
+          "lookback": 96,
+          "side": -1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_PAIR_L_ACCEPTED_BREAK48_S_TREND_RETEST96_V13_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.3
+        },
+        {
+          "family": "TREND_RETEST",
+          "flow": 0.04,
+          "lookback": 96,
+          "side": -1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_PAIR_L_ACCEPTED_BREAK48_S_TREND_RETEST96_V13_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.02,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.1
+        },
+        {
+          "family": "TREND_RETEST",
+          "flow": 0.02,
+          "lookback": 96,
+          "side": -1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_PAIR_L_ACCEPTED_BREAK48_S_TREND_RETEST96_V11_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.02,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.1
+        },
+        {
+          "family": "TREND_RETEST",
+          "flow": 0.02,
+          "lookback": 96,
+          "side": -1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_PAIR_L_ACCEPTED_BREAK48_S_TREND_RETEST96_V11_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.04,
+          "lookback": 24,
+          "side": 1,
+          "volume": 1.3
+        },
+        {
+          "family": "TREND_RETEST",
+          "flow": 0.04,
+          "lookback": 96,
+          "side": -1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_PAIR_L_ACCEPTED_BREAK24_S_TREND_RETEST96_V13_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.04,
+          "lookback": 24,
+          "side": 1,
+          "volume": 1.3
+        },
+        {
+          "family": "TREND_RETEST",
+          "flow": 0.04,
+          "lookback": 96,
+          "side": -1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_PAIR_L_ACCEPTED_BREAK24_S_TREND_RETEST96_V13_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.02,
+          "lookback": 24,
+          "side": 1,
+          "volume": 1.1
+        },
+        {
+          "family": "TREND_RETEST",
+          "flow": 0.02,
+          "lookback": 96,
+          "side": -1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_PAIR_L_ACCEPTED_BREAK24_S_TREND_RETEST96_V11_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.02,
+          "lookback": 24,
+          "side": 1,
+          "volume": 1.1
+        },
+        {
+          "family": "TREND_RETEST",
+          "flow": 0.02,
+          "lookback": 96,
+          "side": -1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_PAIR_L_ACCEPTED_BREAK24_S_TREND_RETEST96_V11_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.3
+        },
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": -1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_PAIR_L_BREAKOUT48_S_BREAKOUT48_V13_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.3
+        },
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": -1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_PAIR_L_BREAKOUT48_S_BREAKOUT48_V13_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.02,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.1
+        },
+        {
+          "family": "BREAKOUT",
+          "flow": 0.02,
+          "lookback": 48,
+          "side": -1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_PAIR_L_BREAKOUT48_S_BREAKOUT48_V11_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "BREAKOUT",
+          "flow": 0.02,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.1
+        },
+        {
+          "family": "BREAKOUT",
+          "flow": 0.02,
+          "lookback": 48,
+          "side": -1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_PAIR_L_BREAKOUT48_S_BREAKOUT48_V11_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.3
+        },
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": -1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_PAIR_L_ACCEPTED_BREAK48_S_BREAKOUT48_V13_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.3
+        },
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 48,
+          "side": -1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_PAIR_L_ACCEPTED_BREAK48_S_BREAKOUT48_V13_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.02,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.1
+        },
+        {
+          "family": "BREAKOUT",
+          "flow": 0.02,
+          "lookback": 48,
+          "side": -1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_PAIR_L_ACCEPTED_BREAK48_S_BREAKOUT48_V11_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.02,
+          "lookback": 48,
+          "side": 1,
+          "volume": 1.1
+        },
+        {
+          "family": "BREAKOUT",
+          "flow": 0.02,
+          "lookback": 48,
+          "side": -1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_PAIR_L_ACCEPTED_BREAK48_S_BREAKOUT48_V11_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.04,
+          "lookback": 24,
+          "side": 1,
+          "volume": 1.3
+        },
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 24,
+          "side": -1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_PAIR_L_ACCEPTED_BREAK24_S_BREAKOUT24_V13_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.04,
+          "lookback": 24,
+          "side": 1,
+          "volume": 1.3
+        },
+        {
+          "family": "BREAKOUT",
+          "flow": 0.04,
+          "lookback": 24,
+          "side": -1,
+          "volume": 1.3
+        }
+      ],
+      "id": "EXTRA_PAIR_L_ACCEPTED_BREAK24_S_BREAKOUT24_V13_B6"
+    },
+    {
+      "delta24_bound_pct": 4.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.02,
+          "lookback": 24,
+          "side": 1,
+          "volume": 1.1
+        },
+        {
+          "family": "BREAKOUT",
+          "flow": 0.02,
+          "lookback": 24,
+          "side": -1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_PAIR_L_ACCEPTED_BREAK24_S_BREAKOUT24_V11_B4"
+    },
+    {
+      "delta24_bound_pct": 6.0,
+      "events": [
+        {
+          "family": "ACCEPTED_BREAK",
+          "flow": 0.02,
+          "lookback": 24,
+          "side": 1,
+          "volume": 1.1
+        },
+        {
+          "family": "BREAKOUT",
+          "flow": 0.02,
+          "lookback": 24,
+          "side": -1,
+          "volume": 1.1
+        }
+      ],
+      "id": "EXTRA_PAIR_L_ACCEPTED_BREAK24_S_BREAKOUT24_V11_B6"
+    }
+  ]
+}

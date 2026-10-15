@@ -1,0 +1,15 @@
+{
+  "all130_signal_streams_and_metrics_real_prefix_invariant": true,
+  "all_duplicate_entry_paths_match": true,
+  "all_outcomes_observed_no_censor_or_inferred_gap_fill": true,
+  "all_unique_first_stop_target_expiry_touches_verified": true,
+  "every_cash_fee_slippage_risk_R_and_target_verified": true,
+  "every_global_book_and_known_basis_verified": true,
+  "full_control_source_identity_reverified_by_original_loader": true,
+  "independent_unique_first_touch_paths": 59,
+  "isolated_omissions_all_portfolio_rows": 1001,
+  "portfolios": 130,
+  "prefix_cutoff": "2026-08-20 23:59:00+00:00",
+  "primary_40H_is_preserved": true,
+  "trade_paths_accounted": 2450
+}

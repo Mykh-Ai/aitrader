@@ -1,0 +1,8 @@
+{
+  "all_prior_artifacts_preserved": true,
+  "first_terminal_touch_with_amendment_latency_verified": true,
+  "first_trigger_is_causally_observed_2R": true,
+  "source_identity_verified": true,
+  "two_R_closed_paths_independently_checked": 48,
+  "two_R_stop_activations": 5
+}

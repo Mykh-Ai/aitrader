@@ -1,0 +1,8 @@
+{
+  "command": "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q market_monitor_runs/SHI_RESET_40F_direction_expiry_stop_interventions_v0/test_interventions.py tests/test_strategy_search_replay.py",
+  "duration_seconds": 0.73,
+  "existing_strategy_replay_cases": 10,
+  "failed": 0,
+  "new_intervention_cases": 10,
+  "passed": 20
+}

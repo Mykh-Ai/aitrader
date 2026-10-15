@@ -31,6 +31,9 @@ OUTPUT_COLUMNS = [
     "SellQty",
     "OpenInterest",
     "FundingRate",
+    "LiqBuyQty",
+    "LiqSellQty",
+    "LiquidationDataAvailable",
     "DataQuality",
     "SourceFile",
 ]
@@ -47,6 +50,8 @@ NUMERIC_COLUMNS = [
     "SellQty",
     "OpenInterest",
     "FundingRate",
+    "LiqBuyQty",
+    "LiqSellQty",
 ]
 
 
@@ -93,6 +98,7 @@ def _resolve_input_paths(paths: str | Path | Iterable[str | Path]) -> list[Path]
 def _read_one_csv(path: Path) -> pd.DataFrame:
     raw = pd.read_csv(path)
     frame = raw.rename(columns=HISTORICAL_TO_PROTECTED).copy()
+    liquidation_data_available = {"LiqBuyQty", "LiqSellQty"}.issubset(frame.columns)
 
     if "Timestamp" not in frame.columns:
         raise FeedContractError("Missing required column: Timestamp")
@@ -106,7 +112,16 @@ def _read_one_csv(path: Path) -> pd.DataFrame:
             "Missing required price columns: " + ", ".join(missing_prices)
         )
 
-    for column in ["TotalQty", "Trades", "BuyQty", "SellQty", "OpenInterest", "FundingRate"]:
+    for column in [
+        "TotalQty",
+        "Trades",
+        "BuyQty",
+        "SellQty",
+        "OpenInterest",
+        "FundingRate",
+        "LiqBuyQty",
+        "LiqSellQty",
+    ]:
         if column not in frame.columns:
             frame[column] = 0
 
@@ -119,6 +134,7 @@ def _read_one_csv(path: Path) -> pd.DataFrame:
         if frame[column].isna().any():
             raise FeedContractError(f"Invalid numeric values in column: {column}")
 
+    frame["LiquidationDataAvailable"] = liquidation_data_available
     frame["DataQuality"] = _data_quality_for(path, frame)
     frame["SourceFile"] = path.name
     frame["_source_order"] = range(len(frame))
@@ -134,4 +150,3 @@ def _data_quality_for(path: Path, frame: pd.DataFrame) -> str:
         if (synthetic != 0).any():
             return "RECOVERED_DEGRADED"
     return "RAW"
-

@@ -1,0 +1,34 @@
+{
+  "combined_csv_sha256": "82b1f11886b1a92927af4fa717d09088231db9105e8acf9ab7fa39a18f0f3643",
+  "combined_first_close": "2026-03-01 00:01:00+00:00",
+  "combined_last_close": "2026-10-15 00:00:00+00:00",
+  "combined_rows": 328320,
+  "frozen40G_not_modified": true,
+  "market": "BINANCE_SPOT_BTCUSDC",
+  "new_daily_archives": [
+    {
+      "checksum_sha256": "1563d3f079e91707ec9aa2019f42f3c4024b1b1a9106823a2c83cb4ea7f012d0",
+      "day": "2026-10-13",
+      "first_close": "2026-10-13 00:01:00+00:00",
+      "last_close": "2026-10-14 00:00:00+00:00",
+      "no_trade_minutes": 0,
+      "rows": 1440,
+      "sha256": "ea2d02d740c51bb04f4133d524136a66814e76b9db1f6d859710034012308afb",
+      "url": "https://data.binance.vision/data/spot/daily/klines/BTCUSDC/1m/BTCUSDC-1m-2026-10-13.zip"
+    },
+    {
+      "checksum_sha256": "de329a120e00a38b2d49b6bfba2f633697bbeed6713288f6641894791db3a07d",
+      "day": "2026-10-14",
+      "first_close": "2026-10-14 00:01:00+00:00",
+      "last_close": "2026-10-15 00:00:00+00:00",
+      "no_trade_minutes": 0,
+      "rows": 1440,
+      "sha256": "11a4ebb565c513a39c6e42b3ead90ecbfaa95feb4f21cd2b615a025a5e080df0",
+      "url": "https://data.binance.vision/data/spot/daily/klines/BTCUSDC/1m/BTCUSDC-1m-2026-10-14.zip"
+    }
+  ],
+  "prior_CSV_bytes_preserved_as_exact_prefix": true,
+  "prior_csv_sha256": "5497128e6ceb42788eb256c0e0e2a72768f7b8fbd1cae37162fbd845a3305ac9",
+  "prior_frozen_csv": "market_monitor_runs/SHI_RESET_40G_futures_signals_spot_execution_v0/spot_BTCUSDC/spot_minutes.csv",
+  "prior_rows_preserved": true
+}

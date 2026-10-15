@@ -1,0 +1,56 @@
+{
+  "code_hashes": {
+    "research/strategy_search/__init__.py": "7d4e5d761a1c528b4b0e89883a1a98839a616148ab4ca6c8d044ec34f1c326f6",
+    "research/strategy_search/__main__.py": "ba9f964ed9b5f29df1d6a80b09c2f3d199f1cedd3e2c3842a1ae24f4e96c354c",
+    "research/strategy_search/features.py": "e8a89f29a96097ee7cbba1ae88517b2656422948567addf3249567a395a94cb3",
+    "research/strategy_search/hybrid.py": "44d547d3b732b0fed20514ed0d17ab881223a6400b1cdf4f56f563cbd9b406e0",
+    "research/strategy_search/replay.py": "a48af0986e81c1c36cd159ad3a5003faf9e34dd2abfd43e0f52cab10e0c0b7e8"
+  },
+  "cooldown_minutes": 3,
+  "entry_end": "2026-10-01T00:00:00Z",
+  "entry_latency_minutes": 1,
+  "gap_policy": "CENSOR",
+  "historically_selected_after_search": true,
+  "history_selected": true,
+  "hypothesis": "Long entries on trend retest, short entries on accepted support break, one global position",
+  "long": {
+    "exit": {
+      "atr_floor": 2.0,
+      "hold_hours": 168,
+      "stop_lookback": 6,
+      "target_r": 10.0,
+      "trail_atr": 0.0
+    },
+    "family": "TREND_RETEST",
+    "flow": 0.04,
+    "impulse": 2.0,
+    "lookback": 96,
+    "maturity": 1.5,
+    "trend": "EMA",
+    "volume": 1.3
+  },
+  "maximum_initial_risk_fraction": 0.04,
+  "minimum_initial_risk_fraction": 0.004,
+  "notional_usd": 3000,
+  "one_position_global": true,
+  "pristine_holdout": false,
+  "production_promoted": false,
+  "round_trip_commission_usd": 5,
+  "short": {
+    "exit": {
+      "atr_floor": 1.5,
+      "hold_hours": 168,
+      "stop_lookback": 6,
+      "target_r": 6.0,
+      "trail_atr": 0.0
+    },
+    "family": "ACCEPTED_BREAK",
+    "flow": 0.0,
+    "lookback": 48,
+    "trend": "PRESSURE",
+    "volume": 1.3
+  },
+  "slippage_bps_per_fill": 2,
+  "source_preparation": "market_monitor_runs/SHI_RESET_40B_own_signal_run_preparation_v1",
+  "version": "SHI_RESET_40D_HYBRID_CANDIDATE_V1"
+}

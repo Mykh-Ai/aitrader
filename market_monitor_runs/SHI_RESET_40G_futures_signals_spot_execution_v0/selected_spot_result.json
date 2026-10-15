@@ -1,0 +1,105 @@
+{
+  "USDC_USD_parity_for_dollar_display_assumed": true,
+  "borrow_model_is_prorated_not_verified_exchange_charging": true,
+  "borrow_rates_are_assumed_not_account_tariffs": true,
+  "execution_market": "BINANCE_SPOT_MARGIN_BTCUSDC_PRICE_MODEL",
+  "full_history": {
+    "censored": 0,
+    "commission_usd": 105.0,
+    "drawdown_usd": 223.92196251827087,
+    "gross_usd": 806.5988456164237,
+    "mean_initial_risk_usd": 48.164605392132984,
+    "mean_net_R": 1.1248805952121346,
+    "mean_net_usd": 32.207948618008366,
+    "net_usd": 676.3669209781757,
+    "net_without_best_three": -163.65270435225102,
+    "profit_factor": 2.0161356933201366,
+    "resolved": 21,
+    "slippage_usd": 25.231924638247907,
+    "trades": 21
+  },
+  "historical_borrow_availability_orderbook_and_actual_fills_unverified": true,
+  "hypothetical_borrow_sensitivity": [
+    {
+      "assumed_daily_short_BTC_borrow_percent": 0.0,
+      "net_after_hypothetical_short_borrow_quote": 676.3669209781757,
+      "prorated_interest_quote": 0.0
+    },
+    {
+      "assumed_daily_short_BTC_borrow_percent": 0.01,
+      "net_after_hypothetical_short_borrow_quote": 669.606951192476,
+      "prorated_interest_quote": 6.759969785699646
+    },
+    {
+      "assumed_daily_short_BTC_borrow_percent": 0.03,
+      "net_after_hypothetical_short_borrow_quote": 656.0870116210767,
+      "prorated_interest_quote": 20.279909357098933
+    },
+    {
+      "assumed_daily_short_BTC_borrow_percent": 0.1,
+      "net_after_hypothetical_short_borrow_quote": 608.7672231211792,
+      "prorated_interest_quote": 67.59969785699646
+    }
+  ],
+  "isolated_no_trade_spot_minutes_skipped_in_selected_paths": 9,
+  "long": {
+    "censored": 0,
+    "commission_usd": 75.0,
+    "drawdown_usd": 256.97293189052186,
+    "gross_usd": 483.11101842797495,
+    "mean_initial_risk_usd": 41.24625137813082,
+    "mean_net_R": 1.023014669053559,
+    "mean_net_usd": 26.000959748285958,
+    "net_usd": 390.0143962242894,
+    "net_without_best_three": -239.28645273173288,
+    "profit_factor": 1.9471098684683292,
+    "resolved": 15,
+    "slippage_usd": 18.0966222036856,
+    "trades": 15
+  },
+  "mean_holding_hours": 64.56904761904764,
+  "mean_planned_target_R": 8.857142857142858,
+  "mean_planned_target_profit_quote": 406.8340648617432,
+  "native_spot_stop_sensitivity_is_a_different_reference_contract": true,
+  "negative_trades": 13,
+  "net_R_sum": 23.622492499454825,
+  "old_futures_proxy_full_net": 671.0501074032345,
+  "positive_trades": 8,
+  "primary_selected_to_preserve_frozen_stop_source_contract": true,
+  "primary_variant": "SPOT_40F_FIXED",
+  "pristine_holdout": false,
+  "production_promoted": false,
+  "reporting_currency": "USDC",
+  "short": {
+    "censored": 0,
+    "commission_usd": 30.0,
+    "drawdown_usd": 191.9617950334547,
+    "gross_usd": 323.4878271884486,
+    "mean_initial_risk_usd": 65.46049042713841,
+    "mean_net_R": 1.3795454106085725,
+    "mean_net_usd": 47.725420792314374,
+    "net_usd": 286.35252475388626,
+    "net_without_best_three": -245.09752444521456,
+    "profit_factor": 2.128116850480696,
+    "resolved": 6,
+    "slippage_usd": 7.135302434562311,
+    "trades": 6
+  },
+  "signal_market": "BTCUSDT_PERPETUAL_FUTURES",
+  "six_month_entry_cohort": {
+    "censored": 0,
+    "commission_usd": 95.0,
+    "drawdown_usd": 212.91530931390923,
+    "gross_usd": 962.8342508888668,
+    "mean_initial_risk_usd": 45.01164778749207,
+    "mean_net_R": 1.3587230298754194,
+    "mean_net_usd": 44.474501630106346,
+    "net_usd": 845.0155309720205,
+    "net_without_best_three": 4.995905641593822,
+    "profit_factor": 2.700307842554927,
+    "resolved": 19,
+    "slippage_usd": 22.81871991684614,
+    "trades": 19
+  },
+  "version": "SHI_RESET_40G_SPOT_PRICE_REPLAY_V1"
+}

@@ -1,0 +1,15 @@
+{
+  "candidate_rejection_counts.csv": "9b7296d21fa3e54cf2658df3da0834bb32c42fb725cc774924ba47163a68c75a",
+  "degraded_minutes.csv": "3f29da8eaa4408994285aa5b22e847e157dcef69266ac9ec59c4264b64629f2e",
+  "entry_admission_counts.csv": "03a91678ae0c8bd4b9bb0aa75cd1b6ffdefdafc190e886ca67cc518a069f9196",
+  "family_month_results.csv": "2934afe49ca530df4bca6a988e48d06e7ba1b27dc672c239b5f5f8a663f2ea24",
+  "family_overall_results.csv": "09a87e77c9960499775c201e143c861b1b0682adb571371569d5c4ab48975a01",
+  "feed_gaps.csv": "8cd6e51cbef3af5ed99f3dfc3c61b10cd46a5a6532d7b24257237e6cfd7501dd",
+  "feed_inventory.csv": "e90452016f212fd5ef96086cb837e6631bfe49b68bcea9b4b4aba5c82eacf44e",
+  "financial_proxy_replay/entry_admission.csv": "1d7401dd35100de739860fb353a6362f8ec2a35751dd36bb2bb90774ca4a07fa",
+  "financial_proxy_replay/family_period_results.csv": "4107bba1b6c0fc95b38bb7137f3701f474bcdd62264359c364cfd61a6f5ec5a2",
+  "financial_proxy_replay/trade_ledger.csv": "ea0c0d8f36ea6bdd88f29ce61d0a1a785ffbeeb387daef0587e944d65151d5b4",
+  "resolved_trade_economics.csv": "1f2d6b53dd2500908f50fa3164f4666cca81a6a5b9156882b59cd3049d4215a8",
+  "signals/candidate_decisions.csv": "60c9320f13512b5ddc6f71cee85787ba34566b40f82c1ba71c4dbbae7a3e029f",
+  "signals/state_continuity.csv": "d6c694df61cc7a31f7b8c3389cffbcf62bffa281f20b4f120134cd983f40e6c9"
+}

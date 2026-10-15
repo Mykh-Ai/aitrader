@@ -61,6 +61,10 @@ VOLUME_DELTA_STATE_COLUMNS = [
     "oi",
     "oi_change",
     "funding_rate",
+    "liq_buy_qty",
+    "liq_sell_qty",
+    "liq_total_qty",
+    "liquidation_data_available",
     "data_quality",
 ]
 
@@ -192,6 +196,21 @@ def build_volume_delta_state(feed: pd.DataFrame) -> pd.DataFrame:
     total_qty = frame["TotalQty"]
     volume_zscore = _rolling_zscore(total_qty)
     delta_zscore = _rolling_zscore(delta)
+    liq_buy_qty = (
+        frame["LiqBuyQty"].astype(float)
+        if "LiqBuyQty" in frame.columns
+        else pd.Series(0.0, index=frame.index)
+    )
+    liq_sell_qty = (
+        frame["LiqSellQty"].astype(float)
+        if "LiqSellQty" in frame.columns
+        else pd.Series(0.0, index=frame.index)
+    )
+    liquidation_data_available = (
+        frame["LiquidationDataAvailable"].astype(bool)
+        if "LiquidationDataAvailable" in frame.columns
+        else pd.Series(False, index=frame.index)
+    )
     result = pd.DataFrame(
         {
             "timestamp": frame["Timestamp"].map(_format_ts),
@@ -205,6 +224,10 @@ def build_volume_delta_state(feed: pd.DataFrame) -> pd.DataFrame:
             "oi": frame["OpenInterest"].astype(float),
             "oi_change": frame["OpenInterest"].diff().fillna(0).astype(float),
             "funding_rate": frame["FundingRate"].astype(float),
+            "liq_buy_qty": liq_buy_qty,
+            "liq_sell_qty": liq_sell_qty,
+            "liq_total_qty": liq_buy_qty + liq_sell_qty,
+            "liquidation_data_available": liquidation_data_available,
             "data_quality": frame["DataQuality"],
         }
     )

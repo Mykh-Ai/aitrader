@@ -1,0 +1,8 @@
+{
+  "command": "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q market_monitor_runs/SHI_RESET_40G_futures_signals_spot_execution_v0/test_cross_market.py tests/test_strategy_search_replay.py",
+  "cross_market_cases": 12,
+  "duration_seconds": 0.72,
+  "existing_strategy_cases": 10,
+  "failed": 0,
+  "passed": 22
+}

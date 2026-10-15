@@ -1,0 +1,19 @@
+{
+  "October_eligible": 2,
+  "October_raw_candidates": 7,
+  "all13_control_trades_reproduced_and_retained": true,
+  "all_data_source_and_prior_code_hashes_unchanged": true,
+  "cutoff": "2026-10-14 23:59:00+00:00",
+  "eligible_after_all_gates": 22,
+  "futures_rows": 313093,
+  "independent_closed_first_touch_cash_paths": 14,
+  "last_closed_H1": "2026-10-14 23:00:00+00:00",
+  "no_data_censored_trades": true,
+  "one_global_book_no_overlap": true,
+  "open_paths_no_prior_exit": 0,
+  "open_realized_credit": 0,
+  "preOctober_formula_parity": true,
+  "raw_candidates": 59,
+  "real_old_cutoff_prefix_features_signals_filters_H4_quotes_identical": true,
+  "spot_rows_to_common_cutoff": 313063
+}

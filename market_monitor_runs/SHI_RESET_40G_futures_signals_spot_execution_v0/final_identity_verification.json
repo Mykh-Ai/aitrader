@@ -1,0 +1,8 @@
+{
+  "executor_cached_archives_unchanged": 33,
+  "futures_source_files_unchanged": 230,
+  "no_production_or_protected_data_write": true,
+  "normalized_spot_csv_identity_verified": true,
+  "spot_archives_verified": 48,
+  "study_code_and_original_artifacts_preserved": true
+}

@@ -1,0 +1,12 @@
+{
+  "accepted_candidates": 63,
+  "candidate_decisions": 3741,
+  "elapsed_seconds": 103.47,
+  "h1_steps": 5170,
+  "liquidity_zones_reset": false,
+  "market_state_reset": false,
+  "processed_through": "2026-10-12 23:59:00+00:00",
+  "qualified_h1_state_reset": false,
+  "setup_context_reset": false,
+  "structure_levels_reset": false
+}

@@ -1,0 +1,11 @@
+{
+  "accepted_candidates": 10,
+  "candidate_decisions": 152,
+  "chunk_continuity": true,
+  "future_append_invariance": true,
+  "gate": "RESEARCH_PREPARATION_ONLY_NO_BACKTESTER_PROMOTION_OR_LIVE_AUTHORITY",
+  "h1_steps": 337,
+  "profitability_run_performed": false,
+  "real_feed_smoke_cutoff": "2026-03-25T14:00:00Z",
+  "status": "PREPARED_FOR_EXPLICIT_OFFLINE_PROXY_RUN"
+}

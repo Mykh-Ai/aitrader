@@ -1,0 +1,42 @@
+{
+  "accepted_by_family": {
+    "DEMAND_SWEEP_RECLAIM_UP": 62,
+    "SELLER_DOMINANCE_RETEST_DOWN": 1
+  },
+  "accepted_with_context_omissions": 0,
+  "all_27_family_period_cost_combinations_present": true,
+  "all_accepted_evidence_clocks_validated": true,
+  "candidate_decisions": 3741,
+  "censored_distinct_trades": 0,
+  "cost_sensitivity_monotonic_per_trade": true,
+  "costs_verified": false,
+  "distinct_research_trades": 21,
+  "entry_admitted": 21,
+  "entry_rejection_counts": {
+    "ENTRY_GEOMETRY_FAILED": 8,
+    "FAMILY_POSITION_ALREADY_OPEN": 34
+  },
+  "execution_market": "BTCUSDT_FEED_PRICE_PROXY",
+  "frozen_contract_unchanged": true,
+  "generation_journal_hashes_verified": true,
+  "h1_steps": 5170,
+  "independent_entry_price_and_cost_arithmetic_checked": true,
+  "ledger_rows_all_cost_scenarios": 63,
+  "live_authority": false,
+  "no_overlap_within_family_books": true,
+  "nominal_h1_chronology_contiguous": true,
+  "original_smoke_prefix_preserved_exactly": true,
+  "primary_skipped_rows": 35,
+  "pristine_holdout_claim": false,
+  "production_code_changed_in_this_run": false,
+  "research_regression_previously_passed": 752,
+  "resolved_distinct_trades": 21,
+  "resolved_entry_minutes_delayed_by_omission": 0,
+  "resolved_trades_with_isolated_omissions": 3,
+  "signal_gate_accepted": 63,
+  "source_and_code_hashes_verified_before_and_after_run": true,
+  "source_data_changed_in_this_run": false,
+  "state_reset_fields_all_false": true,
+  "status": "FROZEN_HISTORICAL_PROXY_RUN_COMPLETED",
+  "trade_periods_and_exclusions_verified": true
+}

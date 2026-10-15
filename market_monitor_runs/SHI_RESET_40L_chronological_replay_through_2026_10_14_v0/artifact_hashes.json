@@ -1,0 +1,23 @@
+{
+  "asof_execution_quotes.csv": "8bd87c099716cd223846d7776753d4a81f276c6d01da712c9d5590704a0e983d",
+  "candidate_book_decisions.csv": "84c9456df45821e295e9db67b675f95ca103bb11e95851adaedcd5ebcec523f2",
+  "candidate_entry_metrics.csv": "911c77cf7be2c1e637a5cbd4c63f334ea2e4949a5e05971bec118e0342a12327",
+  "closed_trade_ledger_usdc.csv": "b48e2290001526793157147748c630717c0a87799ca4ece5ad8e1b720e022d22",
+  "control_40H_reproduced.csv": "d9e6ae81b40fb55cc24d81bd9bf1104edeed017c46ef3f5a337d29440c69fc17",
+  "final_verification.json": "37e838116e0484625759f1dced1d3280ac24d196851c9e3c01355a1831d4f84f",
+  "h4_space_candidates.csv": "1f08c75303c8754b12ff94f0363294b29777390f1aeb3d1ea70d9dbd3e119f45",
+  "h4_space_rejections.csv": "00c41a9488133762dfe0e0c70ebc5755b639f00b7f38975fa90aa95c34c3302a",
+  "monthly_entry_results_usdc.csv": "fec4829c69cf51c5ec4a3dfd0a146764422ff62b3f33a71039dedefa56baa1f3",
+  "october_trade_journal_usdc.csv": "4cfc6b546e18e0965781fc3869e9a8c73bb504b48f23e607c19166223b8dbe34",
+  "open_positions_at_cutoff.csv": "502947958c8586606bf1dbf4ad7992480dcfd3f7324a4f9f8606f8da0da49f5d",
+  "policy.py": "9796d866c060648a46a0fe8f66f6f1c2796b9c567e146cd4a9aaa32b62657fbb",
+  "result.json": "221f1f6e485f193770b44f58f35329bf96048aa37033e3033fc6db47d9015695",
+  "result.md": "b057d8550c82fb7837599f8abef0595038e2d7ea9a4ae2711bb2e6ce231ff414",
+  "run_study.py": "8870366bd1c2dfc29a80f96c163198a99bbd5bc74851bf1bc71c6959fde23a88",
+  "source_inventory.csv": "c6d3f5655f6f1b174ef0d861fc47b8b1932f506e4602020a0b6e1338ebb995f8",
+  "study_manifest.json": "d561a4c53a4964ed43d1dd928fd6fa5179d7ee5971ad8f6f255caf88334e416d",
+  "test_policy.py": "ed352704aa4378b6ed94f6c904f79bc9e3526c3714f35539cb0ca9ca243eb2f8",
+  "trade_journal_usdc.csv": "b48e2290001526793157147748c630717c0a87799ca4ece5ad8e1b720e022d22",
+  "verification.json": "d7cb4ca02a07375c5b733157ad6df42ff948e56fbb8b06b1244f35219d309efb",
+  "verify_and_index.py": "8c9be1da53c47e045173876cf98f8137b546f4502c9c916050f961785b71260d"
+}

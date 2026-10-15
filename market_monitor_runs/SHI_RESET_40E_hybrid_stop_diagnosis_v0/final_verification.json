@@ -1,0 +1,31 @@
+{
+  "all16_losses_accounted": true,
+  "all20_alternate_journals_retained": true,
+  "complete_target_grid_best_is_original_baseline": true,
+  "diagnostic_verification": {
+    "all_16_stops_accounted": true,
+    "all_26_trades_accounted": true,
+    "baseline_hashes_unchanged": true,
+    "h4_references_causal": true,
+    "no_rule_promoted_or_feed_changed": true,
+    "observed_pre_terminal_mfe_excludes_stop_minute_order_ambiguity": true,
+    "script_sha256": "01c0a5b5470bc021ba63d6c55d6cae3a6c3c9db017d3ccbcca13c461338059ab",
+    "source_code_identity_verified": true,
+    "stop_1R_2R_counts_independent_of_terminal_minute_order": true
+  },
+  "final_source_code_baseline_identity_verified": true,
+  "four_censored_2R_long_alternatives_explicit": true,
+  "source_rows": 310213,
+  "target_sensitivity_verification": {
+    "baseline_6R_short_10R_long_reproduced": true,
+    "baseline_artifacts_unchanged": true,
+    "code_identity_unchanged": true,
+    "historically_exposed_sensitivity_only": true,
+    "identical_signal_array_each_pair": true,
+    "independent_cash_arithmetic_verified": true,
+    "pairs_completed": 20,
+    "script_sha256": "b60eeb764a8a2923a8544ee59fe14920b6830c70027fce932331ce4e43914990",
+    "single_global_book_and_cooldown_verified": true,
+    "source_identity_verified": true
+  }
+}

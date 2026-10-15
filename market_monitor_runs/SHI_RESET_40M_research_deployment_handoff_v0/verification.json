@@ -1,0 +1,23 @@
+{
+  "March_April_September_October_counts": {
+    "April_September": 12,
+    "March": 1,
+    "October": 1
+  },
+  "all_snapshot_hashes_match": true,
+  "chosen40H_and_latest40L_bindings_unchanged": true,
+  "full_net_usdc": 1060.9076400647832,
+  "historical40L_validation": "15 tests and14 independent paths; not rerun for documentation task",
+  "inventory_files": 1698,
+  "net_usdc_by_entry_period": {
+    "April_September": 1142.1087288010335,
+    "March": -51.29687795196899,
+    "October": -29.904210784281332
+  },
+  "new_financial_replay": false,
+  "new_trading_tests": false,
+  "prior40L_artifact_hashes_unchanged": true,
+  "roadmap_local_links_checked": 75,
+  "status": "PASS_DOCUMENTATION_AND_SNAPSHOT_VERIFIED",
+  "trade_cash_reconciliation": true
+}

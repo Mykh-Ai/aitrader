@@ -1,0 +1,14 @@
+{
+  "all_declared_variants_completed": true,
+  "all_six_expiry_cases_accounted": true,
+  "baseline_artifacts_unchanged": true,
+  "baseline_reproduced": true,
+  "global_book_latency_causal_reference_and_cash_checks": true,
+  "historical_selection_not_holdout": true,
+  "original_code_identity_unchanged": true,
+  "production_policy_unchanged": true,
+  "real_feed_prefix_feature_and_signal_invariance": true,
+  "real_feed_prefix_h4_inventory_invariance": true,
+  "source_identity_verified": true,
+  "study_code_identity_unchanged": true
+}

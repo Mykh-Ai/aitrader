@@ -1,0 +1,42 @@
+{
+  "candidate_count": 51,
+  "counts": {
+    "stop_before_or_at_tp1": 17,
+    "stop_before_tp1_label": 17,
+    "target_before_stop": 2,
+    "tp1_then_target": 2,
+    "unresolved": 0,
+    "valid_tp1_before_stop": 34
+  },
+  "forward_data_used_for_outcome_evaluation_only": true,
+  "generation_timestamp": "2026-07-01T20:54:52Z",
+  "outcome_count": 51,
+  "outputs": {
+    "manual_monitor_rejects_csv": "market_monitor_runs\\SHI_RESET_38W1_fix_chronological_tp1_stop_labels_v0\\manual_monitor_rejects.csv",
+    "manual_monitor_shortlist_csv": "market_monitor_runs\\SHI_RESET_38W1_fix_chronological_tp1_stop_labels_v0\\manual_monitor_shortlist.csv",
+    "setup_builder_outcome_replay_results_csv": "market_monitor_runs\\SHI_RESET_38W1_fix_chronological_tp1_stop_labels_v0\\setup_builder_outcome_replay_results.csv",
+    "setup_builder_policy_replay_results_csv": "market_monitor_runs\\SHI_RESET_38W1_fix_chronological_tp1_stop_labels_v0\\setup_builder_policy_replay_results.csv",
+    "setup_builder_replay_manifest_json": "market_monitor_runs\\SHI_RESET_38W1_fix_chronological_tp1_stop_labels_v0\\setup_builder_replay_manifest.json",
+    "setup_builder_replay_summary_md": "market_monitor_runs\\SHI_RESET_38W1_fix_chronological_tp1_stop_labels_v0\\setup_builder_replay_summary.md"
+  },
+  "policy_result_count": 102,
+  "repo_commit": "f87cf33787de96bbe3acd39af0d506666a3b9e6a",
+  "research_only": true,
+  "run_version": "SHI_RESET_38W1_FIX_CHRONOLOGICAL_TP1_STOP_LABELS_V0",
+  "selected_feed_dir": "market_monitor_runs\\SHI_RESET_38V_full_feed_38s_to_setup_builder_crosscheck_v0\\support\\selected_feed",
+  "selected_zones_csv": "market_monitor_runs\\SHI_RESET_38V_full_feed_38s_to_setup_builder_crosscheck_v0\\support\\selected_zones\\selected_zones.csv",
+  "setup_reference_level_used_as_entry": false,
+  "source_38v_manifest": "market_monitor_runs\\SHI_RESET_38V_full_feed_38s_to_setup_builder_crosscheck_v0\\38v_manifest.json",
+  "source_candidates_are_38v_canonical_setup_builder_only": true,
+  "source_candidates_csv": "market_monitor_runs\\SHI_RESET_38V_full_feed_38s_to_setup_builder_crosscheck_v0\\full_feed_setup_builder_candidates.csv",
+  "uses_38s_rows_as_source_candidates": false,
+  "uses_executor": false,
+  "uses_live_readiness": false,
+  "uses_live_trading": false,
+  "uses_old_analyzer": false,
+  "uses_old_backtester": false,
+  "uses_orders": false,
+  "uses_pnl": false,
+  "uses_position_sizing": false,
+  "uses_strategy_promotion": false
+}

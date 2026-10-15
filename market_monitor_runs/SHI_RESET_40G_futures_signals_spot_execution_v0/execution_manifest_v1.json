@@ -1,0 +1,250 @@
+{
+  "H4_regime": "two latest confirmed high/lows of strict3H4 swings, available at right close; UP=HH+HL, DOWN=LH+LL, else MIXED; four references max30day age",
+  "baseline_spec": {
+    "code_hashes": {
+      "research/strategy_search/__init__.py": "7d4e5d761a1c528b4b0e89883a1a98839a616148ab4ca6c8d044ec34f1c326f6",
+      "research/strategy_search/__main__.py": "ba9f964ed9b5f29df1d6a80b09c2f3d199f1cedd3e2c3842a1ae24f4e96c354c",
+      "research/strategy_search/features.py": "e8a89f29a96097ee7cbba1ae88517b2656422948567addf3249567a395a94cb3",
+      "research/strategy_search/hybrid.py": "44d547d3b732b0fed20514ed0d17ab881223a6400b1cdf4f56f563cbd9b406e0",
+      "research/strategy_search/replay.py": "a48af0986e81c1c36cd159ad3a5003faf9e34dd2abfd43e0f52cab10e0c0b7e8"
+    },
+    "cooldown_minutes": 3,
+    "entry_end": "2026-10-01T00:00:00Z",
+    "entry_latency_minutes": 1,
+    "gap_policy": "CENSOR",
+    "historically_selected_after_search": true,
+    "history_selected": true,
+    "hypothesis": "Long entries on trend retest, short entries on accepted support break, one global position",
+    "long": {
+      "exit": {
+        "atr_floor": 2.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 10.0,
+        "trail_atr": 0.0
+      },
+      "family": "TREND_RETEST",
+      "flow": 0.04,
+      "impulse": 2.0,
+      "lookback": 96,
+      "maturity": 1.5,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    "maximum_initial_risk_fraction": 0.04,
+    "minimum_initial_risk_fraction": 0.004,
+    "notional_usd": 3000,
+    "one_position_global": true,
+    "pristine_holdout": false,
+    "production_promoted": false,
+    "round_trip_commission_usd": 5,
+    "short": {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    "slippage_bps_per_fill": 2,
+    "source_preparation": "market_monitor_runs/SHI_RESET_40B_own_signal_run_preparation_v1",
+    "version": "SHI_RESET_40D_HYBRID_CANDIDATE_V1"
+  },
+  "commission_per_completed_trade_usdc": 5,
+  "execution_market": "BINANCE_SPOT_BTCUSDC_MARGIN_PRICE_MODEL",
+  "execution_revision": "Trail stop validity must compare with the most recent observed spot minute close, not the older H1 close; original13-variant results and code retained; fixed primary and H4-only rules unchanged",
+  "initial_manifest_sha256": "7d37ffd24d78f84d73c242ab713981ab0c82ae2f1c34577c2d9795b47b76b32f",
+  "legacy_backtester_gate_active": false,
+  "long_half_exit": "standing half-position2R limit, remainder original10R target/stop/deadline;5USDC total fee remains user-specified per completed trade; 2bps each weighted fill",
+  "long_trail": "after observed2R close, confirmed H1 low with5bp buffer, mapped by then-known asof ratio; amendments valid after1minute and remain below then-known price",
+  "native_stop_sensitivity": "Same futures signals but native spot previous6H1 extrema and ATR24; explicitly different stop-source contract",
+  "notional_quote_usdc": 3000,
+  "official_archive_hashes": {
+    "BTCUSDC-1m-2026-03.zip": "bedca033bfc3f6a691441b9b6be50a6283d94a876b1ca81c1e60abf75ab47a68",
+    "BTCUSDC-1m-2026-04.zip": "f14c8c3ea7e84e32a19dc815720be5bc12b06ce190a8df2fa9930483d4012acc",
+    "BTCUSDC-1m-2026-05.zip": "7d9646d0ae95b7c6b3d5cdd66aed00fc6cef24907e1356c94508c2b85a3b1e2b",
+    "BTCUSDC-1m-2026-06.zip": "f5a1cbb7b549ad1e8f7854e6412e5ee0d7a1358deabe947556db7d3c1f63814c",
+    "BTCUSDC-1m-2026-07.zip": "af93d800e00f9b9bcf99c94d2fc210a2ccf7ea54598c1ed12ada66197228c663",
+    "BTCUSDC-1m-2026-08.zip": "71641b068bf1d5970191c251db10067117d540c9c9e37ec925717e2e64198ce2",
+    "BTCUSDC-1m-2026-09-01.zip": "2b9992e571144f9de45480d343cd422b3f15439f2625fb2b4012c28f6059ca63",
+    "BTCUSDC-1m-2026-09-02.zip": "1ba7343877539d83619d8085a416837f6ffe8b90952be1c828abd4d8b27db479",
+    "BTCUSDC-1m-2026-09-03.zip": "43b41c6d1245dabd76a4af0d765be168bc0a581d5d6ce29b171100130c3fbc4d",
+    "BTCUSDC-1m-2026-09-04.zip": "ad5d42bfc238c10627d929f7b81490394e7ee14142348217c7f7d5fb58a35f6d",
+    "BTCUSDC-1m-2026-09-05.zip": "0f2d058b6fed9f315326782c053609b31080e2bb7bb0b64546cc98ca6d65f5ce",
+    "BTCUSDC-1m-2026-09-06.zip": "662c7e865bc082b906ee54db6a182256df52db57c179716325654ab6725b2e88",
+    "BTCUSDC-1m-2026-09-07.zip": "4bd6e893fc1769c7c0b3cd659636fb018a30d016b99754108f2d331898464be8",
+    "BTCUSDC-1m-2026-09-08.zip": "930e8f0ded638287f335bb1138884a0228eab3d5cf2f28cb005a7aa53d54f667",
+    "BTCUSDC-1m-2026-09-09.zip": "cc6f785864db0ae9247108646d675ef2fb9ef53d00e63371a772e560cd1541e1",
+    "BTCUSDC-1m-2026-09-10.zip": "593dc6b494b7fd40b9ccb72000b72cb9e45b8e0adeac24d9deb992e666536761",
+    "BTCUSDC-1m-2026-09-11.zip": "9f5bb78962f465935fe76f8f549061ec20620360dd450f4d5739f021463d2efe",
+    "BTCUSDC-1m-2026-09-12.zip": "bffb43e4453eaab964982b1a9d727ba23ec859f70385f5621c6f8fef580570cf",
+    "BTCUSDC-1m-2026-09-13.zip": "39ad19e5e522080421070eb86828c11902e25ee485bfae0862fc8ee5ab53a3f4",
+    "BTCUSDC-1m-2026-09-14.zip": "04894a397512c4638d46324b0ad93b898b0101af50104f6424a6918dcabf04a9",
+    "BTCUSDC-1m-2026-09-15.zip": "5d68017781f2de75f9075183a599fcba9b79a412a348e2081220c9b1de09b323",
+    "BTCUSDC-1m-2026-09-16.zip": "bf4518925d88e86d33a54bded597330e4956e5c17f7925195b68c13160cb693d",
+    "BTCUSDC-1m-2026-09-17.zip": "76e597e1d2289857b5db17baa7fa4d157a7a4c3c5e58def5f351b5d2b0d4c731",
+    "BTCUSDC-1m-2026-09-18.zip": "c8d47d04edbecce0d2465400cfaaa2befe9a067de465ce7836cd259a91d144b5",
+    "BTCUSDC-1m-2026-09-19.zip": "4a59e3d210c36b78dc613d244269808dcbd36eeeaadce86cae2b671306ad9d83",
+    "BTCUSDC-1m-2026-09-20.zip": "3ff1b4a320a08e65a749042db23f550b77d596287b922d5595843ef95080088a",
+    "BTCUSDC-1m-2026-09-21.zip": "1f20d3c1b6c5c0e137b02e8cded7b7dd5f8efbc2a8ea59e50e39dc385b5ce238",
+    "BTCUSDC-1m-2026-09-22.zip": "b0089491bcd680824fc589798ba957aee39d62276b5b40f4df37357381ec0034",
+    "BTCUSDC-1m-2026-09-23.zip": "5dcb9d0d1724f326a54eec1a5babc7c99529de39be82a7b9ab9f6e6af2fec97e",
+    "BTCUSDC-1m-2026-09-24.zip": "e6050d59b600edabeae79bbc215329ac81de872c456eae114647c2a7125ad7bf",
+    "BTCUSDC-1m-2026-09-25.zip": "eb60c939cd7fc7f37e12388ed47418757274e5a8fd9e3e060afb9d853a40842c",
+    "BTCUSDC-1m-2026-09-26.zip": "53788788a953bae58f1c6ad003df482ff02dd982411f3b91492fbe909bd0fdda",
+    "BTCUSDC-1m-2026-09-27.zip": "293fde060589e98270a3ebbfb1a2fd5643cab7e2ddc8cef99be80a3a2c94f7c4",
+    "BTCUSDC-1m-2026-09-28.zip": "84e61840e3c4ebdd8530de61e78924cdabe947c391eec91e3fc28e338f7f43f2",
+    "BTCUSDC-1m-2026-09-29.zip": "4b3a50aef1956d04387ebb190e5f6e203420fea3a8afbf15d88130b5a87cf467",
+    "BTCUSDC-1m-2026-09-30.zip": "a69baf22c6dae9f4766fb09fe83e14b12a658dcf49c853b681ba191c2c48037a",
+    "BTCUSDC-1m-2026-10-01.zip": "04ec5a947a286fcc40f3d9261287b474f226614655f7c994186c749b71f202a2",
+    "BTCUSDC-1m-2026-10-02.zip": "80afa6f169028fb20621ae38ad677bcd4520937d17a8d3ab4b45aacc618b3e3e",
+    "BTCUSDC-1m-2026-10-03.zip": "7ccc41c820fd5dd799d999b2a49c6cde315ea26df5f8fc53c3f3c1d5de181466",
+    "BTCUSDC-1m-2026-10-04.zip": "55ca10b68e70939a141f1f062732869e2ad2146690297845d482af31cdb7d507",
+    "BTCUSDC-1m-2026-10-05.zip": "0b79c1e03b19f3f3dc6184d7cfd953184bb0947b53beb69ec210bb93f28482cc",
+    "BTCUSDC-1m-2026-10-06.zip": "7ef7cc2ec6c1eb7609b4345c6db0dfc1cbbd52bdd746e17ceca8b6b3e200e94a",
+    "BTCUSDC-1m-2026-10-07.zip": "0fef1f8ec6310373d2119f511ba4d643550a779a661de3e0981554412841c282",
+    "BTCUSDC-1m-2026-10-08.zip": "8bce41392a625ec9985d902856f9f151b7cde090c47b16e91e08359e2cdce79a",
+    "BTCUSDC-1m-2026-10-09.zip": "0d68bf601cdc5e83c251c271432bae54035244a4b646598ad8d0125e38db9b19",
+    "BTCUSDC-1m-2026-10-10.zip": "4be34a254014439b476132004230bc47b5091900a8bd9d28f847c3de662dcd51",
+    "BTCUSDC-1m-2026-10-11.zip": "c4b2a4e7af1d2205b2576236313055967bd4007904b920977069f2ef1a1a6faf",
+    "BTCUSDC-1m-2026-10-12.zip": "e0c28d4b73d181265704acab87baf8ee2edad656450152bcacbcacd1a60bb898"
+  },
+  "original_local_official_archive_cache": "D:/Project_V/Executor/backtests/imbalance_045_075_through_2026-09-27_v1/source/execution_feed_btcusdc/raw",
+  "preserved_hashes": {
+    "market_monitor_runs/SHI_RESET_40D_own_signal_strategy_search_v0/selected_result.json": "2911fd9282fe12985feae09d1bf65f230d2378b7d57708b2f483d1b9cda553b3",
+    "market_monitor_runs/SHI_RESET_40D_own_signal_strategy_search_v0/selected_strategy.json": "823d65932958085801d277b0a594c8b1f76facb979e5433e45984b6031bdfe57",
+    "market_monitor_runs/SHI_RESET_40D_own_signal_strategy_search_v0/selected_trade_ledger_usd.csv": "fa459edad9ba33d6b0c686a321716613963e72c14ea2444400d558741b4d4de1",
+    "market_monitor_runs/SHI_RESET_40F_direction_expiry_stop_interventions_v0/interventions.py": "e6a81090662ab4e210201595c2cba5e51b8197b7b5bc28dd54db09306de41949",
+    "market_monitor_runs/SHI_RESET_40F_direction_expiry_stop_interventions_v0/selected_research_variant.json": "884c13a0946507c6c4e6c50dc3bfa7ba79cd1d850efd3c307031837881d86c9e",
+    "market_monitor_runs/SHI_RESET_40F_direction_expiry_stop_interventions_v0/selected_result.json": "d22eedf8b361d5251396687a20370f4a8df43ddb374ce64da2fc7eccc2ea7b4a",
+    "market_monitor_runs/SHI_RESET_40F_direction_expiry_stop_interventions_v0/selected_trade_ledger_usd.csv": "9b601b72af128648bb20320aa4f7bd73e9f30c6cdd9270c06ea39fb8c2a85172"
+  },
+  "price_reference_mapping": "BTCUSDC closed spot / BTCUSDT closed futures, asof decision with max1minute age; frozen ratio maps futures structure and ATR into USDC",
+  "pristine_holdout": false,
+  "production_policy_promoted": false,
+  "signal_market": "BTCUSDT_PERPETUAL_FUTURES",
+  "slippage_bps_each_fill": 2,
+  "source_time_window": "same frozen futures interval through2026-10-12T23:59Z; spot archives include full days but future rows are excluded",
+  "spot_csv_sha256": "5497128e6ceb42788eb256c0e0e2a72768f7b8fbd1cae37162fbd845a3305ac9",
+  "spot_no_trade_minutes": "retain all originals; skip isolated no-observed-trade minute in execution with actual timestamps; extended gaps censored",
+  "spot_source_manifest_sha256": "310bf2bcd0e23f424b7af98d203499940b226a1fe0dfd325df10c6424531b803",
+  "study_code_hashes": {
+    "cross_market.py": "ec059a7ced512c6a1fd1509918fc53286ee6a6485435d4f131f7e2878446cecb",
+    "prepare_spot_data.py": "af7ea59891eb8393b2129704c1a1403b688bf70875e3198abb434f05734dc0e5",
+    "run_cross_market.py": "1b42fe6732300dd13aa76adc561f5c8840431296381b0a6dcfdeae81d97822c0"
+  },
+  "task": "SHI_RESET_40G_FUTURES_SIGNALS_SPOT_EXECUTION",
+  "unmodeled_borrow_interest": true,
+  "variants": [
+    {
+      "h4_mode": "NONE",
+      "id": "FUTURES_40D_CONTROL",
+      "management": "FIXED",
+      "market": "FUTURES_PROXY",
+      "native_stops": false,
+      "short_space": false
+    },
+    {
+      "h4_mode": "NONE",
+      "id": "FUTURES_40F_CONTROL",
+      "management": "FIXED",
+      "market": "FUTURES_PROXY",
+      "native_stops": false,
+      "short_space": true
+    },
+    {
+      "h4_mode": "NONE",
+      "id": "SPOT_40D_FIXED",
+      "management": "FIXED",
+      "market": "BINANCE_SPOT_BTCUSDC",
+      "native_stops": false,
+      "short_space": false
+    },
+    {
+      "h4_mode": "NONE",
+      "id": "SPOT_40F_FIXED",
+      "management": "FIXED",
+      "market": "BINANCE_SPOT_BTCUSDC",
+      "native_stops": false,
+      "short_space": true
+    },
+    {
+      "h4_mode": "NONE",
+      "id": "SPOT_NATIVE_STOP_40F",
+      "management": "FIXED",
+      "market": "BINANCE_SPOT_BTCUSDC",
+      "native_stops": true,
+      "short_space": true
+    },
+    {
+      "h4_mode": "NO_DOWN",
+      "id": "SPOT_40F_NO_DOWN",
+      "management": "FIXED",
+      "market": "BINANCE_SPOT_BTCUSDC",
+      "native_stops": false,
+      "short_space": true
+    },
+    {
+      "h4_mode": "UP_ONLY",
+      "id": "SPOT_40F_UP_ONLY",
+      "management": "FIXED",
+      "market": "BINANCE_SPOT_BTCUSDC",
+      "native_stops": false,
+      "short_space": true
+    },
+    {
+      "h4_mode": "NONE",
+      "id": "SPOT_40F_HALF_2R",
+      "management": "PARTIAL_HALF_2R",
+      "market": "BINANCE_SPOT_BTCUSDC",
+      "native_stops": false,
+      "short_space": true
+    },
+    {
+      "h4_mode": "NONE",
+      "id": "SPOT_40F_TRAIL_2R",
+      "management": "TRAIL_H1_AFTER_2R",
+      "market": "BINANCE_SPOT_BTCUSDC",
+      "native_stops": false,
+      "short_space": true
+    },
+    {
+      "h4_mode": "NO_DOWN",
+      "id": "SPOT_40F_NO_DOWN_HALF",
+      "management": "PARTIAL_HALF_2R",
+      "market": "BINANCE_SPOT_BTCUSDC",
+      "native_stops": false,
+      "short_space": true
+    },
+    {
+      "h4_mode": "UP_ONLY",
+      "id": "SPOT_40F_UP_ONLY_HALF",
+      "management": "PARTIAL_HALF_2R",
+      "market": "BINANCE_SPOT_BTCUSDC",
+      "native_stops": false,
+      "short_space": true
+    },
+    {
+      "h4_mode": "NO_DOWN",
+      "id": "SPOT_40F_NO_DOWN_TRAIL",
+      "management": "TRAIL_H1_AFTER_2R",
+      "market": "BINANCE_SPOT_BTCUSDC",
+      "native_stops": false,
+      "short_space": true
+    },
+    {
+      "h4_mode": "UP_ONLY",
+      "id": "SPOT_40F_UP_ONLY_TRAIL",
+      "management": "TRAIL_H1_AFTER_2R",
+      "market": "BINANCE_SPOT_BTCUSDC",
+      "native_stops": false,
+      "short_space": true
+    }
+  ]
+}

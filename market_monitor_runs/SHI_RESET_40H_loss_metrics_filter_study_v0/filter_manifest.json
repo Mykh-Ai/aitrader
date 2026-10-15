@@ -1,0 +1,148 @@
+{
+  "candidate_feature_csv_sha256": "a1224adb1cac5c605509d4a32ace7d16ac46093ee71f7b24a299a2f2eac2195d",
+  "diagnostic_manifest_sha256": "ffc3484299f30661e83fced498b9ab1503779f131989e51e12a35106d85e331c",
+  "diagnostic_trade_csv_sha256": "f47efd99fb10300ccb52688a67d934671ba4e3c4ee17e4b609be60486b474305",
+  "phase": "ADAPTIVE_FILTERS_FIXED_AFTER_21_TRADE_DIAGNOSIS_BEFORE_FILTER_RETURNS",
+  "reason": "Test delta4 confirmation, delta24 exhaustion with2/4/6 sensitivity, OI, liquidation, range, volume, funding and coarse UTC windows. Thresholds exploratory on exposed history.",
+  "rules_code_sha256": "ee30c96985677283176bdab15b1ce853b12bb0cd04b7cc95377376670da4c6f4",
+  "runner_code_sha256": "cc97377a1042835d6db09fcb90a4e42dc7ba4b7da7111d60a496c3bd4bdd0e39",
+  "scope": "22 declared portfolios including control; no exit/cost/target change. All failures/censors retained.",
+  "selection": "Cash ranking diagnostic, no production promotion. Prefer mechanistic rule simplicity and threshold stability over fitted calendar exclusions.",
+  "variants": [
+    {
+      "id": "BASELINE",
+      "rules": []
+    },
+    {
+      "id": "LONG_DELTA4_POS",
+      "rules": [
+        "L_D4_POS"
+      ]
+    },
+    {
+      "id": "LONG_DELTA24_LT4",
+      "rules": [
+        "L_D24_LT4"
+      ]
+    },
+    {
+      "id": "SHORT_DELTA24_GT_NEG4",
+      "rules": [
+        "S_D24_GT_NEG4"
+      ]
+    },
+    {
+      "id": "BOTH_DELTA24_BAND4",
+      "rules": [
+        "B_D24_BAND4"
+      ]
+    },
+    {
+      "id": "LONG_DELTA24_POS",
+      "rules": [
+        "L_D24_POS"
+      ]
+    },
+    {
+      "id": "LONG_DELTA4_POS_DELTA24_LT4",
+      "rules": [
+        "L_D4_POS",
+        "L_D24_LT4"
+      ]
+    },
+    {
+      "id": "LONG_DELTA4_POS_BOTH_BAND4",
+      "rules": [
+        "L_D4_POS",
+        "B_D24_BAND4"
+      ]
+    },
+    {
+      "id": "LONG_DELTA4_POS_BOTH_BAND2",
+      "rules": [
+        "L_D4_POS",
+        "B_D24_BAND2"
+      ]
+    },
+    {
+      "id": "LONG_DELTA4_POS_BOTH_BAND6",
+      "rules": [
+        "L_D4_POS",
+        "B_D24_BAND6"
+      ]
+    },
+    {
+      "id": "LONG_OI_NONNEG",
+      "rules": [
+        "L_OI_GE0"
+      ]
+    },
+    {
+      "id": "LONG_OI_GT_NEG2",
+      "rules": [
+        "L_OI_GT_NEG2"
+      ]
+    },
+    {
+      "id": "SHORT_OI_NONNEG",
+      "rules": [
+        "S_OI_GE0"
+      ]
+    },
+    {
+      "id": "BOTH_OI_NONNEG",
+      "rules": [
+        "B_OI_GE0"
+      ]
+    },
+    {
+      "id": "LONG_LIQ_SELL_GE_BUY",
+      "rules": [
+        "L_LIQ_SELL"
+      ]
+    },
+    {
+      "id": "LONG_RANGE_ATR_GE1_25",
+      "rules": [
+        "L_RANGE_GE1_25"
+      ]
+    },
+    {
+      "id": "SHORT_VOLUME_LT4",
+      "rules": [
+        "S_VOL_LT4"
+      ]
+    },
+    {
+      "id": "SHORT_FUNDING_NONNEG",
+      "rules": [
+        "S_FUNDING_GE0"
+      ]
+    },
+    {
+      "id": "LONG_SKIP_UTC04_08",
+      "rules": [
+        "L_SKIP04_08"
+      ]
+    },
+    {
+      "id": "LONG_SKIP_UTC16_20",
+      "rules": [
+        "L_SKIP16_20"
+      ]
+    },
+    {
+      "id": "LONG_SKIP_UTC04_08_AND16_20",
+      "rules": [
+        "L_SKIP04_08",
+        "L_SKIP16_20"
+      ]
+    },
+    {
+      "id": "BOTH_UTC08_16_ONLY",
+      "rules": [
+        "B_ONLY08_16"
+      ]
+    }
+  ]
+}

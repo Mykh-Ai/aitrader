@@ -1,0 +1,38 @@
+{
+  "October15_not_imported": true,
+  "aggregator_and_strategy_code_unchanged": true,
+  "all230_original_frozen_source_files_unchanged": true,
+  "complete_UTC_days_applied": [
+    {
+      "before_sha256": "5ef33ec1e36aebe94d49d991fa0309de50e1e4ef35da7a3adc314b540e64e55a",
+      "day": "2026-10-13",
+      "duplicate_timestamps": 0,
+      "first_close": "2026-10-13 00:00:00+00:00",
+      "last_close": "2026-10-13 23:59:00+00:00",
+      "max_buy_sell_volume_parity_error": 2.2737367544323206e-13,
+      "missing_minutes": 0,
+      "path": "feed/2026-10-13.csv",
+      "rows": 1440,
+      "sha256": "f402a66b5493f5ed29482e4d5de691a9d497bbfe879428f925705d682f96b34b",
+      "synthetic_rows": 0
+    },
+    {
+      "before_sha256": null,
+      "day": "2026-10-14",
+      "duplicate_timestamps": 0,
+      "first_close": "2026-10-14 00:00:00+00:00",
+      "last_close": "2026-10-14 23:59:00+00:00",
+      "max_buy_sell_volume_parity_error": 1.1368683772161603e-13,
+      "missing_minutes": 0,
+      "path": "feed/2026-10-14.csv",
+      "rows": 1440,
+      "sha256": "5b7c9537627aa357bafcaa5fca3e352a54aaca01fa0d13567dda204ea252377d",
+      "synthetic_rows": 0
+    }
+  ],
+  "feed_recovered_unchanged": true,
+  "new_replay_performed": false,
+  "prior_partial13_preserved": true,
+  "server_files_match_exact_bytes": true,
+  "source_cutoff_available": "2026-10-14T23:59:00Z"
+}

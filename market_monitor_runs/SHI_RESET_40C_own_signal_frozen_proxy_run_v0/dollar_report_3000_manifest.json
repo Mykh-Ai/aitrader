@@ -1,0 +1,17 @@
+{
+  "actual_account_fees_verified": false,
+  "capital_or_live_sizing_behavior_added": false,
+  "fills_and_rules_changed": false,
+  "interpretation": "FIXED_RAW_ENTRY_NOTIONAL_PER_INDEPENDENT_TRADE",
+  "no_compounding": true,
+  "output_hashes": {
+    "family_results_3000_usd.csv": "4f08449ad14ad68fc27af2494006784522c8d55b399e94c42ab48d6eb7ce7b47",
+    "trade_ledger_3000_usd.csv": "d4851d5303a2c44ebfc6247574dbfbb44f0e2fd1b8e7083cde8b5195af97ae5c"
+  },
+  "quantity_formula": "3000 / raw_entry_price",
+  "report_script_sha256": "fbdbc77020d5bf620c0b0d366f69030cbd2958564bf525be8507e980d60dd207",
+  "source_contract_sha256": "5cbc554bf29e98bd48e45f7c107b36cdd3621f31bc713056c19dad86332b38a7",
+  "source_ledger_sha256": "ea0c0d8f36ea6bdd88f29ce61d0a1a785ffbeeb387daef0587e944d65151d5b4",
+  "usd_reporting_assumes_one_usdt_equals_one_usd": true,
+  "user_requested_position_notional_usd": 3000.0
+}

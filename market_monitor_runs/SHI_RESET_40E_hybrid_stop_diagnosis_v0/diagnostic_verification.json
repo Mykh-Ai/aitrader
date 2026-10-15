@@ -1,0 +1,11 @@
+{
+  "all_16_stops_accounted": true,
+  "all_26_trades_accounted": true,
+  "baseline_hashes_unchanged": true,
+  "h4_references_causal": true,
+  "no_rule_promoted_or_feed_changed": true,
+  "observed_pre_terminal_mfe_excludes_stop_minute_order_ambiguity": true,
+  "script_sha256": "01c0a5b5470bc021ba63d6c55d6cae3a6c3c9db017d3ccbcca13c461338059ab",
+  "source_code_identity_verified": true,
+  "stop_1R_2R_counts_independent_of_terminal_minute_order": true
+}

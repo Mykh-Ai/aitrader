@@ -1,0 +1,11 @@
+{
+  "accepted_evidence_keys_preserved": true,
+  "v0_accepted": 10,
+  "v0_decisions": 152,
+  "v1_accepted": 10,
+  "v1_accepted_by_family": {
+    "DEMAND_SWEEP_RECLAIM_UP": 10
+  },
+  "v1_accepted_with_omitted_context": 0,
+  "v1_decisions": 164
+}

@@ -1,0 +1,17 @@
+{
+  "requested_complete_days": [
+    "2026-10-13",
+    "2026-10-14"
+  ],
+  "data_available_through_UTC": "2026-10-14T23:59:00Z",
+  "futures_server_local_hashes_match": true,
+  "spot_two_official_checksums_match": true,
+  "old13partial_backed_up_exact_prefix": true,
+  "old230source_and_strategy_identities_unchanged": true,
+  "prior_spot_CSV_preserved_byte_for_byte": true,
+  "selected40H_contract_result_ledger_identity_unchanged": true,
+  "new_financial_replay_performed": false,
+  "git_diff_check_passed": true,
+  "refresh_code_sha256": "fe204467d0bf6b66dba35889c64efa7f1dfce7f8425feeac3ca77ed6cf92560d",
+  "verification_code_sha256": "c6060892c793ddce02ff7976a30223e5dcc296b5e8a3fc84524c7aba32fdd127"
+}

@@ -1,0 +1,51 @@
+{
+  "actual_borrowing_in_net": false,
+  "additional_entries": "First newly closed break of prior48H1 high/low; repeated same-episode break signals suppressed; long EMAtrend, short negative24h price/delta pressure; directional H1delta>=4%, volume>=1.3prior-median; distanceEMA24<=2ATR, range<=2.5ATR; longdelta4>0, extra |delta24|<6%; shortspace>=0.75R when known opposing reference exists.",
+  "baseline_contract_sha256": "7d9338cf606e539baeaaf003267c24585019b74f7952e4cf2f97c5231b03f993",
+  "baseline_control_remains": "40H",
+  "code_sha256": {
+    "conditions.py": "dfe1293c3e72e2168522f68cbd859b7a705d98ae6c6d07ddbf30f4b817158e07",
+    "events.py": "de43dff6afcd39c9081f565b2e60d72b3bd47582b3be785702eb1f7645439c41",
+    "run_combinations.py": "cdeb427202107512a80e04288ece9cbdd5ea127e7ccafe6f772709814d94c88d"
+  },
+  "combination_manifest_sha256": "e225bdd498ac0da964550a4c4628f29ef3662e49b827f0895ceffc62a0f7dfd7",
+  "conflicts": "Opposite candidates at same H1 suppressed before replay; core and extra same-side merged; one global book/cooldown3min.",
+  "continuity_scope": "Original history/features/causal H4 inventory carried forward. No claim of implementing the full Monitor lifecycle.",
+  "event_manifest_sha256": "f496bda4bf041730e387f15c83a0ca37926fd0ddf14f59382802e084cdc4abce",
+  "execution_market": "BINANCE_SPOT_MARGIN_BTCUSDC_PRICE_MODEL",
+  "exit_rules": {
+    "long": {
+      "atr_floor": 2.0,
+      "hold_hours": 168,
+      "stop_lookback": 6,
+      "target_r": 10.0,
+      "trail_atr": 0.0
+    },
+    "short": {
+      "atr_floor": 1.5,
+      "hold_hours": 168,
+      "stop_lookback": 6,
+      "target_r": 6.0,
+      "trail_atr": 0.0
+    }
+  },
+  "fee_per_completed_trade_quote": 5,
+  "history_selected": true,
+  "liquidity_zones_reset": false,
+  "market_state_reset": false,
+  "notional_quote": 3000,
+  "original_40H_rules": "Core delta24 strict(-4%,+4%); longdelta4>0; oldfamilies/quality/exits unchanged except shortspace0.75R.",
+  "pristine_holdout": false,
+  "production_promoted": false,
+  "qualified_h1_state_reset": false,
+  "selected_variant": "JOINT_PAIR48_V13_B6_SPACE075",
+  "selection_status": "Frequency/cash tradeoff alternative; original strong24-trade criterion unmet, not silently relaxed.",
+  "setup_context_reset": false,
+  "signal_market": "BTCUSDT_PERPETUAL_FUTURES",
+  "slippage_bps_per_fill": 2,
+  "source_preparation": "market_monitor_runs/SHI_RESET_40B_own_signal_run_preparation_v1",
+  "spot_csv_sha256": "5497128e6ceb42788eb256c0e0e2a72768f7b8fbd1cae37162fbd845a3305ac9",
+  "structure_levels_reset": false,
+  "study_manifest_sha256": "6f31f3ec1913ae895395047ef6708ca8f3bbb493898bad48290a33abb349334d",
+  "version": "SHI_RESET_40I_FREQUENCY_ALTERNATIVE_V1"
+}

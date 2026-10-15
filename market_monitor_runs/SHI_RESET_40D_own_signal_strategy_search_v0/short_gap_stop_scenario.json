@@ -1,0 +1,21 @@
+{
+  "candidate": {
+    "exit": {
+      "atr_floor": 1.5,
+      "hold_hours": 168,
+      "stop_lookback": 6,
+      "target_r": 6.0,
+      "trail_atr": 0.0
+    },
+    "family": "ACCEPTED_BREAK",
+    "flow": 0.0,
+    "id": "a71b9897cbc576df",
+    "lookback": 48,
+    "trend": "PRESSURE",
+    "volume": 1.3
+  },
+  "gap_policy": "STOP_BOUND_PRIMARY_SHORT_GAP",
+  "interpretation": "A conservative stress mark, not an observed protective-stop fill",
+  "maximum_primary_gap_minutes": 5,
+  "one_minute_gaps_continue": true
+}

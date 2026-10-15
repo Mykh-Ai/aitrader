@@ -1,0 +1,18 @@
+{
+  "CONTROL_40H_trade_ledger_usdc.csv": "f90766f8a8c434597f535e4728024b0ea89c12a7b7cbf9ef48f17193f4cfd3f6",
+  "SHORT_DELTA4_NEGATIVE_trade_ledger_usdc.csv": "81c0e2a61781c892bf72ab8850c107863b5bcc3f7a94906730074c6714aac761",
+  "all_candidate_filter_evidence.csv": "6b6b81881ce27fd444251e4ff800763e8e4f7e27f20456388d5f1257f7dc2d2d",
+  "all_short_candidate_filter_evidence.csv": "2f95f27df9c717ce373bd3e0a0c506b7178ac63e3852128271480a97468ecc61",
+  "comparison.csv": "7f5832dca4022cdbdc37dde7e3e6189dbc31741cd054c398707ab52e53d47097",
+  "final_identity_verification.json": "8adf39b02fb2e57aea6708bb6b1f9dab15c5c1c04bf2d76e43fad1c259192617",
+  "mirror.py": "79ad260b8e0e0f390c6389edb255600f6e1f0bfb3380f610b8aa594ef5bb12c5",
+  "mirror_result.json": "2230dd70ea937b2a30d9d35cebd00f016fdd24b8bae709af9b590a81d776e6e4",
+  "result.md": "44043ac7a1464e19194a150314476d366a3fdfb20f0587a7e8d64cbb814f8570",
+  "run_output.txt": "c74e24e1b0c9c1793a428888c6a110501b9f00bfd119f9270c912b07e481c414",
+  "run_study.py": "bb6c64890294579e01c7bff0220c41a9f42b32811d767a1b8692b9d8777a0a5e",
+  "study_manifest.json": "901103aa0eceafe405e5b38d10ea1f18853b85bc2430bf49d9093b0f98f7bc5a",
+  "test_mirror.py": "2eeb71fb3b4ab58fe9902c8bf4728b41ab8136e2687276b39bab36b8fc7ea67a",
+  "test_summary.json": "4d0b7a39b1b1ba57515ebed4534643fbc2a6f3549e556af66229c9dadc16a5da",
+  "trade_attribution.csv": "0c40a53efdfa03dee1d3a6ef6f195f6492a1b0774d9f3f06561afb96207a5125",
+  "verification.json": "09e35381e24d012ed7c0424ddb035126bd61ac40ac6ddeed590ba9a576103f3f"
+}

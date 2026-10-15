@@ -1,0 +1,5035 @@
+{
+  "candidate_count": 335,
+  "candidates": [
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "2ee4401ad72ad728",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "05359310b2618ff8",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "c1f4b9a1895e56d5",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "b2597efd535fc0f4",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "af24055cad709a1d",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "5e14b4fbd117f3c9",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "78187b961ede6ee2",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "fbc6d64707e24f1b",
+      "lookback": 24,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "645e0f74eac9bbaf",
+      "lookback": 24,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "7cb3738ee11079ee",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "dde0a9aac0a4c91c",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "f567a821c556d246",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "ecde0381e50a9287",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "117d89e29bc135a7",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "7e4a6aa71180ad18",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "846ce98cded29976",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "67a67a13003059b0",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "41621a0162b3df42",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "6a0e617c26c36bdb",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "6835bda4b2693e56",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "45448e66fde6f556",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "5fece6e9b2d54f11",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "b568c6fe21c2de75",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "778d6116bbc41014",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "e1874817bf25607c",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "ea40a2288f5495ab",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "e0838a4499911c85",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "89fa31aaadc04ada",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "a37f6a285106d005",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "7655badb738add12",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "11fb49aeec3f8add",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "600524c1934b258e",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "5dc8e4f44895b88d",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "a6f0318166a0cdce",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "996f60ed39d29e27",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "e48a79c595b132f5",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "c65e1ba934b62054",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "49120ab41a17df56",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "a0d5d564d396d5ea",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "787e09c4061eda0a",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "c6de311054051605",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "0f252d4fb814f28b",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "8b2a418f1317fa63",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "3b732d4b507821db",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "61f838f2f949de09",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "c659e64167c73a86",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "2e59da5affc82768",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "a9f42261a57d9cb2",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "5745e9d7ed0282b2",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "4fe582dd1ed9d06a",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "7d7f3e151b6c5e64",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "6197ba996dbac9e5",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "650b07f19cee7c9b",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "c1d11b21e3ddfa89",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "c1cdd3875140a334",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "dd7c846060ac5bb8",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "6ca7e565682083d8",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "673311df87a2bc62",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "52e9a9a06ff86ca8",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "37ed37db9f7d427e",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "eee3f91592a596e9",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "fa8555cb0210c5d6",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "3f4512f4f283da7c",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "32c7f874ac01cbe3",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "170eb1bf1c81921c",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "8e3e3d3d59e13a96",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "f4d99af01d4ac26b",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "8f006e554383c9af",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "844320225b19512a",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "c3cfbddcf864bead",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "3ce7f44d4d6f5309",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "f293887cddfd9658",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "0fac467aa838735d",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "b02d7f8e8c74cbae",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "2639395c2e7ab33c",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "0000510ca257e8a8",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "b14dad93e007e0e3",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "e7034841631483aa",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "558756b48ab2183e",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "44d1b84b68cc0217",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "81bdc38605a2b6a0",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "fc45b1dc02d706a7",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "73c371ac91f71c88",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "60525c6d309ad4db",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "e86b69fbff89ec70",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "187fc095b114485c",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "e480c11351d370b8",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "eec91af26b338474",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "ab930c3ef39cc41d",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "17c2f96b0b2460fd",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "e7cf8526cbdf1a1c",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "a71b9897cbc576df",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "6c151f207bc568b7",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "b4adec7900d63eb2",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "28b6e48541c5d2da",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "2e9ba329e88391f2",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "20481867e6d54a5f",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "8126b0e8b1ef059d",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "7b48b2db68a621c1",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "0c58907feccafc7c",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "b3bbc1fe7206f6bc",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "f20ad44e6914e6b8",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "0439af6a22d0ef06",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "1c9ba1df9395f776",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "7c1647490cb004a7",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "fa7d8aa115852c1e",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "0dd4ea20fb91ca7d",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "9755c13a352c5597",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "001be6c6ef9b1b6d",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "f335c969912a6357",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "8e1a4d4c9eaf9ee3",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "c42f7e1e04d629d0",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "cc867c57038c842b",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "47a529fbbd2a1bc4",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "ab61126df9fa3ab2",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "a87ceef5b279e1dc",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "dd2dae93730cefe1",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "13ef4f71ff2271b5",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "6b572e481ed28bb9",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "a846da669efd195a",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "4f6e28a7099def31",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "c573774293a0e787",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "fa5200c3e632281d",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "9b2a4d3ed6d41ec5",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "d87201f4549bf3cc",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "4547de20f323065f",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "ba168869b5b82dd9",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "1239caf00714047b",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "15c779efae3cf64c",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "c23e84ae1be286fa",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "1a5c953136cebcc3",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "ef8c3a508abdac2a",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.04,
+      "id": "60ae9e187cff7fcc",
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "ac4b8c0b93a1a772",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "029e5d5a82546cf6",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "fc311e3a734784e5",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "b5d3f3c3afe4ea63",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "7df443c4bebac8eb",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "dbef931e543b10f4",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "8f6f8f6d99c0b6e9",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "ea09b24873f858b0",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "0fd658993adf92b8",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "e1421a90a8112fb8",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "427466ee5adef352",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "4575c914d5af7787",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "00817d0ddab2d9fb",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "2ca1690fd8368c6a",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "d75d548a9a1bb4ba",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "ae6e6e3c286bc17a",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "62895e93e861ad6a",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "8c5530f1380a35c7",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "4566ed98900cbb54",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "d1be2a61731358bb",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "26757b6c6c1047a6",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "ec91bdac48663678",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "9d1fbcc52110b0a1",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "e2a5c24940bb8a2b",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "d8fe60ffafdc814a",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "bd56bd97c5a2a397",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "30397ee0737e431d",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "c143dd42ce9d76e7",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "2eca2eefd83587fc",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "5807ebe9396aba5f",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "edc1388cb3cac9e3",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "bf95258215caa69b",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "fbea3a324fb305a9",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "05646de13b160488",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "185c0f4651d2d758",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "01f4d7f0b18fbd2a",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "07967c299bc723f3",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "fc57b40a3762753b",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "5f66c6720bca48af",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "2e3bc954b1526e59",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "a2415b3f1f2d58d3",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "b8bf39381fcf2e2f",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "0e72742a82bca29a",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "b0a03807dc9862a1",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "7a4aa7905999a149",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "59d6a96774d06cec",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "fea54f567f53624c",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "10a050b38d2f9401",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "9ef402511bd9f483",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "5db7aa6224a80556",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "01a62024e12680d0",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "83f4114d1f58652f",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "ed80a769949fcf84",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "2ff32c1680cf0f35",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "d708ff63a862cda3",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "902221dd95cede63",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "89ab0965be742c78",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "64eac6be6a3e2834",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "f0160db71c2c6558",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "32ec4d3249dfe0b9",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "6346b0ea1f191495",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "f73541bab43927c1",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "9b8c11de24a133a9",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "f6ae1f55c954459e",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "da650b523348c9c1",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "20df1f917a8040e3",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "280689eed6afda51",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "6a64cf13e96aae83",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "42dd833865cc0086",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "30d5d11049faa77d",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "ee815934ad387a7e",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "d0c89d361324f3bf",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "212bc5053e602ca9",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "eba96c38e8f5c399",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "aa68512086752abd",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "4727f71ac218f8a3",
+      "lookback": 96,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "14d3c6a4d4c39cd0",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "c9e783298a2f69ae",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "1465ffc0d2e48806",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "fff2762b3288b1d3",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "07c40ff24c7cc248",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "9f3f88f6fdf06c3f",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "66474f1956da6676",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "1405fc95f7cc788e",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "faa0f4cb515dcf10",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "16482038ea8dc8b5",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "8a965618d25ef45c",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "b5aef439938ac134",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "474fb7299ef70eca",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "7326aadcdb953321",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "22540b957ed5aea1",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "23c75a2e462903c5",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "115e4472510ca07c",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "6edfbbc832ddf397",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "d4cd378602df73e9",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "d3961bb040edf07e",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "87cfdef6e89dbf07",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "1510aa2584f82d10",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "8c404e55a5c609ff",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "a33edbd0b7f51c35",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "4e28c6475ae6c8d9",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "211a5679c3d49e6e",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "d6ac45cb2e4b9737",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "id": "6e57a2dd7204d232",
+      "lookback": 96,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "4c7afb355e964d69",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "a0197f27a5e8bea9",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "983339a474145af0",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "a4035e85b18ef28a",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "11f0ef3f0159b979",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "53162a47301d87cc",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "60799d345aa7f19f",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "02e428286629f727",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "974c4808157161c0",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "e132f0b086eebd88",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "4005aaa0360397d3",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "da3811c94c2ab302",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "b9369e0975ffbf3a",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "0618f8fc87dbdb3d",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "54605eeaaa45a5e0",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "7dafbe11a09aa418",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "c82e70667d3b992c",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "22cabc15df89e356",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "6d80b5bd0ea674d0",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "1c87e4c626a77666",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "896ee3e242baf63d",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "1abdeaffa4b886a8",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "91ac29a5fdf6f5e4",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "f2a5aaf25856c700",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "bfb1de3ed107e9a1",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "b74424b5cc51f35b",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "ecb2d917355e7191",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "551e8ce696ee48cd",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "cd9b624a210585a9",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "fb51ee71e52fac75",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "8f8e48197deff090",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "ffef7e2b8ca0dfda",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "64310ee8ca6cee04",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "cc239b0497488e49",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "c4dd1720fd6176d1",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "64306a41f31389f5",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "4d265a2dddd703e8",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "df494c87ff00a873",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "ab2b568eb0aee8f7",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "6d4d9e55aeec61a0",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "b35c7fc42412dbd5",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "6f47eed454e3a320",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "c7ed00415699ab1a",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "f6fe7491f376b5fa",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "c6b4aa497ce29938",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "315bce65d36ea2ec",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "bec5215fc6824ac9",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "324f7d609b4b228a",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "ddc1c5467242737c",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "2ab38156d6d0c6d5",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "e0daef701cdf4a47",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "c4032cb8046e89a9",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "001efe6972799a37",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "a0ee75ccf290347e",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "f85da460f4c72c53",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "02f76351f403e534",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "427904e014c62564",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "91ac948a056efba3",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "347c1593c70ff776",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "4c7b387664a4ff7d",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "2fa83ef45be408b2",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "f80cde1637d900af",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "a1571c293cfa4f1a",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "6f237fac1f8ba3c2",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "f97bd58175c4477b",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "e4c97e246c49e66e",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "fc4fb5868e40cc76",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "b720884025d121b4",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "6f05921df7f00189",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "bdc99f0858b2fee2",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "31edcfa4a796bd78",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "b39484ea543b3708",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.0,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "01963fe48f66346f",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "32d19ce03818deb2",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "dcfeeadaf13ee54b",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "0a4e359dde7b7d77",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 2.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "5661ccddcab711bc",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "eae3249a8c2d9107",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "2cae7677e366444b",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "30111e600191a876",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "9db5c9152b3d482c",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 6.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "4dc8f122d859f885",
+      "lookback": 24,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "d4f077ea290fc520",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "3a97a858e0184545",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "b5c81bc75309cc43",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "90aa5968bb6cfe3d",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "da9434281c3c518f",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "900639460fe8ea3c",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "a9e873e31e9a89e5",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.0,
+      "id": "15662813e874b779",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "61966d1a46adc30b",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "95f38a206b14e093",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "932594fb5faa89f4",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "5f72376237f46488",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.0
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "d4887687d8bc9ef9",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "5133cc11a0b4f710",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 48,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "1fe27dd1a550a0e0",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 12,
+        "target_r": 4.0,
+        "trail_atr": 2.0
+      },
+      "family": "SWEEP_RECLAIM",
+      "flow": 0.04,
+      "id": "92c22180b835953f",
+      "lookback": 48,
+      "trend": "EMA",
+      "volume": 1.3
+    }
+  ],
+  "selection": "Every positive uncensored development variant with at least six trades",
+  "same_variant_grid": true,
+  "adaptation": "Expanded the original development shortlist; validation is previously observed",
+  "pristine_holdout": false,
+  "script_sha256": "0576c4bdfdfbbcb1f37391d6725ddd96156ed0acf5a281926a3e936a4075201a"
+}

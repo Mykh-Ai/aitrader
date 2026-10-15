@@ -1,0 +1,11 @@
+{
+  "all47_40H_artifacts_and_original_inputs_unchanged": true,
+  "all_three_batch_rule_code_hashes_unchanged": true,
+  "minimum_success_count": 13,
+  "selected_alternative_has_no_lost_baseline_winners": true,
+  "strong_success_count": 0,
+  "total_variants": 130,
+  "all130_summary_rows_no_censors_and_strong_target_unmet_verified": true,
+  "selected18rows11wins7losses_and_dollars_verified": true,
+  "independent_verifier_repair_fully_rerun_successfully": true
+}

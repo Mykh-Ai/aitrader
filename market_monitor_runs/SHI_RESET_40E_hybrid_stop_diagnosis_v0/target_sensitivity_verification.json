@@ -1,0 +1,12 @@
+{
+  "baseline_6R_short_10R_long_reproduced": true,
+  "baseline_artifacts_unchanged": true,
+  "code_identity_unchanged": true,
+  "historically_exposed_sensitivity_only": true,
+  "identical_signal_array_each_pair": true,
+  "independent_cash_arithmetic_verified": true,
+  "pairs_completed": 20,
+  "script_sha256": "b60eeb764a8a2923a8544ee59fe14920b6830c70027fce932331ce4e43914990",
+  "single_global_book_and_cooldown_verified": true,
+  "source_identity_verified": true
+}

@@ -1,0 +1,7 @@
+{
+  "additional_to_40F_cases": 20,
+  "command": "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q market_monitor_runs/SHI_RESET_40F1_short_protection_2R_v0/test_2r.py",
+  "duration_seconds": 0.49,
+  "failed": 0,
+  "passed": 2
+}

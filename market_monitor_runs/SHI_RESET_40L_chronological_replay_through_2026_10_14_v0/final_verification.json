@@ -1,0 +1,14 @@
+{
+  "all232_sources_unchanged": true,
+  "all40K_artifact_hashes_match": true,
+  "all_candidate_book_decisions_reconcile": true,
+  "all_run_code_and_prior_artifacts_unchanged": true,
+  "eligible_book_decisions": {
+    "ENTERED": 14,
+    "ENTRY_OBSERVATION_OR_INITIAL_RISK_REJECTED": 1,
+    "POSITION_OPEN_OR_COOLDOWN": 7
+  },
+  "independent_full_cash_reconciliation": true,
+  "original40H_artifacts_and_selection_bindings_match_their_saved_hashes": true,
+  "test_result": "15 passed"
+}

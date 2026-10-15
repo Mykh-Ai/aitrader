@@ -1,0 +1,24 @@
+{
+  "40I_status": "PRESERVED_UNSELECTED_EXPERIMENT",
+  "combined_delta_rules": [
+    "All directions: -4% < weighted rolling24h futures delta < +4%.",
+    "Long only: weighted rolling4h futures delta >0%."
+  ],
+  "decision_record": "research/canonical/OWN_SIGNAL_RESEARCH_SELECTION_2026_10_15.md",
+  "inherits_entire_frozen_contract": true,
+  "new_financial_run": false,
+  "production_promoted": false,
+  "runtime_consumer_added": false,
+  "scope": "RESEARCH_CONFIRMATION_ONLY",
+  "selected_at_local_date": "2026-10-15",
+  "selected_contract": "market_monitor_runs/SHI_RESET_40H_loss_metrics_filter_study_v0/selected_research_contract.json",
+  "selected_contract_sha256": "7d9338cf606e539baeaaf003267c24585019b74f7952e4cf2f97c5231b03f993",
+  "selected_ledger": "market_monitor_runs/SHI_RESET_40H_loss_metrics_filter_study_v0/selected_trade_ledger_usdc.csv",
+  "selected_ledger_sha256": "29153704a2c8b58fda7027f7a19a15a39a1934ceb76c7adf1d542b12b7297d3b",
+  "selected_result": "market_monitor_runs/SHI_RESET_40H_loss_metrics_filter_study_v0/selected_result.json",
+  "selected_result_sha256": "92b56e66fc2a262811dd6115c009f1d171052aae999d76a9fc6c9a9b1f040361",
+  "selected_variant": "LONG_DELTA4_POS_BOTH_BAND4",
+  "short_space_r": 1.0,
+  "timezone": "Europe/Budapest",
+  "user_selected_candidate": "40H"
+}

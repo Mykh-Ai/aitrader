@@ -1,0 +1,110 @@
+{
+  "activation": "completed minute excursion reaches2R; stop becomes effective at next real open at least1 minute later; no same-minute retroactive fill",
+  "baseline_spec": {
+    "code_hashes": {
+      "research/strategy_search/__init__.py": "7d4e5d761a1c528b4b0e89883a1a98839a616148ab4ca6c8d044ec34f1c326f6",
+      "research/strategy_search/__main__.py": "ba9f964ed9b5f29df1d6a80b09c2f3d199f1cedd3e2c3842a1ae24f4e96c354c",
+      "research/strategy_search/features.py": "e8a89f29a96097ee7cbba1ae88517b2656422948567addf3249567a395a94cb3",
+      "research/strategy_search/hybrid.py": "44d547d3b732b0fed20514ed0d17ab881223a6400b1cdf4f56f563cbd9b406e0",
+      "research/strategy_search/replay.py": "a48af0986e81c1c36cd159ad3a5003faf9e34dd2abfd43e0f52cab10e0c0b7e8"
+    },
+    "cooldown_minutes": 3,
+    "entry_end": "2026-10-01T00:00:00Z",
+    "entry_latency_minutes": 1,
+    "gap_policy": "CENSOR",
+    "historically_selected_after_search": true,
+    "history_selected": true,
+    "hypothesis": "Long entries on trend retest, short entries on accepted support break, one global position",
+    "long": {
+      "exit": {
+        "atr_floor": 2.0,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 10.0,
+        "trail_atr": 0.0
+      },
+      "family": "TREND_RETEST",
+      "flow": 0.04,
+      "impulse": 2.0,
+      "lookback": 96,
+      "maturity": 1.5,
+      "trend": "EMA",
+      "volume": 1.3
+    },
+    "maximum_initial_risk_fraction": 0.04,
+    "minimum_initial_risk_fraction": 0.004,
+    "notional_usd": 3000,
+    "one_position_global": true,
+    "pristine_holdout": false,
+    "production_promoted": false,
+    "round_trip_commission_usd": 5,
+    "short": {
+      "exit": {
+        "atr_floor": 1.5,
+        "hold_hours": 168,
+        "stop_lookback": 6,
+        "target_r": 6.0,
+        "trail_atr": 0.0
+      },
+      "family": "ACCEPTED_BREAK",
+      "flow": 0.0,
+      "lookback": 48,
+      "trend": "PRESSURE",
+      "volume": 1.3
+    },
+    "slippage_bps_per_fill": 2,
+    "source_preparation": "market_monitor_runs/SHI_RESET_40B_own_signal_run_preparation_v1",
+    "version": "SHI_RESET_40D_HYBRID_CANDIDATE_V1"
+  },
+  "driver_sha256": "55b399f93c260bd93653544cb9860c2902a6fc1e62c63fcbb56c2004d4a0036d",
+  "engine_sha256": "e6a81090662ab4e210201595c2cba5e51b8197b7b5bc28dd54db09306de41949",
+  "notional_usd": 3000,
+  "preserved_artifact_hashes": {
+    "market_monitor_runs/SHI_RESET_40D_own_signal_strategy_search_v0/selected_result.json": "2911fd9282fe12985feae09d1bf65f230d2378b7d57708b2f483d1b9cda553b3",
+    "market_monitor_runs/SHI_RESET_40D_own_signal_strategy_search_v0/selected_strategy.json": "823d65932958085801d277b0a594c8b1f76facb979e5433e45984b6031bdfe57",
+    "market_monitor_runs/SHI_RESET_40D_own_signal_strategy_search_v0/selected_trade_ledger_usd.csv": "fa459edad9ba33d6b0c686a321716613963e72c14ea2444400d558741b4d4de1",
+    "market_monitor_runs/SHI_RESET_40F_direction_expiry_stop_interventions_v0/selected_research_variant.json": "884c13a0946507c6c4e6c50dc3bfa7ba79cd1d850efd3c307031837881d86c9e",
+    "market_monitor_runs/SHI_RESET_40F_direction_expiry_stop_interventions_v0/selected_result.json": "d22eedf8b361d5251396687a20370f4a8df43ddb374ce64da2fc7eccc2ea7b4a",
+    "market_monitor_runs/SHI_RESET_40F_direction_expiry_stop_interventions_v0/selected_trade_ledger_usd.csv": "9b601b72af128648bb20320aa4f7bd73e9f30c6cdd9270c06ea39fb8c2a85172",
+    "market_monitor_runs/SHI_RESET_40F_direction_expiry_stop_interventions_v0/study_manifest.json": "4f8978ae84bce993214642df556d9af78298491bf1821f71f311d87b42866b1e"
+  },
+  "pristine_holdout": false,
+  "production_promoted": false,
+  "protective_stop_R": 0.25,
+  "round_trip_fee_usd": 5,
+  "slippage_bps_per_fill": 2,
+  "task": "SHI_RESET_40F1_SHORT_PROTECTION_2R",
+  "user_directed_trigger_R": 2,
+  "variants": [
+    {
+      "id": "BASE_TRIGGER_0R",
+      "short_space": false,
+      "trigger_R": 0
+    },
+    {
+      "id": "BASE_TRIGGER_1R",
+      "short_space": false,
+      "trigger_R": 1
+    },
+    {
+      "id": "BASE_TRIGGER_2R",
+      "short_space": false,
+      "trigger_R": 2
+    },
+    {
+      "id": "SHORT_SPACE_TRIGGER_0R",
+      "short_space": true,
+      "trigger_R": 0
+    },
+    {
+      "id": "SHORT_SPACE_TRIGGER_1R",
+      "short_space": true,
+      "trigger_R": 1
+    },
+    {
+      "id": "SHORT_SPACE_TRIGGER_2R",
+      "short_space": true,
+      "trigger_R": 2
+    }
+  ]
+}

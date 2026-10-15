@@ -1,0 +1,18 @@
+{
+  "actual_borrowing_in_net": false,
+  "artifact_hashes": "market_monitor_runs/SHI_RESET_40L_chronological_replay_through_2026_10_14_v0/artifact_hashes.json",
+  "artifact_hashes_sha256": "18bf9a61184cd1ad84d637bdc71ddd2b5bd9c9e2f575624864adaa8acca9105a",
+  "cutoff_utc": "2026-10-14 23:59:00+00:00",
+  "journal": "market_monitor_runs/SHI_RESET_40L_chronological_replay_through_2026_10_14_v0/trade_journal_usdc.csv",
+  "journal_sha256": "b48e2290001526793157147748c630717c0a87799ca4ece5ad8e1b720e022d22",
+  "production_promoted": false,
+  "result": "market_monitor_runs/SHI_RESET_40L_chronological_replay_through_2026_10_14_v0/result.json",
+  "result_sha256": "221f1f6e485f193770b44f58f35329bf96048aa37033e3033fc6db47d9015695",
+  "rule_contract_unchanged": "market_monitor_runs/SHI_RESET_40H_loss_metrics_filter_study_v0/selected_research_contract.json",
+  "selected_rule_pointer": "research/active_own_signal_selection.json",
+  "selected_rule_pointer_sha256": "e6e618cebe1b36eb488b86d3295baa32d4ce622541a1233edf6bb40df71cf1de",
+  "status": "COMPLETED_RESEARCH_ONLY",
+  "study_manifest": "market_monitor_runs/SHI_RESET_40L_chronological_replay_through_2026_10_14_v0/study_manifest.json",
+  "study_manifest_sha256": "d561a4c53a4964ed43d1dd928fd6fa5179d7ee5971ad8f6f255caf88334e416d",
+  "version": "40L_EXTENDED_40H_REPLAY_EVIDENCE"
+}

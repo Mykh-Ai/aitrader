@@ -1,0 +1,8 @@
+{
+  "all_baseline_difference_cash_reconciled": true,
+  "all_diagnostic_baseline_hashes_unchanged": true,
+  "completed_variants": 22,
+  "declared_variants": 22,
+  "fixed_original_engine_no_cost_exit_changes": true,
+  "one_global_book_full_replays": true
+}

@@ -1,0 +1,8 @@
+{
+  "command": "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q market_monitor_runs/SHI_RESET_40I_entry_frequency_expansion_v0/test_conditions.py tests/test_strategy_search_replay.py",
+  "passed": 17,
+  "failed": 0,
+  "new_tests": 7,
+  "original_replay_tests": 10,
+  "duration_seconds": 0.74
+}

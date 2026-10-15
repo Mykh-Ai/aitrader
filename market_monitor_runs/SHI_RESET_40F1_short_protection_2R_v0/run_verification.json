@@ -1,0 +1,12 @@
+{
+  "2R_is_only_new_trigger_0_25R_stop_unchanged": true,
+  "all_four_40F_controls_match": true,
+  "all_six_declared_replays_completed": true,
+  "amendment_latency_causal_trigger_and_cash_checks": true,
+  "baseline_artifacts_preserved": true,
+  "code_identity_unchanged": true,
+  "global_position_book_verified": true,
+  "historically_exposed_not_holdout": true,
+  "original_code_identity_unchanged": true,
+  "source_identity_verified": true
+}

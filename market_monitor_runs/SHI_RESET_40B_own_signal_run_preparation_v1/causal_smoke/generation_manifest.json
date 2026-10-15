@@ -1,0 +1,19 @@
+{
+  "candidate_decisions_sha256": "6f363d5563ed71229c661cd81d0c7da12761fcb4f8aa7561f09cbbb9bb62e17d",
+  "code_hashes": {
+    "market_monitor/feed_adapter.py": "191cd6f3a807a8ffd11f9da9610c7d31f057250f6c6b9d5c27a163615d93f352",
+    "market_monitor/market_structure_state.py": "2a122465abfea2c119226e917224b33d72837190974123425fc078a952603278",
+    "market_monitor/qualified_h1_sweep_reclaim.py": "97d0923cefcd319e657137dbabf2e823d9f3af66cab0cb402d76998d3a21293d",
+    "research/own_signal_run/__init__.py": "894065cf875d881fe406b55478d08b5795f5fe2d2445b8a3d71892bce0662718",
+    "research/own_signal_run/__main__.py": "69c9155b1a0a23f46e9e29d723c325f13f28fd801d6a82cbd4e3dbca62194afd",
+    "research/own_signal_run/causal.py": "bb0979b3e2dab85028e5f2aeca0d0899e66c7156b8593e00ced6e3a7a9edbf26",
+    "research/own_signal_run/contracts.py": "300a4b84621da38cb3427a7366be231a1641629b45633314eb3315b02f1a6ba4",
+    "research/own_signal_run/feed.py": "17687465a0dd8a5a20e10ca28433f03809261162381b435f53c12d23ad3c48de",
+    "research/own_signal_run/replay.py": "7931784f6fcdee04f28773f7b67622728773f2b5ce47bf7c31ee12c330781854"
+  },
+  "contract_sha256": "b2ff1ff9fb9f9d9ad9261479420f6328175873b3825770c7c7c96ec54351b428",
+  "cutoff": "2026-03-25 14:00:00+00:00",
+  "financial_replay": false,
+  "source": "Aitrader_feed_only",
+  "state_continuity_sha256": "918d35b6cce26fa35ef1464f69588b243f3923ad0b2c5a152d43a1a19c4d6811"
+}

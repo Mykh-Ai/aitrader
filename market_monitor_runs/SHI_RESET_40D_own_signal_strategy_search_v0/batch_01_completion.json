@@ -1,0 +1,11 @@
+{
+  "code_hashes": {
+    "research/strategy_search/__init__.py": "7d4e5d761a1c528b4b0e89883a1a98839a616148ab4ca6c8d044ec34f1c326f6",
+    "research/strategy_search/__main__.py": "ba9f964ed9b5f29df1d6a80b09c2f3d199f1cedd3e2c3842a1ae24f4e96c354c",
+    "research/strategy_search/features.py": "e8a89f29a96097ee7cbba1ae88517b2656422948567addf3249567a395a94cb3",
+    "research/strategy_search/replay.py": "a7b01b978dd8fe6a40e3a9ec55b9dae304527248eba5294f9f9a8eecf6f7c283"
+  },
+  "elapsed_seconds": 25.39,
+  "qualified_ids": [],
+  "source_identity_reverified": true
+}

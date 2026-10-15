@@ -1,0 +1,19 @@
+{
+  "all22_actual_entry_UTC_and_local_hours_match_known_planned_hours": true,
+  "all22_variants_complete_no_censor": true,
+  "selected_cash_and_count_reconciled": true,
+  "no_production_reusable_or_protected_source_code_changed_by40H": true,
+  "targeted_tests": {
+    "command": "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q market_monitor_runs/SHI_RESET_40H_loss_metrics_filter_study_v0/test_filters.py tests/test_strategy_search_replay.py",
+    "passed": 16,
+    "failed": 0,
+    "duration_seconds": 0.96,
+    "new_cases": 6,
+    "existing_replay_cases": 10,
+    "test_code_sha256": "1c55c3834412d57c97c5bd62340dec64cbc818d9ac6371c0c4b3cb41d82a4057"
+  },
+  "independent_path_verification_sha256": "827b8952f9dded242c8ffe0f8092877c20ffb42f5b3fefaa6fc3134643d1dfd0",
+  "selected_journal_execution_currency_quote_availability_and_metrics_verified": true,
+  "unchanged_40G_asof_quote_csv_sha256": "526bbc4ddcf50c29c1dc9c8a5721531d011801b789510d2b1f273d44c81b309f",
+  "git_diff_check_passed": true
+}

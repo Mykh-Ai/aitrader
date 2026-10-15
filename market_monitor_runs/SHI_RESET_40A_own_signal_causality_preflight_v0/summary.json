@@ -1,0 +1,46 @@
+{
+  "candidate_count": 51,
+  "directionally_invalid_target_at_replay_entry": 26,
+  "family_outcomes": {
+    "DEMAND_SWEEP_RECLAIM_UP_SETUP": {
+      "STOP_BEFORE_TP1": 2,
+      "TP1_ONLY_NO_FOLLOWUP": 0,
+      "TP1_THEN_BE": 7,
+      "TP1_THEN_TARGET": 0
+    },
+    "SELLER_DOMINANCE_RETEST_DOWN_SETUP": {
+      "STOP_BEFORE_TP1": 9,
+      "TP1_ONLY_NO_FOLLOWUP": 0,
+      "TP1_THEN_BE": 17,
+      "TP1_THEN_TARGET": 2
+    },
+    "SUPPLY_SWEEP_RECLAIM_DOWN_SETUP": {
+      "STOP_BEFORE_TP1": 6,
+      "TP1_ONLY_NO_FOLLOWUP": 1,
+      "TP1_THEN_BE": 7,
+      "TP1_THEN_TARGET": 0
+    }
+  },
+  "financial_backtester_run": false,
+  "limitations": [
+    "source_day identifies the selected snapshot, not the zone's original formation time",
+    "a later target snapshot alone does not prove the geometry first appeared in the future",
+    "49 backward state timestamps are confirmed by the daily metric computation and builder timestamp assignment",
+    "the two remaining rows are not validated: the full-period zone selection has no per-signal availability contract",
+    "historical outcome labels are preserved as forensic evidence, not tradable or net-return results"
+  ],
+  "max_state_availability_delay_hours": 23.0,
+  "new_signal_generation": false,
+  "profitability_search_performed": false,
+  "raw_feed_read_or_modified": false,
+  "research_only": true,
+  "source_hashes": {
+    "market_monitor_runs/SHI_RESET_38V_full_feed_38s_to_setup_builder_crosscheck_v0/full_feed_setup_builder_candidates.csv": "cf757d164336e59e5b2008164b2a1c314efdd77007dfbf321fe06eef13321dfd",
+    "market_monitor_runs/SHI_RESET_38V_full_feed_38s_to_setup_builder_crosscheck_v0/support/selected_zones/selected_zones.csv": "2d885bff411d4fabafc9b84f61bd984c7ec5bf428ed0da994430d88d07f88a49",
+    "market_monitor_runs/SHI_RESET_38W1_fix_chronological_tp1_stop_labels_v0/setup_builder_outcome_replay_results.csv": "cf9ae0829e72b70a4e8f78a35b84ba8a4e40f12b58b9ee350f80e939155b52dd"
+  },
+  "state_ends_after_recorded_setup": 49,
+  "target_snapshot_later_calendar_day": 24,
+  "task_id": "SHI_RESET_40A_OWN_SIGNAL_CAUSALITY_PREFLIGHT",
+  "verdict": "SAVED_COHORT_REJECTED_FOR_CAUSAL_FINANCIAL_VALIDATION"
+}

@@ -1,0 +1,5 @@
+{
+  "first_verifier_attempt": "Passed all130 prefix streams and path/cash checks; export failed with missing G source-directory import.",
+  "repair": "Added missing constant import in verifier only; frozen signal rules, financial runners, manifests and all130 financial returns unchanged.",
+  "next": "Full verifier rerun completed successfully after import repair; all130streams and2450trade rows/59unique first-touch paths verified. See verification_output.txt."
+}

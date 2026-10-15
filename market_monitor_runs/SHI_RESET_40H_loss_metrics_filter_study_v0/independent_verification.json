@@ -1,0 +1,17 @@
+{
+  "all_declared_portfolios": 22,
+  "all_entry_metrics_and_22_signal_streams_real_prefix_invariant": true,
+  "all_first_stop_target_expiry_touches_verified": true,
+  "all_frozen_baseline_and_source_identities_unchanged": true,
+  "all_global_books_and_filter_decisions_verified": true,
+  "all_study_code_and_rules_identities_unchanged": true,
+  "decision_close_risk_estimates_verified_all52_candidates": true,
+  "full_source_identity_revalidated_by_40B_loader": true,
+  "independent_dollar_cost_risk_and_R_arithmetic": true,
+  "independent_paths_checked": 345,
+  "isolated_omissions_preserved_and_verified": 178,
+  "no_censored_paths_in_any_variant": true,
+  "not_pristine_holdout": true,
+  "prefix_cutoff": "2026-07-22 17:30:00+00:00",
+  "unique_entry_paths_checked": 27
+}

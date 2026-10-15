@@ -1,0 +1,12 @@
+{
+  "40H_band6_sensitivity_exactly_reproduced": true,
+  "all_attribution_dollar_differences_reconciled": true,
+  "all_original_40H_artifacts_unchanged": true,
+  "baseline_40H_exactly_reproduced": true,
+  "minimum_success_count": 12,
+  "selected_frequency_variant": null,
+  "strong_success_count": 0,
+  "unchanged_exit_engine": true,
+  "union_candidate_decisions": 127,
+  "variants_declared_and_completed": 74
+}

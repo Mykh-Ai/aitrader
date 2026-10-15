@@ -1,0 +1,50 @@
+{
+  "code_sha256": "cdeb427202107512a80e04288ece9cbdd5ea127e7ccafe6f772709814d94c88d",
+  "first_results_sha256": "c574450f638daa186c3855e7694a112ce8f5f2f57776c9267617521435226dc7",
+  "phase": "THIRD_FINITE_ADAPTIVE_BATCH_FIXED_BEFORE_COMBINATION_RETURNS",
+  "reason": "Single0.75R short-space gate adds a winner;48h-first-break additions increase winning count. Test their declared combinations, including high-frequency tradeoff.",
+  "second_results_sha256": "78028bc653421b773f186c032d50208f0bf2874f1ce9d7bcec93ed01d926dc85",
+  "selection": "Original minimum/strong criteria unchanged; no pristine holdout or exit/cost/quality change.",
+  "variants": [
+    {
+      "id": "JOINT_CORE_SPACE075",
+      "kind": "RELAX",
+      "source": "BASELINE_40H"
+    },
+    {
+      "id": "JOINT_FLOW02_VOL11_SPACE075",
+      "kind": "RELAX",
+      "source": "L_FLOW02_VOL11_S_STRICT_B4_F0"
+    },
+    {
+      "id": "JOINT_BOTH_VOL11_SPACE075",
+      "kind": "RELAX",
+      "source": "BOTH_VOL11"
+    },
+    {
+      "id": "JOINT_HIGH_FREQUENCY_SPACE075",
+      "kind": "RELAX",
+      "source": "L_FLOW02_VOL11_S_LB24_VOL11_B6_F-1"
+    },
+    {
+      "id": "JOINT_PAIR48_V13_B4_SPACE075",
+      "kind": "EVENT",
+      "source": "EXTRA_PAIR_L_BREAKOUT48_S_BREAKOUT48_V13_B4"
+    },
+    {
+      "id": "JOINT_PAIR48_V13_B6_SPACE075",
+      "kind": "EVENT",
+      "source": "EXTRA_PAIR_L_BREAKOUT48_S_BREAKOUT48_V13_B6"
+    },
+    {
+      "id": "JOINT_PAIR48_V11_B4_SPACE075",
+      "kind": "EVENT",
+      "source": "EXTRA_PAIR_L_BREAKOUT48_S_BREAKOUT48_V11_B4"
+    },
+    {
+      "id": "JOINT_PAIR48_V11_B6_SPACE075",
+      "kind": "EVENT",
+      "source": "EXTRA_PAIR_L_BREAKOUT48_S_BREAKOUT48_V11_B6"
+    }
+  ]
+}
