@@ -2,6 +2,12 @@
 
 Compact handoff log for AiTrader. This file is the index; detailed evidence remains in `research/canonical/` and generated outputs under `market_monitor_runs/`.
 
+## 2026-10-15 - SHI_RESET_40P user-authorized Binance historical data acquisition
+
+- Follow-up user instruction authorizes downloading older data after40Ostop, without waiving parity or running OOS. Starting commit`733177740850675f98d50fe0e2ae412870725c82`,dedicated`codex/SHI_RESET_40P_binance_futures_history_acquisition_v0`. Inherited prospective score2025-03-01–2026-03-09,warmupFebruary2025,declared January31boundary minute. Source plan/code/previous identities frozen before download.
+-23official BTCUSDT USD-M1m ZIP/CHECKSUM pairs all passSHA256:13monthly February2025–February2026,nine dailyMarch1–9,one boundaryday;24,596,772ZIPbytes/580320source rows. Separate normalized cache:578880UTCright-close rows/402daily files/175,750,532bytes;40320warmup and538560evaluation-source rows. Zero missing/duplicate minute labels;18official nontraded rows flagged and retained. Original exchange clocks remain; unchanged40Oadapter,prices2dec/quantities6dec,exact inventories/checksums verified.
+- Canonical:`research/canonical/SHI_RESET_40P_BINANCE_FUTURES_HISTORY_ACQUISITION_AUDIT_2026_10_15.md`;run:`market_monitor_runs/SHI_RESET_40P_binance_futures_history_acquisition_v0/`. Bulk data preserved locally with committed exact cache/URL/hash references and reproduction commands.16targeted/787full regression tests pass,11existing warnings,JUnit retained. Prior40Oartifacts/protected assets/40H/Lpointers unchanged. OOS features/candidates/returns not read;no strategy variants,production integration or automatic main merge/push. Next remains source-equivalence resolution;40Ofailed gate is preserved.
+
 ## 2026-10-15 - SHI_RESET_40O official Binance futures archive parity before OOS
 
 - User-scoped research-only task starts from preserved publication`def5060680b31b6639c39d3e00b061ccf147d4c9` on dedicated`codex/SHI_RESET_40O_binance_futures_archive_oos_validation_v0`. Byte-exact0862342historical modules reproduce selected40H13rows/+1090.811850849USDC. Rules SHA`ee30c969...`,filter manifest`32ff407d...`verified; actual executed code hashes recorded. No current runtime substitution, rule changes, variants or optimization.

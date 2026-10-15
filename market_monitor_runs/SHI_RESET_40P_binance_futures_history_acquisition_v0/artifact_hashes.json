@@ -1,0 +1,14 @@
+{
+  "acquire_history.py": "0b52042c0f882660afc1d0d1620e1512e0f1ba2fcabb030794c695a69a037309",
+  "archive_inventory.csv": "8ba7bdd8cbcde3cde611d80f3c62549db4943b2f02e90fad54bf23b1cd639610",
+  "code_hashes.json": "8a98197996c178d47d970000fe58ee68b9fdd3e68f0d3c21ee099690c51a9863",
+  "nontraded_minutes.csv": "ee5233f6db72887c38d31edb00a0945e616e47203fdd1d6b6174a6e1124056c2",
+  "normalization_summary.json": "b0b03551fe247ad6d214a8e4c1d83fe0759ec0a638f1aa94229906088c6d5b02",
+  "normalized_inventory.csv": "18b08fa56f4726aae79ddc563536a2e0befce29e60452f04056f8fb71040ac4c",
+  "README.md": "262810e76ead076327004f749418b4136249685360f057cf9b8f0bef97bec744",
+  "run_manifest.json": "aabfc6835009ff1ef2c33f82594f3734121c3a12d501d5b7863d403d378edf9a",
+  "source_manifest.json": "1cb90bae176992997f26a095d02204779f847d5389b49b26e2feeb46f8da0fb3",
+  "test_contracts.xml": "f007f25dd3b4f863d4ca9a22989a23650624dcc82a7653b64ec62341f15804e4",
+  "test_regression.xml": "b06b13e88b4880e7200e665a6f17676accaaaaad04275c6b6e71f4fae444c11a",
+  "verification.json": "6ba5e56b0d65d3982302d4a5321b7cdd99ef476ea429d8099b6cd77bfac6d14d"
+}

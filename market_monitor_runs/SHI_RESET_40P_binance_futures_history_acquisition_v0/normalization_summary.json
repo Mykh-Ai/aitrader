@@ -1,0 +1,33 @@
+{
+  "BuyQty": "taker_buy_base_asset_volume",
+  "OOS_replay_executed": false,
+  "OOS_strategy_outcomes_read": false,
+  "SellQty": "unrounded total base volume minus unrounded taker-buy base volume, then rounded to 6 decimals",
+  "Trades_semantics": "Binance component trades; not equal to SHI received aggTrade event count",
+  "archives": 23,
+  "duplicate_minutes": 0,
+  "evaluation_source_rows": 538560,
+  "first_timestamp": "2025-02-01 00:00:00+00:00",
+  "last_timestamp": "2026-03-09 23:59:00+00:00",
+  "missing_minutes": 0,
+  "nontraded_minutes": 18,
+  "normalized_bytes": 175750532,
+  "normalized_daily_files": 402,
+  "normalized_rows": 578880,
+  "original_zip_bytes": 24596772,
+  "price_decimals": 2,
+  "quantity_decimals": 6,
+  "source_parity_accepted": false,
+  "source_rows": 580320,
+  "source_rows_outside_declared_boundary": 1440,
+  "status": "DATA_ACQUIRED_AND_NORMALIZED_NOT_STRATEGY_VALIDATED",
+  "timestamp_contract": "Exchange candle open + 60s = SHI-style right-close label; original clocks retained",
+  "unavailable_fields": [
+    "OpenInterest",
+    "FundingRate",
+    "LiqBuyQty",
+    "LiqSellQty"
+  ],
+  "unavailable_fields_policy": "Inherited schema zeros are placeholders flagged unavailable; not observations or strategy filters",
+  "warmup_rows": 40320
+}

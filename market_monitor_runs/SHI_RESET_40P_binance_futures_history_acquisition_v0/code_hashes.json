@@ -1,0 +1,5 @@
+{
+  "market_monitor_runs/SHI_RESET_40P_binance_futures_history_acquisition_v0/acquire_history.py": "0b52042c0f882660afc1d0d1620e1512e0f1ba2fcabb030794c695a69a037309",
+  "market_monitor_runs/SHI_RESET_40O_binance_futures_archive_oos_validation_v0/archive_source.py": "2b0144c3fd3b3abf5b0d6f6d9c9eec5ad38d5e76d16bca002a311c6579242266",
+  "tests/test_binance_history_acquisition.py": "2895510abc70c25b888c8de72a77f3a1cc76c674f8739fd0f445ab3df6091aa4"
+}

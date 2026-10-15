@@ -1,0 +1,12 @@
+{
+  "OOS_replay_executed": false,
+  "all_daily_files_have_1440_rows": true,
+  "archives_checksum_verified": 23,
+  "checked_at_utc": "2026-10-15T15:45:34.259579+00:00",
+  "normalized_files_sha_verified": 402,
+  "normalized_minutes_verified": 578880,
+  "prior_files_unchanged": true,
+  "right_close_mapping_verified": true,
+  "source_parity_still_unaccepted": true,
+  "status": "PASS"
+}
