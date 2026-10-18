@@ -16,13 +16,19 @@ def test_h1_aggregation_is_deterministic_and_conservative_quality():
     second = aggregate_timeframe(feed, "H1")
 
     assert first.equals(second)
-    assert first.loc[0, "Timestamp"] == pd.Timestamp("2026-05-07T00:00:00Z")
+    assert first["Timestamp"].tolist() == [
+        pd.Timestamp("2026-05-07T00:00:00Z"),
+        pd.Timestamp("2026-05-07T01:00:00Z"),
+    ]
     assert first.loc[0, "OpenPrice"] == 100
-    assert first.loc[0, "HiPrice"] == 104
-    assert first.loc[0, "LowPrice"] == 99
-    assert first.loc[0, "ClosePrice"] == 103
-    assert first.loc[0, "TotalQty"] == 21
-    assert first.loc[0, "DataQuality"] == "RECOVERED_DEGRADED"
+    assert first.loc[0, "HiPrice"] == 102
+    assert first.loc[0, "TotalQty"] == 10
+    assert first.loc[1, "OpenPrice"] == 101
+    assert first.loc[1, "HiPrice"] == 105
+    assert first.loc[1, "LowPrice"] == 100
+    assert first.loc[1, "ClosePrice"] == 104
+    assert first.loc[1, "TotalQty"] == 23
+    assert first.loc[1, "DataQuality"] == "RECOVERED_DEGRADED"
 
 
 def test_h4_aggregation_aligns_to_utc_four_hour_boundaries():
@@ -38,11 +44,41 @@ def test_h4_aggregation_aligns_to_utc_four_hour_boundaries():
     bars = aggregate_timeframe(feed, "H4")
 
     assert bars["Timestamp"].tolist() == [
-        pd.Timestamp("2026-05-07T00:00:00Z"),
         pd.Timestamp("2026-05-07T04:00:00Z"),
         pd.Timestamp("2026-05-07T08:00:00Z"),
     ]
+    assert bars.loc[0, "TotalQty"] == 21
+    assert bars.loc[1, "TotalQty"] == 25
     assert all(ts.hour in {0, 4, 8, 12, 16, 20} for ts in bars["Timestamp"])
+
+
+def test_live_h1_drops_unclosed_bar_and_is_prefix_stable():
+    feed = _feed([
+        ("2026-05-07T00:59:00Z", 100, 103, 99, 101, 10, "RAW"),
+        ("2026-05-07T01:00:00Z", 101, 104, 100, 103, 11, "RAW"),
+        ("2026-05-07T01:01:00Z", 103, 105, 102, 104, 12, "RAW"),
+    ])
+    completed = aggregate_timeframe(feed.iloc[:2], "H1")
+    later = aggregate_timeframe(feed, "H1")
+    assert completed["Timestamp"].tolist() == [pd.Timestamp("2026-05-07T01:00:00Z")]
+    pd.testing.assert_frame_equal(completed, later)
+
+
+def test_live_h4_does_not_expose_incomplete_following_bar():
+    feed = _feed([
+        ("2026-05-07T04:00:00Z", 100, 110, 99, 101, 10, "RAW"),
+        ("2026-05-07T08:00:00Z", 101, 120, 100, 110, 11, "RAW"),
+        ("2026-05-07T12:00:00Z", 110, 111, 101, 105, 12, "RAW"),
+        ("2026-05-07T12:01:00Z", 105, 115, 100, 110, 13, "RAW"),
+    ])
+    prefix = aggregate_timeframe(feed.iloc[:3], "H4")
+    later = aggregate_timeframe(feed, "H4")
+    assert prefix["Timestamp"].tolist() == [
+        pd.Timestamp("2026-05-07T04:00:00Z"),
+        pd.Timestamp("2026-05-07T08:00:00Z"),
+        pd.Timestamp("2026-05-07T12:00:00Z"),
+    ]
+    pd.testing.assert_frame_equal(prefix, later)
 
 
 def _feed(rows):
