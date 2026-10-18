@@ -90,7 +90,14 @@ def aggregate_timeframe(feed: pd.DataFrame, timeframe: str) -> pd.DataFrame:
 
     rule = rules[timeframe]
     frame = feed.sort_values("Timestamp", kind="mergesort").copy()
-    frame["bar_timestamp"] = frame["Timestamp"].dt.floor(rule)
+    # Feed timestamps label minute CLOSES. A minute closing on an H1/H4
+    # boundary belongs to the bar that just closed, not the next bar.
+    # Label each aggregate with its actual closing UTC timestamp.
+    duration = pd.Timedelta({"h": "1h"}.get(rule, rule))
+    frame["bar_timestamp"] = (
+        (frame["Timestamp"] - pd.Timedelta(nanoseconds=1)).dt.floor(rule)
+        + duration
+    )
     bars = (
         frame.groupby("bar_timestamp", sort=True)
         .agg(
@@ -111,7 +118,11 @@ def aggregate_timeframe(feed: pd.DataFrame, timeframe: str) -> pd.DataFrame:
         )
         .reset_index(drop=True)
     )
-    return bars[columns]
+    # Never expose the last partial higher-timeframe candle as a completed
+    # structural observation. Missing individual minutes do not, by
+    # themselves, invalidate an already elapsed bar.
+    bars = bars.loc[bars["Timestamp"] <= frame["Timestamp"].max()]
+    return bars[columns].reset_index(drop=True)
 
 
 def _daily_reference_levels(frame: pd.DataFrame) -> list[dict[str, object]]:
