@@ -558,8 +558,9 @@ def _target_reference_zone(zones: pd.DataFrame, side: str, price: float) -> str:
 
 
 def _formed_at(state: pd.Series, raw: pd.Series | None) -> str:
-    if raw is not None:
-        return _cell(raw.get("end_timestamp"))
+    # Family decisions also consume the state classification and pressure
+    # calculated through the state end. An earlier raw regime window can be
+    # recorded as the source window, but cannot backdate that later evidence.
     return _cell(state.get("end_timestamp"))
 
 
