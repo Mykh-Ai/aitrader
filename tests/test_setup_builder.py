@@ -41,7 +41,7 @@ def test_seller_dominant_state_and_bearish_raw_window_create_down_setup(tmp_path
     assert row["setup_type"] == "SELLER_DOMINANCE_RETEST_DOWN_SETUP"
     assert row["direction_context"] == "DOWN"
     assert row["trigger_status"] == "ARMED"
-    assert row["setup_formed_at"] == "2026-03-26T08:59:00+00:00"
+    assert row["setup_formed_at"] == "2026-03-26T09:00:00Z"
     assert row["source_window_start"] == "2026-03-26T05:00:00+00:00"
     assert row["source_window_end"] == "2026-03-26T08:59:00+00:00"
     assert row["source_time_precision"] == "RAW_REGIME_WINDOW_240M"
@@ -71,7 +71,7 @@ def test_downtrend_exhaustion_near_demand_creates_up_watch_not_triggered(tmp_pat
     assert str(row["countertrend_flag"]).lower() == "true"
     assert row["trigger_status"] in {"WATCH", "ARMED"}
     assert row["trigger_status"] != "TRIGGERED"
-    assert row["setup_formed_at"] == "2026-03-26T08:59:00+00:00"
+    assert row["setup_formed_at"] == "2026-03-26T09:00:00Z"
     assert row["source_time_precision"] == "RAW_REGIME_WINDOW_240M"
     assert row["nearest_zone_side"] == "SELL_SIDE"
     assert row["target_reference_zone"].startswith("zone_supply:BUY_SIDE:")
