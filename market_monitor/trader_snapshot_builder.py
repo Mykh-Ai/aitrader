@@ -9,6 +9,9 @@ from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
+import numpy as np
+from market_monitor.structure import _observation_feed
+from market_monitor.causality import asof_rows, latest_zone_snapshot, utc
 
 from market_monitor.feed_source import FeedSourceError, resolve_daily_feed_source
 from PIL import Image, ImageDraw, ImageFont
@@ -76,6 +79,7 @@ def build_trader_snapshot(
     input_root: str | Path,
     feed_dir: str | Path,
     output_dir: str | Path,
+    as_of: str | None = None,
 ) -> TraderSnapshotResult:
     start_date = _parse_date(start, "start")
     end_date = _parse_date(end, "end")
@@ -95,9 +99,19 @@ def build_trader_snapshot(
     out_dir.mkdir(parents=True, exist_ok=True)
 
     selected = pd.read_csv(selected_path)
+    day_end = pd.Timestamp(end_date, tz="UTC") + pd.Timedelta(hours=23, minutes=59)
+    if as_of is not None:
+        cutoff = utc(as_of)
+    elif "selection_cutoff_utc" in selected and selected.selection_cutoff_utc.notna().any():
+        cutoff = min(day_end, pd.to_datetime(selected.selection_cutoff_utc, utc=True).max())
+    else:
+        cutoff = day_end
+    if cutoff > day_end or cutoff < pd.Timestamp(start_date, tz="UTC"):
+        raise TraderSnapshotBuilderError("as-of must fall within the requested dates")
+    selected = latest_zone_snapshot(selected, cutoff)
     _validate_selected_zones(selected, selected_path)
     rendered_zones = _visible_zones(selected)
-    price_path = _load_price_path(feed_root, start_date, end_date)
+    price_path = _load_price_path(feed_root, start_date, min(end_date, cutoff.date()), cutoff=cutoff)
     current_price = float(price_path["Close"].iloc[-1])
     missing_flags = _missing_data_flags(selected)
     state = _snapshot_state(
@@ -107,6 +121,7 @@ def build_trader_snapshot(
         rendered_zones=rendered_zones,
         missing_flags=missing_flags,
     )
+    state["cutoff_ts"] = cutoff.isoformat()
 
     rendered_zones_path = out_dir / RENDERED_ZONES_OUTPUT
     rendered_zones[RENDERED_ZONE_COLUMNS].to_csv(rendered_zones_path, index=False)
@@ -125,6 +140,9 @@ def build_trader_snapshot(
     state_path.write_text(json.dumps(state, indent=2, sort_keys=True), encoding="utf-8")
     manifest = {
         "renderer_version": RENDERER_VERSION,
+        "cutoff_ts": cutoff.isoformat(),
+        "source_quality_counts": price_path.DataQuality.value_counts().to_dict(),
+        "source_files": price_path[["SourceFile", "SourceClass"]].drop_duplicates().to_dict("records"),
         "start": start_date.isoformat(),
         "end": end_date.isoformat(),
         "input_selected_zones": str(selected_path),
@@ -175,11 +193,12 @@ def _visible_zones(selected: pd.DataFrame) -> pd.DataFrame:
     return visible.sort_values(["rank", "zone_id"], kind="mergesort").reset_index(drop=True)
 
 
-def _load_price_path(feed_dir: Path, start_date: date, end_date: date) -> pd.DataFrame:
+def _load_price_path(feed_dir: Path, start_date: date, end_date: date, *, cutoff=None) -> pd.DataFrame:
     frames = []
     for day in _date_range(start_date, end_date):
         try:
-            path = resolve_daily_feed_source(feed_dir, day).path
+            selected_source = resolve_daily_feed_source(feed_dir, day)
+            path = selected_source.path
         except FeedSourceError as exc:
             raise TraderSnapshotBuilderError(str(exc)) from exc
         frame = pd.read_csv(path)
@@ -187,16 +206,24 @@ def _load_price_path(feed_dir: Path, start_date: date, end_date: date) -> pd.Dat
         missing = sorted(required - set(frame.columns))
         if missing:
             raise TraderSnapshotBuilderError(f"{path} missing price columns: {', '.join(missing)}")
-        frame = frame[["Timestamp", "Open", "High", "Low", "Close"]].copy()
-        frame["Timestamp"] = pd.to_datetime(frame["Timestamp"], errors="coerce")
+        frame["DataQuality"] = selected_source.source_class
+        frame["SourceClass"] = selected_source.source_class
+        frame["SourceFile"] = path.name
+        frame["Timestamp"] = pd.to_datetime(frame["Timestamp"], errors="raise", utc=True).dt.tz_localize(None)
+        if cutoff is not None:
+            frame = frame.loc[pd.to_datetime(frame.Timestamp, utc=True).le(utc(cutoff))]
+        frame = _observation_feed(frame)
         for column in ["Open", "High", "Low", "Close"]:
             frame[column] = pd.to_numeric(frame[column], errors="coerce")
-        frame = frame.dropna(subset=["Timestamp", "Open", "High", "Low", "Close"])
+        if not np.isfinite(frame[["Open", "High", "Low", "Close"]]).all().all():
+            raise TraderSnapshotBuilderError(f"{path} contains invalid price observations")
         if frame.empty:
             raise TraderSnapshotBuilderError(f"{path} has no usable price rows")
         frames.append(frame)
     out = pd.concat(frames, ignore_index=True)
     out = out.sort_values("Timestamp", kind="mergesort").reset_index(drop=True)
+    if out.Timestamp.duplicated().any():
+        raise TraderSnapshotBuilderError("duplicate source observations require governed resolution")
     if out.empty:
         raise TraderSnapshotBuilderError("no usable price data loaded")
     return out

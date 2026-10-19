@@ -67,6 +67,7 @@ def build_post_sweep_observations(
     event_log: pd.DataFrame,
     feed: pd.DataFrame,
     volume_delta_state: pd.DataFrame,
+    previous_observations: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     if event_log.empty or feed.empty:
         return pd.DataFrame(columns=POST_SWEEP_OBSERVATION_COLUMNS)
@@ -91,13 +92,21 @@ def build_post_sweep_observations(
     unresolved = unresolved.sort_values(
         ["event_timestamp", "market_move_id", "zone_id", "event_id"], kind="mergesort"
     )
+    cached = pd.DataFrame()
+    if previous_observations is not None and not previous_observations.empty:
+        cutoff = feed.Timestamp.max()
+        cached = previous_observations.loc[
+            (pd.to_datetime(previous_observations.source_event_timestamp, utc=True) + pd.Timedelta(minutes=POST_SWEEP_OBSERVATION_BARS)).le(cutoff)
+            & previous_observations.source_event_id.isin(unresolved.event_id)].copy()
+        unresolved = unresolved.loc[~unresolved.event_id.isin(cached.source_event_id)]
     frame = feed.sort_values("Timestamp", kind="mergesort").reset_index(drop=True)
     context = _context_frame(volume_delta_state)
-    rows = []
+    rows = cached.to_dict("records")
     for _, event in unresolved.iterrows():
         rows.append(_observation_row(event, frame, context))
 
     out = pd.DataFrame(rows, columns=POST_SWEEP_OBSERVATION_COLUMNS)
+    out = out.sort_values(["source_event_timestamp", "zone_id", "source_event_id"], kind="mergesort").reset_index(drop=True)
     out["observation_id"] = [f"observation_{idx + 1:06d}" for idx in range(len(out))]
     return out[POST_SWEEP_OBSERVATION_COLUMNS]
 
@@ -126,15 +135,19 @@ def _observation_row(
 ) -> dict[str, object]:
     evidence = json.loads(str(event["evidence_json"]))
     event_ts = pd.Timestamp(event["event_timestamp"])
-    observed = feed[feed["Timestamp"] > event_ts].head(POST_SWEEP_OBSERVATION_BARS)
-    event_feed = feed[feed["Timestamp"] == event_ts]
+    end = event_ts + pd.Timedelta(minutes=POST_SWEEP_OBSERVATION_BARS)
+    start_index = feed.Timestamp.searchsorted(event_ts, side="right")
+    end_index = feed.Timestamp.searchsorted(end, side="right")
+    observed = feed.iloc[start_index:end_index]
+    event_feed = feed.iloc[feed.Timestamp.searchsorted(event_ts, side="left"):start_index]
 
     lower = float(evidence["price_lower"])
     upper = float(evidence["price_upper"])
     mid = float(evidence["price_mid"])
     side = str(event["side"])
     available = len(observed)
-    complete = available >= POST_SWEEP_OBSERVATION_BARS
+    expected = pd.date_range(event_ts + pd.Timedelta(minutes=1), end, freq="min")
+    complete = len(observed) == len(expected) and pd.DatetimeIndex(observed.Timestamp).equals(expected)
     quality = _quality(event, observed)
 
     if observed.empty:
@@ -335,14 +348,14 @@ def _post_oi_change(observed: pd.DataFrame, event_feed: pd.DataFrame) -> float:
 def _matched_context(context: pd.DataFrame, observed: pd.DataFrame) -> pd.DataFrame:
     if context.empty or observed.empty:
         return pd.DataFrame()
-    timestamps = set(observed["Timestamp"].map(_format_ts))
-    return context[context["timestamp"].isin(timestamps)]
+    timestamps = observed["Timestamp"].map(_format_ts).tolist()
+    return context.reindex(timestamps).dropna(how="all")
 
 
 def _context_frame(volume_delta_state: pd.DataFrame) -> pd.DataFrame:
     if volume_delta_state.empty:
         return pd.DataFrame(columns=["timestamp", "volume_zscore", "delta_zscore"])
-    return volume_delta_state.copy()
+    return volume_delta_state.drop_duplicates("timestamp", keep="last").set_index("timestamp", drop=False)
 
 
 def _first_ts(frame: pd.DataFrame, mask: pd.Series) -> str:

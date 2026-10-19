@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import pandas as pd
+import hashlib
+from market_monitor.causality import utc
 
 
 M15_SWING_LEFT_RIGHT = 2
@@ -16,6 +18,8 @@ SESSION_DEFINITIONS = [
 STRUCTURE_LEVEL_COLUMNS = [
     "level_id",
     "created_at",
+    "LevelAvailableAtUTC",
+    "ConfirmingBarCloseUTC",
     "level_timestamp",
     "timeframe",
     "level_type",
@@ -36,18 +40,21 @@ STRUCTURE_LEVEL_COLUMNS = [
 ]
 
 
-def build_structure_levels(feed: pd.DataFrame) -> pd.DataFrame:
+def build_structure_levels(feed: pd.DataFrame, *, as_of=None) -> pd.DataFrame:
     if feed.empty:
         return pd.DataFrame(columns=STRUCTURE_LEVEL_COLUMNS)
 
     frame = feed.sort_values("Timestamp", kind="mergesort").copy()
-    frame["day"] = frame["Timestamp"].dt.floor("D")
+    if as_of is not None:
+        frame = frame.loc[frame.Timestamp.le(utc(as_of))]
+    frame = _observation_feed(frame)
+    frame["day"] = (frame["Timestamp"] - pd.Timedelta(nanoseconds=1)).dt.floor("D")
     rows: list[dict[str, object]] = []
     rows.extend(_daily_reference_levels(frame))
-    rows.extend(_finalized_session_levels(frame))
-    rows.extend(_confirmed_swing_levels(frame, "M15", M15_SWING_LEFT_RIGHT))
-    rows.extend(_confirmed_swing_levels(frame, "H1", H1_SWING_LEFT_RIGHT))
-    rows.extend(_confirmed_swing_levels(frame, "H4", H4_SWING_LEFT_RIGHT))
+    rows.extend(_finalized_session_levels(frame, as_of=as_of))
+    rows.extend(_confirmed_swing_levels(frame, "M15", M15_SWING_LEFT_RIGHT, as_of=as_of))
+    rows.extend(_confirmed_swing_levels(frame, "H1", H1_SWING_LEFT_RIGHT, as_of=as_of))
+    rows.extend(_confirmed_swing_levels(frame, "H4", H4_SWING_LEFT_RIGHT, as_of=as_of))
 
     levels = _assign_level_ids(pd.DataFrame(rows, columns=STRUCTURE_LEVEL_COLUMNS))
     equal_levels = _equal_level_rows(levels)
@@ -65,7 +72,7 @@ def build_structure_levels(feed: pd.DataFrame) -> pd.DataFrame:
     return levels
 
 
-def aggregate_timeframe(feed: pd.DataFrame, timeframe: str) -> pd.DataFrame:
+def aggregate_timeframe(feed: pd.DataFrame, timeframe: str, *, as_of=None) -> pd.DataFrame:
     rules = {"M15": "15min", "H1": "h", "H4": "4h"}
     if timeframe not in rules:
         raise ValueError(f"Unsupported timeframe: {timeframe}")
@@ -84,12 +91,18 @@ def aggregate_timeframe(feed: pd.DataFrame, timeframe: str) -> pd.DataFrame:
         "DataQuality",
         "source_start",
         "source_end",
+        "completion_status",
+        "missing_minute_count",
     ]
     if feed.empty:
         return pd.DataFrame(columns=columns)
 
     rule = rules[timeframe]
-    frame = feed.sort_values("Timestamp", kind="mergesort").copy()
+    frame = _observation_feed(feed)
+    if as_of is not None:
+        frame = frame.loc[frame.Timestamp.le(utc(as_of))]
+    if frame.empty:
+        return pd.DataFrame(columns=columns)
     # Feed timestamps label minute CLOSES. A minute closing on an H1/H4
     # boundary belongs to the bar that just closed, not the next bar.
     # Label each aggregate with its actual closing UTC timestamp.
@@ -121,8 +134,38 @@ def aggregate_timeframe(feed: pd.DataFrame, timeframe: str) -> pd.DataFrame:
     # Never expose the last partial higher-timeframe candle as a completed
     # structural observation. Missing individual minutes do not, by
     # themselves, invalidate an already elapsed bar.
-    bars = bars.loc[bars["Timestamp"] <= frame["Timestamp"].max()]
+    bars = bars.loc[bars["Timestamp"] <= (utc(as_of) if as_of is not None else frame["Timestamp"].max())]
+    # Elapsed does not mean observed: retain explicit quality for sparse bars.
+    grouped = frame.groupby("bar_timestamp")["Timestamp"]
+    counts = grouped.size()
+    gaps = frame["Timestamp"].diff().where(frame["bar_timestamp"].eq(frame["bar_timestamp"].shift()))
+    interior = gaps.groupby(frame["bar_timestamp"]).max().reindex(bars.Timestamp).fillna(pd.Timedelta(0)).reset_index(drop=True)
+    leading = bars.source_start - (bars.Timestamp - duration)
+    trailing = bars.Timestamp - bars.source_end
+    partial = (interior > pd.Timedelta(minutes=2)) | (leading > pd.Timedelta(minutes=2)) | (trailing > pd.Timedelta(minutes=1))
+    bars["completion_status"] = partial.map({True: "PARTIAL", False: "CLOSED_OBSERVED"})
+    bars["missing_minute_count"] = int(duration / pd.Timedelta(minutes=1)) - bars.Timestamp.map(counts)
     return bars[columns].reset_index(drop=True)
+
+
+def _observation_feed(feed: pd.DataFrame) -> pd.DataFrame:
+    frame = feed.sort_values("Timestamp", kind="mergesort").copy()
+    if frame["Timestamp"].duplicated().any():
+        raise ValueError("duplicate minute observations must be resolved with source provenance")
+    if "DataQuality" not in frame:
+        frame["DataQuality"] = frame.get("SourceClass", "RAW")
+    if "IsSynthetic" in frame:
+        frame.loc[pd.to_numeric(frame.IsSynthetic, errors="raise").ne(0), "DataQuality"] = "SYNTHETIC"
+    frame = frame.loc[~frame["DataQuality"].isin(["SYNTHETIC", "INVALID"])].copy()
+    return frame.reset_index(drop=True)
+
+
+def _observed_window(frame, start, end):
+    timestamps = frame.loc[frame.Timestamp.gt(start) & frame.Timestamp.le(end), "Timestamp"]
+    if timestamps.empty:
+        return False
+    points = pd.DatetimeIndex([start, *timestamps, end])
+    return bool((points[1:] - points[:-1]).max() <= pd.Timedelta(minutes=2))
 
 
 def _daily_reference_levels(frame: pd.DataFrame) -> list[dict[str, object]]:
@@ -131,25 +174,31 @@ def _daily_reference_levels(frame: pd.DataFrame) -> list[dict[str, object]]:
     for index, (_, group) in enumerate(days):
         day_start = group["Timestamp"].min()
         open_row = group.sort_values("Timestamp", kind="mergesort").iloc[0]
-        rows.append(
-            _level_row(
-                created_at=open_row["Timestamp"],
-                level_timestamp=open_row["Timestamp"],
-                timeframe="D1",
-                level_type="DAY_OPEN",
-                side="NEUTRAL",
-                price=open_row["OpenPrice"],
-                source_start=day_start,
-                source_end=open_row["Timestamp"],
-                touch_count=1,
-                strength_score=45,
-                data_quality=_quality(group),
+        if day_start == group["day"].iloc[0] + pd.Timedelta(minutes=1):
+            rows.append(
+                _level_row(
+                    created_at=open_row["Timestamp"],
+                    level_timestamp=open_row["Timestamp"],
+                    timeframe="D1",
+                    level_type="DAY_OPEN",
+                    side="NEUTRAL",
+                    price=open_row["OpenPrice"],
+                    source_start=day_start,
+                    source_end=open_row["Timestamp"],
+                    touch_count=1,
+                    strength_score=45,
+                    data_quality=str(open_row["DataQuality"]),
+                )
             )
-        )
         if index == 0:
             continue
 
         _, previous = days[index - 1]
+        previous_day = pd.Timestamp(previous["day"].iloc[0])
+        if group["day"].iloc[0] != previous_day + pd.Timedelta(days=1):
+            continue
+        if not _observed_window(previous, previous_day, previous_day + pd.Timedelta(days=1)):
+            continue
         previous_start = previous["Timestamp"].min()
         previous_end = previous["Timestamp"].max()
         high_row = previous.sort_values(
@@ -191,18 +240,18 @@ def _daily_reference_levels(frame: pd.DataFrame) -> list[dict[str, object]]:
     return rows
 
 
-def _finalized_session_levels(frame: pd.DataFrame) -> list[dict[str, object]]:
+def _finalized_session_levels(frame: pd.DataFrame, *, as_of=None) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
-    max_ts = frame["Timestamp"].max()
+    max_ts = utc(as_of) if as_of is not None else frame["Timestamp"].max()
     for day, day_group in frame.groupby("day", sort=True):
         for session_name, start_hour, end_hour in SESSION_DEFINITIONS:
             session_start = day + pd.Timedelta(hours=start_hour)
             session_end = day + pd.Timedelta(hours=end_hour)
-            mask = (day_group["Timestamp"] >= session_start) & (
-                day_group["Timestamp"] < session_end
+            mask = (day_group["Timestamp"] > session_start) & (
+                day_group["Timestamp"] <= session_end
             )
             session = day_group.loc[mask].sort_values("Timestamp", kind="mergesort")
-            if session.empty or max_ts < session_end - pd.Timedelta(minutes=1):
+            if session.empty or max_ts < session_end or not _observed_window(session, session_start, session_end):
                 continue
             high_row = session.sort_values(
                 ["HiPrice", "Timestamp"], ascending=[False, True], kind="mergesort"
@@ -244,9 +293,9 @@ def _finalized_session_levels(frame: pd.DataFrame) -> list[dict[str, object]]:
 
 
 def _confirmed_swing_levels(
-    frame: pd.DataFrame, timeframe: str, left_right: int
+    frame: pd.DataFrame, timeframe: str, left_right: int, *, as_of=None
 ) -> list[dict[str, object]]:
-    bars = aggregate_timeframe(frame, timeframe)
+    bars = aggregate_timeframe(frame, timeframe, as_of=as_of)
     rows: list[dict[str, object]] = []
     if len(bars) < left_right * 2 + 1:
         return rows
@@ -255,6 +304,11 @@ def _confirmed_swing_levels(
         current = bars.iloc[index]
         left = bars.iloc[index - left_right : index]
         right = bars.iloc[index + 1 : index + left_right + 1]
+        window = bars.iloc[index - left_right:index + left_right + 1]
+        duration = pd.Timedelta(minutes={"M15": 15, "H1": 60, "H4": 240}[timeframe])
+        if (window["completion_status"].eq("PARTIAL").any()
+                or not window["Timestamp"].diff().dropna().eq(duration).all()):
+            continue
         created_at = bars.iloc[index + left_right]["Timestamp"]
         if current["HiPrice"] > left["HiPrice"].max() and current["HiPrice"] > right["HiPrice"].max():
             rows.append(
@@ -275,7 +329,7 @@ def _confirmed_swing_levels(
                     source_end=current["source_end"],
                     touch_count=1,
                     strength_score=_swing_strength_score(timeframe),
-                    data_quality=current["DataQuality"],
+                    data_quality=_quality_values(window["DataQuality"]),
                 )
             )
         if current["LowPrice"] < left["LowPrice"].min() and current["LowPrice"] < right["LowPrice"].min():
@@ -297,7 +351,7 @@ def _confirmed_swing_levels(
                     source_end=current["source_end"],
                     touch_count=1,
                     strength_score=_swing_strength_score(timeframe),
-                    data_quality=current["DataQuality"],
+                    data_quality=_quality_values(window["DataQuality"]),
                 )
             )
     return rows
@@ -423,9 +477,12 @@ def _assign_level_ids(levels: pd.DataFrame, start_index: int = 1) -> pd.DataFram
     if levels.empty:
         return levels
     levels = _sort_levels(levels)
-    levels["level_id"] = [
-        f"level_{idx:06d}" for idx in range(start_index, start_index + len(levels))
-    ]
+    if start_index > 1:
+        levels["level_id"] = ["level_" + hashlib.sha256(
+            f"{r['level_type']}|{r['created_at']}|{r['price']}|{r['source_level_ids']}".encode()).hexdigest()[:20]
+            for r in levels.to_dict("records")]
+    else:
+        levels["level_id"] = [f"level_{idx:06d}" for idx in range(1, len(levels) + 1)]
     return levels
 
 
@@ -456,6 +513,8 @@ def _level_row(
     return {
         "level_id": "",
         "created_at": _format_ts(created_at),
+        "LevelAvailableAtUTC": _format_ts(created_at),
+        "ConfirmingBarCloseUTC": _format_ts(created_at) if timeframe in {"M15", "H1", "H4"} else "",
         "level_timestamp": _format_ts(level_timestamp),
         "timeframe": timeframe,
         "level_type": level_type,
@@ -513,3 +572,45 @@ def _quality_values(values) -> str:
 
 def _format_ts(value) -> str:
     return pd.Timestamp(value).tz_convert("UTC").isoformat().replace("+00:00", "Z")
+
+
+class StructureState:
+    """Incremental invocation of the canonical detectors, with prior levels.
+
+    Only primitive detection needs a bounded confirmation window; derived
+    equal/pattern structures always use the complete causally known inventory.
+    No detector or weights are duplicated here.
+    """
+    def __init__(self):
+        self.cutoff = None
+        self.primitives = pd.DataFrame(columns=STRUCTURE_LEVEL_COLUMNS)
+        self.levels = self.primitives.copy()
+
+    def update(self, feed: pd.DataFrame, *, as_of=None) -> pd.DataFrame:
+        cutoff = utc(as_of) if as_of is not None else feed.Timestamp.max()
+        if self.cutoff is not None and cutoff < self.cutoff:
+            raise ValueError("structure state cannot rewind; reconstruct the historical prefix")
+        if self.cutoff == cutoff:
+            return self.levels.copy()
+        start = feed.Timestamp.min() if self.cutoff is None else cutoff - pd.Timedelta(hours=48)
+        window = _observation_feed(feed.loc[feed.Timestamp.between(start, cutoff)])
+        window["day"] = (window.Timestamp - pd.Timedelta(nanoseconds=1)).dt.floor("D")
+        rows = _daily_reference_levels(window) + _finalized_session_levels(window, as_of=cutoff)
+        for timeframe, radius in [("M15", 2), ("H1", 2), ("H4", 1)]:
+            rows.extend(_confirmed_swing_levels(window, timeframe, radius, as_of=cutoff))
+        fresh = pd.DataFrame(rows, columns=STRUCTURE_LEVEL_COLUMNS)
+        if self.cutoff is not None and not fresh.empty:
+            fresh = fresh.loc[pd.to_datetime(fresh.created_at, utc=True).gt(self.cutoff)]
+        def combine(parts):
+            nonempty = [part.dropna(axis=1, how="all") for part in parts if not part.empty]
+            return (pd.concat(nonempty, ignore_index=True).reindex(columns=STRUCTURE_LEVEL_COLUMNS)
+                    if nonempty else pd.DataFrame(columns=STRUCTURE_LEVEL_COLUMNS))
+        primitives = combine([self.primitives, fresh])
+        self.primitives = _assign_level_ids(primitives)
+        equal = _equal_level_rows(self.primitives)
+        equal = _assign_level_ids(equal, start_index=len(self.primitives) + 1)
+        combined = combine([self.primitives, equal])
+        patterns = _assign_level_ids(_pattern_structure_level_rows(combined), start_index=len(combined) + 1)
+        self.levels = _sort_levels(combine([combined, patterns]))
+        self.cutoff = cutoff
+        return self.levels.copy()

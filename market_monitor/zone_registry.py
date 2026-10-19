@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 
 import pandas as pd
+import numpy as np
+from market_monitor.causality import utc
 
 from market_monitor.liquidity_zones import LIQUIDITY_MAP_COLUMNS
 from market_monitor.score_instrumentation import (
@@ -17,6 +20,10 @@ from market_monitor.structure import aggregate_timeframe
 
 
 REGISTRY_COLUMNS = [
+    "registry_state_version",
+    "geometry_available_at_utc",
+    "prior_geometry_history_json",
+    "lifecycle_processed_at_utc",
     "zone_id",
     "first_seen_at",
     "last_seen_at",
@@ -83,6 +90,13 @@ REGISTRY_COLUMNS = [
     *SCORE_INSTRUMENTATION_COLUMNS,
 ]
 
+REGISTRY_STATE_VERSION = "CLOSED_MINUTE_CAUSAL_V4"
+
+
+def _geometry_start(row):
+    value = row.get("geometry_available_at_utc", "")
+    return pd.Timestamp(value if pd.notna(value) and str(value) else row["first_seen_at"])
+
 CARRY_FORWARD_STATUSES = {
     "ACTIVE",
     "APPROACHED",
@@ -141,6 +155,9 @@ def load_registry(path: str | Path | None) -> pd.DataFrame:
     if not registry_path.exists():
         raise FileNotFoundError(f"Registry input not found: {registry_path}")
     registry = pd.read_csv(registry_path, dtype=str)
+    if (not registry.empty and ("registry_state_version" not in registry
+            or not registry["registry_state_version"].eq(REGISTRY_STATE_VERSION).all())):
+        raise ValueError("uncertified historical registry: rebuild from governed feed; do not reuse legacy counters")
     return _normalize_registry(registry)
 
 
@@ -149,8 +166,30 @@ def build_zone_registry(
     liquidity_map: pd.DataFrame,
     feed: pd.DataFrame,
     registry_in: pd.DataFrame | None = None,
+    history_feed: pd.DataFrame | None = None,
+    as_of=None,
 ) -> tuple[pd.DataFrame, dict[str, int]]:
     previous = _normalize_registry(registry_in)
+    if not previous.empty and not previous.registry_state_version.eq(REGISTRY_STATE_VERSION).all():
+        raise ValueError("uncertified registry state; rebuild from causal source history")
+    context = history_feed if history_feed is not None else feed
+    if as_of is not None:
+        as_of = utc(as_of)
+        context = context.loc[context.Timestamp.le(as_of)]
+        if context.empty and (not previous.empty or not liquidity_map.empty):
+            raise ValueError("no source observations at registry cutoff")
+    if not context.empty:
+        from market_monitor.structure import _observation_feed
+        context = _observation_feed(context)
+    cutoff = as_of if as_of is not None else (feed.Timestamp.max() if not feed.empty else context.Timestamp.max())
+    if not previous.empty and pd.notna(cutoff):
+        from market_monitor.causality import evidence_times
+        if evidence_times(previous).gt(cutoff).any():
+            raise ValueError("future registry cannot initialize an earlier cutoff")
+    if not liquidity_map.empty and pd.notna(cutoff):
+        from market_monitor.causality import evidence_times
+        if evidence_times(liquidity_map).gt(cutoff).any():
+            raise ValueError("zone unavailable at registry cutoff")
     current_zones = _current_zones_to_registry(liquidity_map, previous)
 
     historical = previous[~previous["status"].isin(CARRY_FORWARD_STATUSES)].copy()
@@ -158,11 +197,12 @@ def build_zone_registry(
     candidates = _concat_registry_frames([carry, current_zones])
 
     active_rows, merged_rows = _merge_registry_candidates(candidates)
-    active_rows = _update_lifecycle(active_rows, feed)
+    active_rows = _update_lifecycle(active_rows, context, as_of=cutoff if pd.notna(cutoff) else None)
     active_rows = _apply_expiry(active_rows)
 
     registry_out = _concat_registry_frames([historical, merged_rows, active_rows])
     registry_out = _normalize_registry(registry_out)
+    registry_out["registry_state_version"] = REGISTRY_STATE_VERSION
     registry_out = registry_out.sort_values(
         ["first_seen_at", "zone_id", "status"], kind="mergesort"
     ).reset_index(drop=True)
@@ -207,6 +247,7 @@ def forward_liquidity_from_registry(
             {
                 "zone_id": row["zone_id"],
                 "created_at": row["first_seen_at"],
+                "geometry_available_at_utc": row["geometry_available_at_utc"] or row["first_seen_at"],
                 "last_updated_at": row["last_updated_at"],
                 "side": row["side"],
                 "zone_type": row["zone_type"],
@@ -276,6 +317,12 @@ def _current_zones_to_registry(
     rows = []
     next_id = _next_zone_index(previous)
     for _, zone in liquidity_map.iterrows():
+        # Replaying a frozen prefix must not create another copy of its zones.
+        source_ids = set(str(zone.get("source_level_ids", "")).split("|")) - {""}
+        existing = previous.loc[previous["side"].eq(zone["side"])] if not previous.empty else previous
+        if source_ids and any(source_ids.issubset(set(str(row["source_level_ids"]).split("|")))
+                              for row in existing.to_dict("records")):
+            continue
         zone_id = f"zone_{next_id:06d}"
         next_id += 1
         created = str(zone["created_at"])
@@ -283,6 +330,8 @@ def _current_zones_to_registry(
             {
                 "zone_id": zone_id,
                 "first_seen_at": created,
+                "geometry_available_at_utc": str(zone.get("geometry_available_at_utc", "") or zone.get("last_updated_at", "") or created),
+                "prior_geometry_history_json": "[]",
                 "last_seen_at": created,
                 "last_updated_at": created,
                 "side": zone["side"],
@@ -444,6 +493,7 @@ def _collapse_registry_cluster(
     )
 
     active = target.copy()
+    active["lifecycle_processed_at_utc"] = ""  # merged source/role metadata also invalidates a cached classification
     active.update(
         {
             "first_seen_at": min(str(row["first_seen_at"]) for row in cluster),
@@ -510,6 +560,27 @@ def _collapse_registry_cluster(
         }
     )
 
+    if lower != float(target["price_lower"]) or upper != float(target["price_upper"]):
+        # Preserve the prior geometry's history; its old candles cannot be
+        # reclassified against boundaries introduced by this later merge.
+        history = json.loads(str(target.get("prior_geometry_history_json", "") or "[]"))
+        fields = ["geometry_available_at_utc", "first_seen_at", "last_updated_at", "price_lower", "price_upper",
+                  "touch_count", "cross_count", "m1_interaction_count", "htf_sweep_count",
+                  "htf_close_through_count", "htf_acceptance_count", "consumption_status", "source_level_ids"]
+        history.append({name: target.get(name, "") for name in fields})
+        active["prior_geometry_history_json"] = json.dumps(history, sort_keys=True, default=str)
+        active["geometry_available_at_utc"] = max(str(row.get("geometry_available_at_utc", "") or row["first_seen_at"]) for row in cluster)
+        for name in ["touch_count", "cross_count", "cross_through_count", "close_above_count", "close_below_count",
+                     "alternating_close_count", "bars_inside_zone_lifetime", "resweep_count", "failed_acceptance_count",
+                     "rejection_without_sweep_count", "m1_interaction_count", "htf_sweep_count", "htf_close_through_count", "htf_acceptance_count"]:
+            active[name] = 0
+        for name in ["last_touch_at", "last_cross_at", "last_clean_reaction_at", "first_sweep_at", "accepted_above_at",
+                     "accepted_below_at", "drift_away_confirmed_at", "consumed_at", "consumption_reason"]:
+            active[name] = ""
+        active["status"] = "ACTIVE"
+        active["consumption_status"] = "FRESH"
+        active["lifecycle_processed_at_utc"] = ""
+
     merged: list[dict[str, object]] = []
     for row in cluster:
         if row["zone_id"] == target["zone_id"]:
@@ -544,47 +615,125 @@ def _registry_merge_sources_compatible(
     return True
 
 
-def _update_lifecycle(registry: pd.DataFrame, feed: pd.DataFrame) -> pd.DataFrame:
+def _update_lifecycle(registry: pd.DataFrame, feed: pd.DataFrame, *, use_cache=True, as_of=None) -> pd.DataFrame:
     registry = _normalize_registry(registry)
     if registry.empty or feed.empty:
         return registry
-    frame = feed.sort_values("Timestamp", kind="mergesort")
-    run_end = _format_ts(frame["Timestamp"].max())
+    from market_monitor.structure import _observation_feed
+    frame = _observation_feed(feed)
+    if as_of is not None:
+        as_of = utc(as_of)
+        frame = frame.loc[frame.Timestamp.le(as_of)]
+        if frame.empty:
+            raise ValueError("no source observations at registry cutoff")
+    htf_frames = {tf: aggregate_timeframe(frame, tf, as_of=as_of) for tf in ("M15", "H1", "H4")}
+    processed_at = _format_ts(frame.Timestamp.max())
+    run_end = _format_ts(as_of if as_of is not None else frame["Timestamp"].max())
     updated = []
     for row in registry.to_dict("records"):
         row = row.copy()
         row_first_seen = _format_ts(row["first_seen_at"])
+        # Full prior evidence is required to recompute nonlinear lifetime metrics.
+        # Refuse an apparently clean incremental state with missing context.
+        if (row.get("registry_state_version") == REGISTRY_STATE_VERSION
+                and pd.Timestamp(row["first_seen_at"]) + pd.Timedelta(minutes=1) < frame.Timestamp.min()
+                and str(row.get("history_context_incomplete", "false")).lower() != "true"):
+            raise ValueError("registry progression requires full history context from zone availability")
         effective_seen = max(run_end, row_first_seen)
+        cached = _unchanged_interaction_cache(row, frame, htf_frames) if use_cache else None
+        if cached is not None:
+            row = cached
+            row["last_seen_at"] = row["last_updated_at"] = effective_seen
+            row["age_bars"] = _age_bars(row["first_seen_at"], frame)
+            row["age_days"] = _age_days(row["first_seen_at"], effective_seen)
+            row["active_days"] = max(int(float(row["active_days"])), int(row["age_days"]) + 1)
+            row["active_forward_role"] = _active_forward_role(row)
+            row["active_forward"] = _bool_text(_is_active_forward(row))
+            row["lifecycle_processed_at_utc"] = processed_at
+            updated.append(row)
+            continue
         status, touch_at, cross_at = _path_status(row, frame)
-        if touch_at and not row.get("last_touch_at"):
-            row["last_touch_at"] = touch_at
-        if cross_at:
-            if not row.get("last_cross_at") or row["last_cross_at"] != cross_at:
-                row["cross_count"] = int(float(row["cross_count"])) + 1
-            row["last_cross_at"] = cross_at
-        elif touch_at:
-            row["touch_count"] = int(float(row["touch_count"])) + 1
-            row["last_touch_at"] = touch_at
+        path = frame.loc[frame.Timestamp > _geometry_start(row)]
+        lower, upper = float(row["price_lower"]), float(row["price_upper"])
+        touched = path.HiPrice.ge(lower) & path.LowPrice.le(upper)
+        crossed = path.HiPrice.gt(upper) if row["side"] == "BUY_SIDE" else path.LowPrice.lt(lower)
+        row["touch_count"] = _transition_count(touched.tolist())
+        row["cross_count"] = _transition_count(crossed.tolist())
+        row["last_touch_at"] = _format_ts(path.loc[touched, "Timestamp"].iloc[-1]) if touched.any() else ""
+        row["last_cross_at"] = _format_ts(path.loc[crossed, "Timestamp"].iloc[-1]) if crossed.any() else ""
         row["status"] = status
         row["last_seen_at"] = effective_seen
         row["last_updated_at"] = effective_seen
         row["age_bars"] = _age_bars(row["first_seen_at"], frame)
         row["age_days"] = _age_days(row["first_seen_at"], effective_seen)
-        row.update(_consumption_fields(row, frame))
+        row.update(_consumption_fields(row, frame, htf_frames=htf_frames))
         if row["consumption_status"] == "REACTED":
             row["status"] = "REACTED"
         if status in CARRY_FORWARD_STATUSES:
             row["active_days"] = max(int(float(row["active_days"])), int(row["age_days"]) + 1)
         row["active_forward_role"] = _active_forward_role(row)
         row["active_forward"] = _bool_text(_is_active_forward(row))
+        row["lifecycle_processed_at_utc"] = processed_at
         updated.append(row)
     return _normalize_registry(pd.DataFrame(updated, columns=REGISTRY_COLUMNS))
+
+
+def _unchanged_interaction_cache(row, frame, htf_frames):
+    """Skip a lifetime M1 rescan only when no interaction can have changed.
+
+    The last three processed and all new candles must lie entirely on the
+    original side, with no extended gap. HTF metrics are still recomputed
+    from completed canonical bars, including the formerly open HTF candle.
+    A missing watermark, changed geometry or any interaction uses the full
+    canonical calculation instead. Tests/verification compare both paths.
+    """
+    processed = row.get("lifecycle_processed_at_utc", "")
+    if row.get("registry_state_version") != REGISTRY_STATE_VERSION or not processed:
+        return None
+    processed = pd.Timestamp(processed)
+    if processed < _geometry_start(row):
+        return None
+    offset = int(frame.Timestamp.searchsorted(processed, side="right"))
+    if offset == len(frame):
+        # The external elapsed clock can close a bar even when its final
+        # isolated minute is omitted. Reuse M1 memory only if the newly
+        # finalized HTF evidence is unchanged too.
+        metrics = _htf_lifecycle_metrics(row, frame, float(row["zone_outer_lower"]), float(row["zone_outer_upper"]), htf_frames=htf_frames)
+        if any(row.get(name) != value for name, value in metrics.items()):
+            return None
+        return row.copy()
+    if offset < 3:
+        return None
+    recent = frame.iloc[offset - 3:]
+    if (recent.Timestamp.diff().dropna() > pd.Timedelta(minutes=2)).any():
+        return None
+    lower, upper = float(row["zone_outer_lower"]), float(row["zone_outer_upper"])
+    below = row["side"] == "BUY_SIDE"
+    if not (recent.HiPrice.lt(lower).all() if below else recent.LowPrice.gt(upper).all()):
+        return None
+    if not row.get("accepted_below_at" if below else "accepted_above_at"):
+        return None
+    out = row.copy()
+    name = "close_below_count" if below else "close_above_count"
+    out[name] = int(float(out[name])) + len(frame) - offset
+    metrics = _htf_lifecycle_metrics(out, frame, lower, upper, htf_frames=htf_frames)
+    out.update(metrics)
+    if _has_htf_source(out):
+        out["consumption_status"] = ("SWEPT_ONCE" if metrics["htf_sweep_count"] or metrics["htf_acceptance_count"]
+                                      or int(float(out["cross_count"])) else "TESTED" if int(float(out["m1_interaction_count"])) else "FRESH")
+    out["status"] = ("CROSSED_UNCLASSIFIED" if int(float(out["cross_count"])) else
+                     "TOUCHED" if int(float(out["touch_count"])) else "ACTIVE")
+    if out["consumption_status"] == "REACTED":
+        out["status"] = "REACTED"
+    out["htf_lifecycle_status"] = _lifecycle_status_from_row(out)
+    out["sweep_importance_class"] = _sweep_importance_class_from_row(out)
+    return out
 
 
 def _path_status(row: dict[str, object], feed: pd.DataFrame) -> tuple[str, str, str]:
     lower = float(row.get("zone_outer_lower", row["price_lower"]) or row["price_lower"])
     upper = float(row.get("zone_outer_upper", row["price_upper"]) or row["price_upper"])
-    after_first_seen = feed[feed["Timestamp"] >= pd.Timestamp(row["first_seen_at"])]
+    after_first_seen = feed[feed["Timestamp"] > _geometry_start(row)]
     if after_first_seen.empty:
         return str(row.get("status", "ACTIVE") or "ACTIVE"), "", ""
     if row["side"] == "BUY_SIDE":
@@ -606,8 +755,8 @@ def _path_status(row: dict[str, object], feed: pd.DataFrame) -> tuple[str, str, 
     return "ACTIVE", "", ""
 
 
-def _consumption_fields(row: dict[str, object], feed: pd.DataFrame) -> dict[str, object]:
-    after_first_seen = feed[feed["Timestamp"] >= pd.Timestamp(row["first_seen_at"])].sort_values(
+def _consumption_fields(row: dict[str, object], feed: pd.DataFrame, *, htf_frames=None) -> dict[str, object]:
+    after_first_seen = feed[feed["Timestamp"] > _geometry_start(row)].sort_values(
         "Timestamp", kind="mergesort"
     )
     if after_first_seen.empty:
@@ -668,8 +817,7 @@ def _consumption_fields(row: dict[str, object], feed: pd.DataFrame) -> dict[str,
     close_below_count = int(close_below.sum())
     bars_inside = int(inside.sum())
     sweep_timestamps = _sweep_transition_timestamps(row, after_first_seen, lower, upper)
-    previous_first_sweep = str(row.get("first_sweep_at", "") or "")
-    first_sweep_at = previous_first_sweep or (sweep_timestamps[0] if sweep_timestamps else "")
+    first_sweep_at = sweep_timestamps[0] if sweep_timestamps else ""
     resweep_count = max(0, len(sweep_timestamps) - 1)
     accepted_above_at = _consecutive_threshold_at(after_first_seen, close_above.tolist())
     accepted_below_at = _consecutive_threshold_at(after_first_seen, close_below.tolist())
@@ -703,7 +851,7 @@ def _consumption_fields(row: dict[str, object], feed: pd.DataFrame) -> dict[str,
     is_broad = structural_zone_mode in BROAD_STRUCTURAL_MODES
     has_htf = _has_htf_source(row)
     m1_interaction_count = _m1_interaction_count(row, after_first_seen, lower, upper)
-    htf_metrics = _htf_lifecycle_metrics(row, feed, lower, upper)
+    htf_metrics = _htf_lifecycle_metrics(row, feed, lower, upper, htf_frames=htf_frames)
     htf_sweep_count = htf_metrics["htf_sweep_count"]
     htf_close_through_count = htf_metrics["htf_close_through_count"]
     htf_acceptance_count = htf_metrics["htf_acceptance_count"]
@@ -738,6 +886,10 @@ def _consumption_fields(row: dict[str, object], feed: pd.DataFrame) -> dict[str,
         consumption_status = "SWEPT_ONCE"
     elif has_htf and htf_sweep_count > 0:
         consumption_status = "SWEPT_ONCE"
+    elif has_htf:
+        # Minute interactions remain observations; they cannot consume an HTF
+        # structural reference merely because its current HTF candle is open.
+        consumption_status = "SWEPT_ONCE" if cross_through_count or sweep_timestamps else "TESTED" if m1_interaction_count else "FRESH"
     elif is_broad and true_broad_chop:
         consumption_status = "CHOPPED_THROUGH"
         consumed_at = _threshold_reached_at(
@@ -784,7 +936,7 @@ def _consumption_fields(row: dict[str, object], feed: pd.DataFrame) -> dict[str,
         consumption_status = "TESTED"
 
     zone_behavior_state = _zone_behavior_state(
-        row=row,
+        row={**row, "consumption_status": consumption_status},
         is_broad=is_broad,
         clean_reaction_at=clean_reaction_at,
         accepted_above_at=accepted_above_at,
@@ -873,7 +1025,7 @@ def _threshold_reached_at(
     alternating = 0
     inside_count = 0
     previous = ""
-    for idx, (_, row) in enumerate(frame.iterrows()):
+    for idx, timestamp in enumerate(frame["Timestamp"]):
         position = positions[idx]
         if cross_through[idx]:
             cross_count += 1
@@ -884,11 +1036,11 @@ def _threshold_reached_at(
         if position != "INSIDE":
             previous = position
         if threshold_kind == "cross_through" and cross_count >= MAX_CROSS_THROUGH_COUNT:
-            return _format_ts(row["Timestamp"])
+            return _format_ts(timestamp)
         if threshold_kind == "alternating_close" and alternating >= MAX_ALTERNATING_CLOSE_COUNT:
-            return _format_ts(row["Timestamp"])
+            return _format_ts(timestamp)
         if threshold_kind == "inside_bars" and inside_count >= MAX_BARS_INSIDE_ZONE_LIFETIME:
-            return _format_ts(row["Timestamp"])
+            return _format_ts(timestamp)
     return _format_ts(frame.iloc[-1]["Timestamp"])
 
 
@@ -901,9 +1053,9 @@ def _sweep_transition_timestamps(
         swept = pd.to_numeric(frame["LowPrice"], errors="coerce") < lower
     timestamps: list[str] = []
     previous = False
-    for is_swept, (_, candle) in zip(swept.tolist(), frame.iterrows()):
+    for is_swept, timestamp in zip(swept.tolist(), frame["Timestamp"]):
         if is_swept and not previous:
-            timestamps.append(_format_ts(candle["Timestamp"]))
+            timestamps.append(_format_ts(timestamp))
         previous = bool(is_swept)
     return timestamps
 
@@ -918,18 +1070,15 @@ def _m1_interaction_count(
     else:
         interacted = lows <= upper
     current_count = int(interacted.sum())
-    previous_count = int(float(row.get("m1_interaction_count", 0) or 0))
-    return max(previous_count, current_count)
+    return current_count
 
 
 def _htf_lifecycle_metrics(
-    row: dict[str, object], feed: pd.DataFrame, lower: float, upper: float
+    row: dict[str, object], feed: pd.DataFrame, lower: float, upper: float, *, htf_frames=None
 ) -> dict[str, object]:
-    previous_sweeps = int(float(row.get("htf_sweep_count", 0) or 0))
-    previous_close_through = int(float(row.get("htf_close_through_count", 0) or 0))
-    previous_acceptance = int(float(row.get("htf_acceptance_count", 0) or 0))
+    previous_sweeps = previous_close_through = previous_acceptance = 0
     history_context_start = str(row.get("history_context_start", "") or row.get("first_seen_at", "") or "")
-    if not _has_htf_source(row):
+    if not (_has_htf_source(row) or _has_m15_source(row)):
         return {
             "htf_sweep_count": previous_sweeps,
             "htf_close_through_count": previous_close_through,
@@ -940,7 +1089,7 @@ def _htf_lifecycle_metrics(
 
     metric_timeframe = _htf_metric_timeframe(row)
     try:
-        htf_frame = aggregate_timeframe(feed, metric_timeframe)
+        htf_frame = htf_frames[metric_timeframe] if htf_frames is not None else aggregate_timeframe(feed, metric_timeframe)
     except Exception:
         htf_frame = pd.DataFrame()
     if htf_frame.empty:
@@ -949,19 +1098,24 @@ def _htf_lifecycle_metrics(
             "htf_close_through_count": previous_close_through,
             "htf_acceptance_count": previous_acceptance,
             "history_context_start": history_context_start,
-            "history_context_incomplete": "true",
+            "history_context_incomplete": _bool_text(_bool_value(row.get("history_context_incomplete", False))
+                or feed.Timestamp.min() > pd.Timestamp(row["first_seen_at"]) + pd.Timedelta(minutes=1)),
         }
 
     start_text = str(row.get("htf_confirmation_timestamp", "") or row.get("first_seen_at", ""))
+    duration = pd.Timedelta(minutes={"M15": 15, "H1": 60, "H4": 240}[metric_timeframe])
     if start_text:
-        htf_frame = htf_frame[htf_frame["Timestamp"] >= pd.Timestamp(start_text)]
+        start = max(pd.Timestamp(start_text), _geometry_start(row))
+        htf_frame = htf_frame.loc[htf_frame.Timestamp.gt(start) & htf_frame.source_start.gt(start)]
+    had_partial = bool(htf_frame["completion_status"].ne("CLOSED_OBSERVED").any())
+    htf_frame = htf_frame.loc[htf_frame["completion_status"].eq("CLOSED_OBSERVED")]
     if htf_frame.empty:
         return {
             "htf_sweep_count": previous_sweeps,
             "htf_close_through_count": previous_close_through,
             "htf_acceptance_count": previous_acceptance,
             "history_context_start": history_context_start or _format_ts(feed["Timestamp"].min()),
-            "history_context_incomplete": _bool_text(row.get("history_context_incomplete", False)),
+            "history_context_incomplete": _bool_text(_bool_value(row.get("history_context_incomplete", False)) or had_partial),
         }
 
     if str(row.get("side", "")) == "BUY_SIDE":
@@ -970,50 +1124,44 @@ def _htf_lifecycle_metrics(
     else:
         swept = pd.to_numeric(htf_frame["LowPrice"], errors="coerce") < lower
         closed_through = pd.to_numeric(htf_frame["ClosePrice"], errors="coerce") < lower
-    htf_sweeps = _transition_count(swept.tolist())
+    def separated(flags):
+        gaps = np.flatnonzero(np.diff(htf_frame.Timestamp.astype("int64")) != duration.value) + 1
+        return np.insert(np.asarray(flags, dtype=bool), gaps, False)
+    htf_sweeps = _transition_count(separated(swept.tolist()))
     htf_close_through = int(closed_through.sum())
-    htf_acceptance = _accepted_run_count(closed_through.tolist())
+    htf_acceptance = _accepted_run_count(separated(closed_through.tolist()))
     return {
         "htf_sweep_count": max(previous_sweeps, htf_sweeps),
         "htf_close_through_count": max(previous_close_through, htf_close_through),
         "htf_acceptance_count": max(previous_acceptance, htf_acceptance),
         "history_context_start": history_context_start or _format_ts(htf_frame["source_start"].min()),
-        "history_context_incomplete": _bool_text(row.get("history_context_incomplete", False)),
+        "history_context_incomplete": _bool_text(_bool_value(row.get("history_context_incomplete", False)) or had_partial
+            or bool((htf_frame.Timestamp.diff().dropna() != duration).any())
+            or (bool(start_text) and htf_frame.Timestamp.iloc[0] > start.ceil({"M15": "15min", "H1": "h", "H4": "4h"}[metric_timeframe]) + duration)),
     }
 
 
 def _transition_count(flags: list[bool]) -> int:
-    count = 0
-    previous = False
-    for flag in flags:
-        if flag and not previous:
-            count += 1
-        previous = bool(flag)
-    return count
+    flags = np.asarray(flags, dtype=bool)
+    return int(np.count_nonzero(flags & ~np.r_[False, flags[:-1]])) if len(flags) else 0
 
 
 def _accepted_run_count(flags: list[bool]) -> int:
-    accepted = 0
-    run = 0
-    counted_run = False
-    for flag in flags:
-        if flag:
-            run += 1
-            if run >= ACCEPTANCE_CLOSE_BARS and not counted_run:
-                accepted += 1
-                counted_run = True
-        else:
-            run = 0
-            counted_run = False
-    return accepted
+    flags = np.asarray(flags, dtype=bool)
+    edges = np.diff(np.r_[False, flags, False].astype(int))
+    return int(np.count_nonzero(np.flatnonzero(edges == -1) - np.flatnonzero(edges == 1) >= ACCEPTANCE_CLOSE_BARS))
 
 
 def _consecutive_threshold_at(frame: pd.DataFrame, flags: list[bool]) -> str:
     count = 0
-    for is_flagged, (_, candle) in zip(flags, frame.iterrows()):
+    previous = None
+    for is_flagged, timestamp in zip(flags, frame["Timestamp"]):
+        if previous is not None and timestamp - previous > pd.Timedelta(minutes=2):
+            count = 0
         count = count + 1 if is_flagged else 0
+        previous = timestamp
         if count >= ACCEPTANCE_CLOSE_BARS:
-            return _format_ts(candle["Timestamp"])
+            return _format_ts(timestamp)
     return ""
 
 
@@ -1137,9 +1285,6 @@ def _zone_behavior_state(
 
 
 def _clean_reaction_at(row: dict[str, object], feed: pd.DataFrame) -> str:
-    if str(row.get("status", "")) in {"REACTED", "FLIPPED_REACTION_ZONE"}:
-        return str(row.get("last_touch_at", "") or row.get("last_cross_at", ""))
-
     lower = float(row.get("zone_outer_lower", row["price_lower"]) or row["price_lower"])
     upper = float(row.get("zone_outer_upper", row["price_upper"]) or row["price_upper"])
     if str(row["side"]) == "BUY_SIDE":
@@ -1152,7 +1297,7 @@ def _clean_reaction_at(row: dict[str, object], feed: pd.DataFrame) -> str:
         return ""
 
     cross_ts = pd.Timestamp(crossed.iloc[0]["Timestamp"])
-    post = feed[feed["Timestamp"] >= cross_ts].head(REACTION_LOOKAHEAD_BARS_FOR_LIFECYCLE + 1)
+    post = feed.loc[feed.Timestamp.between(cross_ts, cross_ts + pd.Timedelta(minutes=REACTION_LOOKAHEAD_BARS_FOR_LIFECYCLE))]
     inside_seen = False
     for _, candle in post.iterrows():
         close = float(candle["ClosePrice"])
@@ -1245,6 +1390,8 @@ def _normalize_registry(registry: pd.DataFrame | None) -> pd.DataFrame:
         if column not in frame.columns:
             frame[column] = ""
     frame = frame[REGISTRY_COLUMNS]
+    for name in ("registry_state_version", "geometry_available_at_utc", "prior_geometry_history_json", "lifecycle_processed_at_utc"):
+        frame[name] = frame[name].fillna("").astype(str)
     for column in [
         "price_lower",
         "price_upper",
@@ -1279,9 +1426,9 @@ def _normalize_registry(registry: pd.DataFrame | None) -> pd.DataFrame:
         "zone_width_pct",
     ]:
         frame[column] = pd.to_numeric(frame[column], errors="coerce").fillna(0)
-    text_columns = [column for column in REGISTRY_COLUMNS if column not in frame.select_dtypes("number").columns]
-    for column in text_columns:
-        frame[column] = frame[column].fillna("").astype(str)
+    numeric_columns = set(frame.select_dtypes("number").columns)
+    text_columns = [column for column in REGISTRY_COLUMNS if column not in numeric_columns]
+    frame[text_columns] = frame[text_columns].fillna("").astype(str)
     blank_consumption = frame["consumption_status"].astype(str).str.len().eq(0)
     frame.loc[blank_consumption, "consumption_status"] = "FRESH"
     for target, fallback in [
@@ -1786,6 +1933,8 @@ def _htf_metric_timeframe(row: dict[str, object] | pd.Series) -> str:
     htf_level_type = str(row.get("htf_level_type", "") or "")
     if primary == "H4" or "H4" in source_timeframes or htf_level_type.startswith("H4_"):
         return "H4"
+    if primary == "M15" or "M15" in source_timeframes:
+        return "M15"
     return "H1"
 
 
@@ -1894,14 +2043,8 @@ def _lifecycle_status_from_values(
     accepted_below_at: str,
 ) -> str:
     if _has_m15_source(row):
-        return _m15_lifecycle_status(
-            row=row,
-            first_sweep_at=first_sweep_at,
-            close_above_count=close_above_count,
-            close_below_count=close_below_count,
-            accepted_above_at=accepted_above_at,
-            accepted_below_at=accepted_below_at,
-        )
+        return ("M15_ACCEPTED" if htf_acceptance_count else "M15_CLOSE_THROUGH" if htf_close_through_count
+                else "M15_SWEPT" if htf_sweep_count else "M15_ACTIVE")
     return _htf_lifecycle_status(
         has_htf=has_htf,
         htf_sweep_count=htf_sweep_count,
@@ -1976,7 +2119,7 @@ def _sweep_importance_class_from_values(
     structural_zone_mode: str,
 ) -> str:
     primary = _source_timeframe_primary_from_row(row)
-    swept = bool(first_sweep_at) or htf_sweep_count > 0
+    swept = htf_sweep_count > 0 if has_htf or primary in {"M15", "H1", "H4"} else bool(first_sweep_at)
     if has_htf or primary == "H4":
         return "HTF_STRUCTURAL_SWEEP" if swept else "HTF_STRUCTURAL_LEVEL"
     if primary == "H1":
@@ -2055,7 +2198,7 @@ def _age_bars(first_seen_at: str, feed: pd.DataFrame) -> int:
     first_seen = pd.Timestamp(first_seen_at)
     if first_seen > feed["Timestamp"].max():
         return 0
-    return int((feed["Timestamp"] >= first_seen).sum())
+    return len(feed) - int(feed.Timestamp.searchsorted(first_seen, side="left"))
 
 
 def _age_days(first_seen_at: str, run_end: str) -> int:

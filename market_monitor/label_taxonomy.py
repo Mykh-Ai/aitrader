@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from market_monitor.events import GROUPING_WINDOW_MODE, MARKET_MOVE_GROUP_WINDOW_MINUTES
+from market_monitor.events import GROUPING_WINDOW_MODE, MARKET_MOVE_GROUP_WINDOW_MINUTES, _EventSignatures
 
 
 TAXONOMY_VERSION = "SWEEP_LABEL_TAXONOMY_V1"
@@ -126,6 +126,7 @@ def build_sweep_label_frames(
     observations: pd.DataFrame,
     market_move_groups: pd.DataFrame | None = None,
     taxonomy_version: str = TAXONOMY_VERSION,
+    previous_taxonomy: pd.DataFrame | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     observations = observations.copy()
     groups = market_move_groups.copy() if market_move_groups is not None else pd.DataFrame()
@@ -139,19 +140,26 @@ def build_sweep_label_frames(
     group_by_move = _groups_by_move(groups)
 
     move_ids = _market_move_ids(observations, groups)
-    rows = [
-        _label_row(
-            move_id=move_id,
-            observations=observations[observations["market_move_id"].astype(str) == move_id],
-            group=group_by_move.get(move_id, {}),
-            taxonomy_version=taxonomy_version,
-        )
-        for move_id in move_ids
-    ]
+    observation_groups = {str(key): group for key, group in observations.groupby("market_move_id", sort=False)}
+    previous_rows = {} if previous_taxonomy is None else {str(row["market_move_id"]): row for row in previous_taxonomy.to_dict("records")}
+    previous_signatures = {} if previous_taxonomy is None else previous_taxonomy.attrs.get("source_signatures", {})
+    signature_columns = [column for column in observations if column != "snapshot_available_at_utc"]
+    rows, signatures = [], {}
+    for move_id in move_ids:
+        source = observation_groups.get(move_id, observations.iloc[:0])
+        group = group_by_move.get(move_id, {})
+        signature = (taxonomy_version, tuple(map(tuple, source[signature_columns].to_numpy())),
+                     tuple((key, group[key]) for key in sorted(group) if key != "snapshot_available_at_utc"))
+        signatures[move_id] = signature
+        if move_id in previous_rows and previous_signatures.get(move_id) == signature:
+            rows.append(previous_rows[move_id])
+        else:
+            rows.append(_label_row(move_id=move_id, observations=source, group=group, taxonomy_version=taxonomy_version))
     taxonomy = pd.DataFrame(rows, columns=SWEEP_LABEL_TAXONOMY_COLUMNS)
     taxonomy = taxonomy.sort_values(
         ["source_event_timestamp", "market_move_id"], kind="mergesort"
     ).reset_index(drop=True)
+    taxonomy.attrs["source_signatures"] = _EventSignatures(signatures)
     return taxonomy[SWEEP_LABEL_TAXONOMY_COLUMNS], _summary_frame(taxonomy, taxonomy_version)
 
 

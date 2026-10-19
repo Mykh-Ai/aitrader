@@ -11,6 +11,27 @@ from market_monitor.events import (
 )
 
 
+def test_cached_market_move_rows_equal_full_calculation_and_invalidate_changed_evidence(monkeypatch):
+    from market_monitor import events
+    source = assign_market_move_groups(pd.DataFrame([
+        _event("event_1", "2026-05-08T00:01:00Z", "BUY_SIDE", "zone_1"),
+        _event("event_2", "2026-05-08T00:06:00Z", "BUY_SIDE", "zone_2")]))
+    previous = build_market_move_groups(source)
+    full_calculation = events._market_move_group_row
+    calls = []
+    def counted(group):
+        calls.append(len(group))
+        return full_calculation(group)
+    monkeypatch.setattr(events, "_market_move_group_row", counted)
+    actual = build_market_move_groups(source, previous_groups=previous)
+    pd.testing.assert_frame_equal(actual, previous)
+    assert not calls
+    source.loc[0, "excursion_abs"] = 999.
+    changed = build_market_move_groups(source, previous_groups=previous)
+    assert len(calls) == 1
+    pd.testing.assert_frame_equal(changed, build_market_move_groups(source))
+
+
 def test_single_unresolved_event_gets_primary_market_move_metadata():
     grouped = assign_market_move_groups(
         pd.DataFrame([_event("event_000001", "2026-05-08T00:01:00Z", "BUY_SIDE", "zone_1")])

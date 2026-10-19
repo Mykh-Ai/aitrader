@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
+from market_monitor.causality import asof_rows, evidence_times, utc, latest_zone_snapshot
 
 
 SELECTOR_VERSION = "SHI_RESET_36B_SIGNIFICANT_ZONE_SELECTOR_V0"
@@ -28,6 +29,9 @@ SIDE_BALANCE_DISPLACED_REASON = (
 )
 
 SELECTED_ZONE_COLUMNS = [
+    "selection_cutoff_utc",
+    "latest_consumed_evidence_at_utc",
+    "zone_available_at_utc",
     "rank",
     "zone_id",
     "source_day",
@@ -100,6 +104,7 @@ def run_significant_zone_selector(
     start: str | date,
     end: str | date,
     max_visible_zones: int = 7,
+    as_of: str | None = None,
 ) -> SignificantZoneSelectorResult:
     start_date = _parse_date(start, "start")
     end_date = _parse_date(end, "end")
@@ -114,20 +119,12 @@ def run_significant_zone_selector(
         raise SignificantZoneSelectorError(f"input root not found: {root}")
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    loaded = _load_window(root, start_date, end_date)
-    liquidity_map = loaded["liquidity_map.csv"]
-    if liquidity_map.empty:
-        selected = pd.DataFrame(columns=SELECTED_ZONE_COLUMNS)
-    else:
-        selected = _score_candidates(loaded)
-        selected = _assign_visibility(selected, max_visible_zones=max_visible_zones)
-        selected = selected.sort_values(
-            ["visible_on_snapshot", "significance_score", "source_day", "zone_id"],
-            ascending=[False, False, True, True],
-            kind="mergesort",
-        ).reset_index(drop=True)
-        selected["rank"] = range(1, len(selected) + 1)
-        selected = selected[SELECTED_ZONE_COLUMNS]
+    cutoff = utc(as_of) if as_of is not None else utc(end_date) + pd.Timedelta(hours=23, minutes=59)
+    if cutoff.date() > end_date or cutoff.date() < start_date:
+        raise SignificantZoneSelectorError("as-of must fall within the requested dates")
+    loaded = _load_window(root, start_date, min(end_date, cutoff.date()))
+    loaded = {name: asof_rows(frame, cutoff, require_clock=True) for name, frame in loaded.items()}
+    selected = select_zones_at(loaded, cutoff, max_visible_zones=max_visible_zones)
 
     selected_path = out_dir / SELECTED_ZONES_CSV
     summary_path = out_dir / SELECTOR_SUMMARY_MD
@@ -159,6 +156,8 @@ def run_significant_zone_selector(
             "manifest_json": str(manifest_path),
         },
         "max_visible_zones": max_visible_zones,
+        "selection_cutoff_utc": cutoff.isoformat(),
+        "as_of_enforced": True,
         "visible_zone_count": _visible_zone_count(selected),
         "visible_side_counts": _visible_side_counts(selected),
         "side_balance_policy": _side_balance_policy(max_visible_zones),
@@ -204,6 +203,26 @@ def _load_window(root: Path, start_date: date, end_date: date) -> dict[str, pd.D
         name: pd.concat(parts, ignore_index=True, sort=False) if parts else pd.DataFrame()
         for name, parts in frames.items()
     }
+
+
+def select_zones_at(loaded: dict[str, pd.DataFrame], cutoff, *, max_visible_zones: int = 7) -> pd.DataFrame:
+    """Canonical in-memory/file-shared as-of selector, with unchanged scoring."""
+    cutoff = utc(cutoff)
+    if max_visible_zones < 1:
+        raise SignificantZoneSelectorError("max_visible_zones must be >= 1")
+    causal = {name: asof_rows(loaded.get(name, pd.DataFrame()), cutoff, require_clock=True) for name in INPUT_TABLES}
+    causal["liquidity_map.csv"] = latest_zone_snapshot(causal["liquidity_map.csv"], cutoff)
+    if causal["liquidity_map.csv"].empty:
+        return pd.DataFrame(columns=SELECTED_ZONE_COLUMNS)
+    selected = _score_candidates(causal)
+    selected = _assign_visibility(selected, max_visible_zones=max_visible_zones)
+    selected = selected.sort_values(
+        ["visible_on_snapshot", "significance_score", "source_day", "zone_id"],
+        ascending=[False, False, True, True], kind="mergesort").reset_index(drop=True)
+    selected["rank"] = range(1, len(selected) + 1)
+    selected["selection_cutoff_utc"] = cutoff.isoformat()
+    selected["latest_consumed_evidence_at_utc"] = cutoff.isoformat()
+    return selected[SELECTED_ZONE_COLUMNS]
 
 
 def _score_candidates(loaded: dict[str, pd.DataFrame]) -> pd.DataFrame:
@@ -286,6 +305,7 @@ def _score_zone(zone: pd.Series, events: pd.DataFrame, observations: pd.DataFram
     )
 
     return {
+        "zone_available_at_utc": _first_nonempty(zone.get("geometry_available_at_utc"), zone.get("created_at"), zone.get("snapshot_available_at_utc"), source_day),
         "rank": 0,
         "zone_id": zone_id,
         "source_day": source_day,

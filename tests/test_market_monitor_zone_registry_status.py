@@ -1,6 +1,6 @@
 import pandas as pd
 
-from market_monitor.zone_registry import MAX_ZONE_AGE_REASON, build_zone_registry
+from market_monitor.zone_registry import MAX_ZONE_AGE_REASON, REGISTRY_STATE_VERSION, build_zone_registry
 
 
 def test_buy_side_zone_touched_and_crossed_statuses():
@@ -102,6 +102,10 @@ def _registry_row(
     upper=110,
 ):
     return {
+        # Explicit current-schema fixture with intentionally incomplete source
+        # context; it tests expiry/merge rules, not a clean historical replay.
+        "registry_state_version": REGISTRY_STATE_VERSION,
+        "history_context_incomplete": "true",
         "zone_id": zone_id,
         "first_seen_at": "2026-05-07T00:00:00Z",
         "last_seen_at": "2026-05-07T23:59:00Z",

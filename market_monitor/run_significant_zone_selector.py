@@ -22,6 +22,7 @@ def main(argv: list[str] | None = None) -> int:
         help="Directory containing accepted daily Market Monitor output directories.",
     )
     parser.add_argument("--out-dir", required=True, help="Output directory for selector artifacts.")
+    parser.add_argument("--as-of", help="UTC causal cutoff; defaults to the requested end-day close.")
     parser.add_argument(
         "--max-visible-zones",
         type=int,
@@ -37,6 +38,7 @@ def main(argv: list[str] | None = None) -> int:
             start=args.start,
             end=args.end,
             max_visible_zones=args.max_visible_zones,
+            as_of=args.as_of,
         )
     except SignificantZoneSelectorError as exc:
         print(f"significant zone selector failed: {exc}", file=sys.stderr)

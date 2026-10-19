@@ -34,6 +34,29 @@ FORBIDDEN_COLUMNS = {
 }
 
 
+def test_cached_taxonomy_matches_full_calculation_and_recomputes_changed_observation(monkeypatch):
+    from market_monitor import label_taxonomy
+    source = pd.DataFrame([_observation("move_1"), _observation("move_2")])
+    groups = _groups([_group("move_1"), _group("move_2")])
+    previous, previous_summary = build_sweep_label_frames(observations=source, market_move_groups=groups)
+    calculate = label_taxonomy._label_row
+    calls = []
+    def counted(**kwargs):
+        calls.append(kwargs["move_id"])
+        return calculate(**kwargs)
+    monkeypatch.setattr(label_taxonomy, "_label_row", counted)
+    actual, summary = build_sweep_label_frames(observations=source, market_move_groups=groups, previous_taxonomy=previous)
+    pd.testing.assert_frame_equal(actual, previous)
+    pd.testing.assert_frame_equal(summary, previous_summary)
+    assert not calls
+    source.loc[0, "observation_complete"] = False
+    actual, summary = build_sweep_label_frames(observations=source, market_move_groups=groups, previous_taxonomy=previous)
+    assert calls == ["move_1"]
+    expected, expected_summary = build_sweep_label_frames(observations=source, market_move_groups=groups)
+    pd.testing.assert_frame_equal(actual, expected)
+    pd.testing.assert_frame_equal(summary, expected_summary)
+
+
 def test_exactly_one_label_per_market_move_and_secondary_rows_are_context_only():
     observations = pd.DataFrame(
         [

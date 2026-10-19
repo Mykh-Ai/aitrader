@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
+import numpy as np
+from market_monitor.causality import latest_zone_snapshot
 
 from market_monitor.feed_source import FeedSourceError, resolve_daily_feed_source
 
@@ -374,13 +376,18 @@ def _load_feed(feed_dir: Path, start_date: date, end_date: date, *, required_sta
         for column in normalized.columns:
             if column != "timestamp":
                 normalized[column] = pd.to_numeric(normalized[column], errors="coerce")
-        normalized = normalized.dropna(subset=["timestamp", "close_price", "high_price", "low_price"])
+        if "IsSynthetic" in frame:
+            normalized = normalized.loc[pd.to_numeric(frame.IsSynthetic, errors="raise").eq(0)]
+        if normalized.isna().any().any() or not np.isfinite(normalized.drop(columns="timestamp")).all().all():
+            raise HiddenFlowResearchError(f"invalid feed observations: {path}")
         if normalized.empty:
             raise HiddenFlowResearchError(f"{path} has no usable feed rows")
         parts.append(normalized)
     if not parts:
         raise HiddenFlowResearchError(f"no usable feed files found from {start_date} to {end_date}")
     out = pd.concat(parts, ignore_index=True).sort_values("timestamp", kind="mergesort").reset_index(drop=True)
+    if out.timestamp.duplicated().any():
+        raise HiddenFlowResearchError("duplicate source observations require governed resolution")
     for column in ["trades", "total_qty", "buy_qty", "sell_qty", "open_interest", "funding_rate"]:
         out[column] = out[column].fillna(0.0)
     notes = {
@@ -406,7 +413,7 @@ def _load_visible_selected_zones(path: Path) -> pd.DataFrame:
     missing = sorted(required - set(frame.columns))
     if missing:
         raise HiddenFlowResearchError(f"{path} missing selected zone columns: {', '.join(missing)}")
-    visible = frame[frame["visible_on_snapshot"].astype(str).str.lower() == "true"].copy()
+    visible = frame.copy()  # retain hidden latest snapshots so an older visible row cannot resurrect
     if visible.empty:
         raise HiddenFlowResearchError("selected_zones.csv has no visible_on_snapshot=true rows")
     for column in ["representative_price", "price_lower", "price_upper"]:
@@ -455,6 +462,9 @@ def _score_window(
     missing_flags: dict[str, str],
     prior_context: dict[str, object],
 ) -> dict[str, object]:
+    selected_zones = latest_zone_snapshot(selected_zones, window["timestamp"].iloc[-1])
+    if "visible_on_snapshot" in selected_zones:
+        selected_zones = selected_zones.loc[selected_zones.visible_on_snapshot.astype(str).str.lower().eq("true")]
     start_price = float(window["close_price"].iloc[0])
     end_price = float(window["close_price"].iloc[-1])
     high = float(window["high_price"].max())
@@ -517,7 +527,8 @@ def _prior_trend_context(feed: pd.DataFrame, start_pos: int, minutes: int) -> di
     if start_pos <= 0:
         return {"prior_trend_direction": "UNKNOWN", "prior_trend_change_pct": 0.0}
     lookback = min(max(int(minutes), 60), 1440)
-    prior = feed.iloc[max(0, start_pos - lookback) : start_pos]
+    start = feed.iloc[start_pos]["timestamp"]
+    prior = feed.loc[feed.timestamp.ge(start - pd.Timedelta(minutes=lookback)) & feed.timestamp.lt(start)]
     if len(prior) < min(60, lookback):
         return {"prior_trend_direction": "UNKNOWN", "prior_trend_change_pct": 0.0}
     start_price = float(prior["close_price"].iloc[0])
@@ -556,12 +567,12 @@ def _add_relative_metrics(frame: pd.DataFrame) -> pd.DataFrame:
     ]:
         values = pd.to_numeric(out[column], errors="coerce").fillna(0.0)
         grouped = out.groupby("window_minutes")[column]
-        med = grouped.transform("median").replace(0, 1.0)
-        std = grouped.transform("std").fillna(0.0).replace(0, 1.0)
-        mean = grouped.transform("mean").fillna(0.0)
+        med = grouped.transform(lambda x: x.expanding().median()).replace(0, 1.0)
+        std = grouped.transform(lambda x: x.expanding().std()).fillna(0.0).replace(0, 1.0)
+        mean = grouped.transform(lambda x: x.expanding().mean()).fillna(0.0)
         out[rel_name] = values / med
         out[z_name] = (values - mean) / std
-    range_med = out.groupby("window_minutes")["range_pct"].transform("median").replace(0, 0.01)
+    range_med = out.groupby("window_minutes")["range_pct"].transform(lambda x: x.expanding().median()).replace(0, 0.01)
     out["_range_relative"] = out["range_pct"] / range_med
     return out
 
@@ -1377,11 +1388,14 @@ def _size_bucket(move_pct: float) -> str:
 def _price_at_or_before(feed: pd.DataFrame, timestamp: pd.Timestamp) -> float:
     rows = feed[feed["timestamp"] <= timestamp]
     if rows.empty:
-        return float(feed["close_price"].iloc[0])
+        return float("nan")
     return float(rows["close_price"].iloc[-1])
 
 
 def _nearest_zone(zones: pd.DataFrame, price: float) -> dict[str, object]:
+    if zones.empty:
+        return {"zone_id": "", "side": "UNKNOWN", "bucket": "UNAVAILABLE",
+                "price_lower": float("nan"), "price_upper": float("nan"), "distance_pct": float("inf")}
     distances = (zones["representative_price"].astype(float) - price).abs()
     row = zones.loc[distances.sort_values(kind="mergesort").index[0]]
     distance_pct = (float(row["representative_price"]) - price) / price * 100 if price else 0.0

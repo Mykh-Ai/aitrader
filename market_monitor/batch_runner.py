@@ -159,6 +159,7 @@ def run_batch_research(
     processed_dirs: list[Path] = []
     previous_registry_out: Path | None = None
     first_failure: str | None = None
+    context_history: list[pd.DataFrame] = []
 
     for item in considered:
         if item.path is None:
@@ -188,6 +189,8 @@ def run_batch_research(
             feed, calculation_feed, window_quality, context_paths = _load_day_inputs(
                 feed_root, item
             )
+            context_history.append(calculation_feed if not context_history else feed)
+            calculation_feed = pd.concat(context_history, ignore_index=True)
             quality_summary = _quality_summary(feed)
 
             frames = write_outputs(

@@ -24,6 +24,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--feed-dir", required=True, help="Directory containing feed YYYY-MM-DD.csv files.")
     parser.add_argument("--out-dir", required=True, help="Output directory for trader snapshot artifacts.")
+    parser.add_argument("--as-of", help="UTC snapshot cutoff; otherwise use the selector's recorded cutoff.")
     args = parser.parse_args(argv)
 
     try:
@@ -34,6 +35,7 @@ def main(argv: list[str] | None = None) -> int:
             input_root=Path(args.input_root),
             feed_dir=Path(args.feed_dir),
             output_dir=Path(args.out_dir),
+            as_of=args.as_of,
         )
     except TraderSnapshotBuilderError as exc:
         print(f"trader snapshot failed: {exc}", file=sys.stderr)

@@ -9,6 +9,9 @@ from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
+import numpy as np
+from market_monitor.structure import _observation_feed
+from market_monitor.causality import latest_zone_snapshot, asof_rows, evidence_times
 
 from market_monitor.feed_source import FeedSourceError, resolve_daily_feed_source
 
@@ -46,6 +49,7 @@ MARKET_STRUCTURE_LEVEL_COLUMNS = [
 ]
 
 MARKET_STRUCTURE_EVENT_COLUMNS = [
+    "source_event_timestamp",
     "event_id",
     "event_timestamp",
     "event_type",
@@ -138,7 +142,7 @@ def run_market_structure_state(
     current_price = _last_close(feed)
 
     levels = _build_level_bands(
-        loaded["liquidity_zone_registry.csv"],
+        latest_zone_snapshot(loaded["liquidity_zone_registry.csv"], as_of_ts or pd.Timestamp(end_date, tz="UTC") + pd.Timedelta(hours=23, minutes=59)),
         current_price=current_price,
         merge_gap_bps=merge_gap_bps,
     )
@@ -152,6 +156,8 @@ def run_market_structure_state(
         start_date=start_date,
         end_date=end_date,
         as_of_ts=as_of_ts,
+        registry=loaded["liquidity_zone_registry.csv"],
+        merge_gap_bps=merge_gap_bps,
     )
 
     levels_path = out_dir / MARKET_STRUCTURE_LEVELS_CSV
@@ -187,6 +193,8 @@ def run_market_structure_state(
         else "",
         "input_root": str(root),
         "feed_dir": str(feeds),
+        "source_quality_counts": feed.DataQuality.value_counts().to_dict(),
+        "source_files": feed[["SourceFile", "SourceClass"]].drop_duplicates().to_dict("records"),
         "outputs": {
             "market_structure_levels_csv": str(levels_path),
             "market_structure_events_csv": str(events_path),
@@ -254,16 +262,22 @@ def _load_feed_window(
     frames = []
     for day in _date_range(start_date, end_date):
         try:
-            path = resolve_daily_feed_source(feed_dir, day).path
+            selected_source = resolve_daily_feed_source(feed_dir, day)
+            path = selected_source.path
         except FeedSourceError as exc:
             raise MarketStructureStateError(str(exc)) from exc
         frame = pd.read_csv(path)
+        frame["DataQuality"] = selected_source.source_class
+        frame["SourceClass"] = selected_source.source_class
+        frame["SourceFile"] = path.name
         frame = _normalize_feed(frame)
         frames.append(frame)
     if not frames:
         return pd.DataFrame()
     feed = pd.concat(frames, ignore_index=True, sort=False)
     feed = feed.sort_values("Timestamp", kind="mergesort").reset_index(drop=True)
+    if feed.Timestamp.duplicated().any():
+        raise MarketStructureStateError("duplicate source observations require governed resolution")
     if as_of_ts is not None:
         feed = feed[feed["Timestamp"] <= pd.Timestamp(as_of_ts.replace(tzinfo=None))].copy()
     return feed
@@ -292,10 +306,13 @@ def _normalize_feed(frame: pd.DataFrame) -> pd.DataFrame:
     missing = [column for column in required if column not in frame.columns]
     if missing:
         raise MarketStructureStateError(f"feed missing columns: {missing}")
-    frame["Timestamp"] = pd.to_datetime(frame["Timestamp"], utc=False)
+    frame["Timestamp"] = pd.to_datetime(frame["Timestamp"], utc=True).dt.tz_localize(None)
+    frame = _observation_feed(frame)
     for column in required:
         if column != "Timestamp":
-            frame[column] = pd.to_numeric(frame[column], errors="coerce").fillna(0.0)
+            frame[column] = pd.to_numeric(frame[column], errors="coerce")
+            if not np.isfinite(frame[column]).all():
+                raise MarketStructureStateError(f"invalid feed numeric field: {column}")
     return frame
 
 
@@ -359,6 +376,8 @@ def _build_level_bands(
 
 
 def _band_row(band_id: str, role: str, cluster: list[pd.Series]) -> dict[str, object]:
+    def clock(value):
+        return "" if pd.isna(value) else str(value)
     lower = min(float(row["price_lower"]) for row in cluster)
     upper = max(float(row["price_upper"]) for row in cluster)
     mid = (lower + upper) / 2.0
@@ -392,8 +411,8 @@ def _band_row(band_id: str, role: str, cluster: list[pd.Series]) -> dict[str, ob
         "status": "|".join(statuses),
         "first_seen_at": min(str(row.get("first_seen_at", "") or "") for row in cluster),
         "last_seen_at": max(str(row.get("last_seen_at", "") or "") for row in cluster),
-        "last_touch_at": max((str(row.get("last_touch_at", "") or "") for row in cluster), default=""),
-        "last_cross_at": max((str(row.get("last_cross_at", "") or "") for row in cluster), default=""),
+        "last_touch_at": max((clock(row.get("last_touch_at", "")) for row in cluster), default=""),
+        "last_cross_at": max((clock(row.get("last_cross_at", "")) for row in cluster), default=""),
         "active_days": active_days,
         "touch_count": touch_count,
         "cross_count": cross_count,
@@ -435,11 +454,15 @@ def _build_structure_events(post_sweep: pd.DataFrame, levels: pd.DataFrame) -> p
                 event_type = "FAILED_BREAKOUT_REJECTION"
             if not event_type:
                 continue
-            band = _nearest_band(levels, float(row["zone_price_mid"]))
+            available = evidence_times(pd.DataFrame([row])).iloc[0]
+            if pd.isna(available):
+                continue
+            band = _nearest_band(asof_rows(levels, available), float(row["zone_price_mid"]))
             rows.append(
                 {
                     "event_id": f"structure_event_{len(rows) + 1:06d}",
-                    "event_timestamp": str(row.get("source_event_timestamp", "")),
+                    "event_timestamp": available.isoformat(),
+                    "source_event_timestamp": str(row.get("source_event_timestamp", "")),
                     "event_type": event_type,
                     "band_id": str(band.get("band_id", "")),
                     "role": str(band.get("role", "")),
@@ -465,6 +488,8 @@ def _build_state_timeline(
     start_date: date,
     end_date: date,
     as_of_ts: datetime | None,
+    registry: pd.DataFrame | None = None,
+    merge_gap_bps: float = 50.0,
 ) -> pd.DataFrame:
     if feed.empty:
         return pd.DataFrame(columns=MARKET_STRUCTURE_STATE_COLUMNS)
@@ -481,8 +506,14 @@ def _build_state_timeline(
         if day_feed.empty:
             continue
         metrics = _window_metrics(day_feed)
-        support = _nearest_band_for_price(levels, "SUPPORT", metrics["close"])
-        resistance = _nearest_band_for_price(levels, "RESISTANCE", metrics["close"])
+        if registry is not None:
+            historical_levels = _build_level_bands(
+                latest_zone_snapshot(registry, pd.Timestamp(end_ts, tz="UTC")),
+                current_price=metrics["close"], merge_gap_bps=merge_gap_bps)
+        else:
+            historical_levels = asof_rows(levels, pd.Timestamp(end_ts, tz="UTC"))
+        support = _nearest_band_for_price(historical_levels, "SUPPORT", metrics["close"])
+        resistance = _nearest_band_for_price(historical_levels, "RESISTANCE", metrics["close"])
         market_state, confidence, bias, candidate_strength, evidence = _classify_state(
             metrics=metrics,
             support=support,

@@ -236,18 +236,17 @@ def _load_feed(feed_dir: Path, start: date, end: date) -> pd.DataFrame:
 def _build_h1_bars(feed: pd.DataFrame) -> pd.DataFrame:
     if feed.empty:
         return pd.DataFrame()
-    frame = feed.sort_values("timestamp", kind="mergesort").set_index("timestamp")
-    grouped = frame.resample("1h", label="left", closed="left").agg(
-        open=("open", "first"),
-        high=("high", "max"),
-        low=("low", "min"),
-        close=("close", "last"),
-        volume=("volume", "sum"),
-        rows=("close", "size"),
-    )
-    grouped = grouped.dropna(subset=["open", "high", "low", "close"]).reset_index()
-    grouped["timestamp"] = grouped["timestamp"] + pd.Timedelta(minutes=59)
-    grouped["completed"] = grouped["rows"] >= 45
+    from market_monitor.structure import aggregate_timeframe
+    frame = feed.rename(columns={"timestamp": "Timestamp", "open": "OpenPrice", "high": "HiPrice",
+                                 "low": "LowPrice", "close": "ClosePrice", "volume": "TotalQty"}).copy()
+    for name in ["Trades", "BuyQty", "SellQty", "OpenInterest", "FundingRate"]:
+        if name not in frame:
+            frame[name] = 0.
+    if "DataQuality" not in frame:
+        frame["DataQuality"] = "RAW"
+    grouped = aggregate_timeframe(frame, "H1").rename(columns={"Timestamp": "timestamp", "OpenPrice": "open",
+        "HiPrice": "high", "LowPrice": "low", "ClosePrice": "close", "TotalQty": "volume"})
+    grouped["completed"] = grouped["completion_status"].eq("CLOSED_OBSERVED")
     return grouped[["timestamp", "open", "high", "low", "close", "volume", "completed"]]
 
 

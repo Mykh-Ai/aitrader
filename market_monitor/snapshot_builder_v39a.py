@@ -14,6 +14,8 @@ import hashlib
 import json
 import os
 import tempfile
+import numpy as np
+from market_monitor.causality import evidence_times, AVAILABILITY_COLUMNS
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
@@ -62,6 +64,7 @@ def build_market_monitor_snapshot_v39a(
     base_snapshot: Mapping[str, Any] | None = None,
     lineage: Mapping[str, Any] | None = None,
     persist_state: bool = True,
+    allow_isolated_close_omission: bool = False,
 ) -> dict[str, Any]:
     """Build an entry-time monitor snapshot from closed feed rows.
 
@@ -72,19 +75,31 @@ def build_market_monitor_snapshot_v39a(
     frame = _normalise_feed(feed)
     if frame.empty:
         raise MonitorSnapshotV39AError("feed is empty")
-    cutoff = _resolve_cutoff(frame, cutoff_ts)
+    cutoff = _resolve_cutoff(frame, cutoff_ts, allow_isolated_close_omission=allow_isolated_close_omission)
+    if base_snapshot:
+        base_clock = base_snapshot.get("cutoff_ts") or base_snapshot.get("cutoff_timestamp")
+        if base_clock is None:
+            raise MonitorSnapshotV39AError("base snapshot requires a causal cutoff timestamp")
+        if _parse_ts(base_clock) > cutoff:
+            raise MonitorSnapshotV39AError("future base snapshot cannot enter historical context")
+        _assert_nested_evidence(base_snapshot, cutoff)
     current = frame[frame["Timestamp"] <= cutoff].copy()
     if current.empty:
         raise MonitorSnapshotV39AError("no feed rows at or before cutoff")
     context = _normalise_feed(context_feed) if context_feed is not None else current.copy()
     context = context[context["Timestamp"] <= cutoff].copy()
     previous_state, state_load = _load_state(state_path)
+    observed = current.loc[~current.DataQuality.isin(["SYNTHETIC", "INVALID"])].copy()
+    if observed.empty:
+        raise MonitorSnapshotV39AError("no real observations at or before cutoff")
     windows = {
-        str(minutes): _window_metrics(current, minutes=minutes, cutoff=cutoff)
+        str(minutes): _window_metrics(observed, minutes=minutes, cutoff=cutoff)
         for minutes in LOCAL_WINDOWS_MINUTES
     }
     quality = _quality_summary(frame, current, context, windows, cutoff)
-    current_price = float(current.iloc[-1]["ClosePrice"])
+    quality["cutoff_is_latest_used_row"] = bool(observed.Timestamp.max() == cutoff)
+    current_price = float(observed.iloc[-1]["ClosePrice"])
+    quality["excluded_non_observation_rows"] = int(len(current) - len(observed))
     structure = _structure_summary(windows, current_price)
     zones = _zone_summary(base_snapshot)
     market_state = _market_state_summary(base_snapshot, windows)
@@ -114,8 +129,8 @@ def build_market_monitor_snapshot_v39a(
         },
         "current": {
             "price": round(current_price, 8),
-            "rows_used": int(len(current)),
-            "last_timestamp": _format_ts(current["Timestamp"].iloc[-1]),
+            "rows_used": int(len(observed)),
+            "last_timestamp": _format_ts(observed["Timestamp"].iloc[-1]),
         },
         "windows": windows,
         "market_state": market_state,
@@ -142,6 +157,25 @@ def build_market_monitor_snapshot_v39a(
     return _json_safe(snapshot)
 
 
+def _assert_nested_evidence(value, cutoff):
+    clocks = []
+    names = set(AVAILABILITY_COLUMNS) | {"source_day", "_source_day"}
+    def collect(item):
+        if isinstance(item, Mapping):
+            record = {name: child for name, child in item.items() if name in names}
+            if record:
+                clocks.append(record)
+            for child in item.values():
+                if isinstance(child, (Mapping, list, tuple)):
+                    collect(child)
+        elif isinstance(item, (list, tuple)):
+            for child in item:
+                collect(child)
+    collect(value)
+    if clocks and evidence_times(pd.DataFrame(clocks)).gt(cutoff).any():
+        raise MonitorSnapshotV39AError("future evidence inside base snapshot")
+
+
 def _normalise_feed(feed: pd.DataFrame | None) -> pd.DataFrame:
     if feed is None:
         return pd.DataFrame()
@@ -156,31 +190,36 @@ def _normalise_feed(feed: pd.DataFrame | None) -> pd.DataFrame:
         if column not in frame.columns:
             frame[column] = 0.0
         frame[column] = pd.to_numeric(frame[column], errors="coerce")
-        if frame[column].isna().any():
+        if not np.isfinite(frame[column]).all():
             raise MonitorSnapshotV39AError(f"invalid numeric values in {column}")
     frame["Timestamp"] = pd.to_datetime(frame["Timestamp"], utc=True, errors="coerce")
     if frame["Timestamp"].isna().any():
         raise MonitorSnapshotV39AError("invalid Timestamp values")
+    if frame["Timestamp"].duplicated().any():
+        raise MonitorSnapshotV39AError("duplicate minute observations require source resolution")
     if "DataQuality" not in frame.columns:
         if "IsSynthetic" in frame.columns:
             synthetic = pd.to_numeric(frame["IsSynthetic"], errors="coerce").fillna(0)
-            frame["DataQuality"] = synthetic.ne(0).map({True: "RECOVERED_DEGRADED", False: "RAW"})
+            frame["DataQuality"] = synthetic.ne(0).map({True: "SYNTHETIC", False: "RAW"})
         else:
             frame["DataQuality"] = "RAW"
     frame["DataQuality"] = frame["DataQuality"].fillna("UNKNOWN").astype(str)
+    if "IsSynthetic" in frame:
+        frame.loc[pd.to_numeric(frame.IsSynthetic, errors="coerce").fillna(0).ne(0), "DataQuality"] = "SYNTHETIC"
     if "SourceFile" not in frame.columns:
         frame["SourceFile"] = "in_memory_feed"
     return frame.sort_values("Timestamp", kind="mergesort").reset_index(drop=True)
 
 
-def _resolve_cutoff(frame: pd.DataFrame, cutoff_ts: Any | None) -> pd.Timestamp:
+def _resolve_cutoff(frame: pd.DataFrame, cutoff_ts: Any | None, *, allow_isolated_close_omission=False) -> pd.Timestamp:
     cutoff = pd.Timestamp(cutoff_ts) if cutoff_ts is not None else pd.Timestamp(frame["Timestamp"].max())
     if cutoff.tzinfo is None:
         cutoff = cutoff.tz_localize("UTC")
     else:
         cutoff = cutoff.tz_convert("UTC")
     cutoff = cutoff.floor("min")
-    if cutoff > frame["Timestamp"].max():
+    tolerance = pd.Timedelta(minutes=1) if allow_isolated_close_omission else pd.Timedelta(0)
+    if cutoff > frame["Timestamp"].max() + tolerance:
         raise MonitorSnapshotV39AError("cutoff is later than the available feed")
     return cutoff
 
@@ -198,7 +237,8 @@ def _window_metrics(frame: pd.DataFrame, *, minutes: int, cutoff: pd.Timestamp) 
         for key, value in window["DataQuality"].value_counts().sort_index().items()
     }
     recovered = any(key == "RECOVERED_DEGRADED" for key in quality_counts)
-    status = "COMPLETE_RECOVERED_DEGRADED" if complete and recovered else "COMPLETE_RAW" if complete else "PARTIAL"
+    status = ("COMPLETE_DEGRADED" if complete and any(key not in {"RAW", "RECOVERED_DEGRADED"} for key in quality_counts)
+              else "COMPLETE_RECOVERED_DEGRADED" if complete and recovered else "COMPLETE_RAW" if complete else "PARTIAL")
     if window.empty:
         return {
             "start_timestamp": _format_ts(start),
@@ -251,6 +291,8 @@ def _quality_summary(
         str(key): int(value)
         for key, value in current["DataQuality"].value_counts().sort_index().items()
     }
+    recent = current.loc[current.Timestamp.gt(cutoff - pd.Timedelta(minutes=max(LOCAL_WINDOWS_MINUTES)))]
+    recent_qualities = set(recent.DataQuality)
     return {
         "cutoff_is_latest_used_row": bool(current["Timestamp"].max() == cutoff),
         "future_rows_excluded": future_rows,
@@ -259,7 +301,8 @@ def _quality_summary(
         "current_data_quality_counts": counts,
         "recovered_degraded_present": "RECOVERED_DEGRADED" in counts,
         "incomplete_windows": missing_windows,
-        "readiness": "READY_WITH_RECOVERED_DATA" if "RECOVERED_DEGRADED" in counts else "READY",
+        "readiness": ("PARTIAL" if missing_windows or bool(recent_qualities - {"RAW", "RECOVERED_DEGRADED"})
+                      else "READY_WITH_RECOVERED_DATA" if "RECOVERED_DEGRADED" in counts else "READY"),
     }
 
 
@@ -368,7 +411,7 @@ def _advance_state(*, previous_state, state_load, cutoff, structure, zones, mark
         "state_schema_version": STATE_SCHEMA_VERSION,
         "last_cutoff_ts": _format_ts(cutoff),
         "market_day_utc": cutoff.date().isoformat(),
-        "carry_forward_count": int((prior or {}).get("carry_forward_count", 0)) + (1 if carried else 0),
+        "carry_forward_count": int((prior or {}).get("carry_forward_count", 0)) + (1 if carried and previous_cutoff != cutoff else 0),
         "daily_boundary": state_memory["daily_boundary"],
         "structure": structure,
         "liquidity_zones": current_zones,

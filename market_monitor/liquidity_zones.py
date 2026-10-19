@@ -13,6 +13,7 @@ from market_monitor.score_instrumentation import (
 
 
 LIQUIDITY_MAP_COLUMNS = [
+    "geometry_available_at_utc",
     "zone_id",
     "created_at",
     "last_updated_at",
@@ -347,6 +348,7 @@ def _finalize_zone(zone: dict[str, object], latest_close: float | None) -> dict[
     return {
         "zone_id": "",
         "created_at": zone["created_at"],
+        "geometry_available_at_utc": zone["last_updated_at"],
         "last_updated_at": zone["last_updated_at"],
         "side": zone["side"],
         "zone_type": zone["zone_type"],

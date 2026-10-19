@@ -38,7 +38,7 @@ def test_post_sweep_observation_csv_is_always_written_header_only_without_unreso
     output_file = output_dir / "post_sweep_observation.csv"
     assert output_file.exists()
     observation = pd.read_csv(output_file)
-    assert observation.columns.tolist() == POST_SWEEP_OBSERVATION_COLUMNS
+    assert observation.columns.tolist() == [*POST_SWEEP_OBSERVATION_COLUMNS, "snapshot_available_at_utc"]
     assert observation.empty
 
 
@@ -54,7 +54,7 @@ def test_buy_side_unresolved_event_creates_complete_observation_after_event_cand
 
     row = observation.iloc[0]
     assert row["observation_id"] == "observation_000001"
-    assert row["source_event_id"] == "event_000002"
+    assert row["source_event_id"] == event_log.iloc[0]["event_id"]
     assert row["market_move_id"] == "move_20260508_000100_BUY_SIDE_000001"
     assert row["market_move_role"] == "PRIMARY"
     assert row["market_move_event_count"] == 1

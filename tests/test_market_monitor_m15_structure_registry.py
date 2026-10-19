@@ -36,8 +36,8 @@ def test_m1_is_feed_only_and_m15_creates_first_class_structure_rows():
     assert m15_high["source_timeframe_primary"] == "M15"
     assert m15_high["side"] == "BUY_SIDE"
     assert m15_high["price"] == 65500.0
-    assert m15_high["level_timestamp"] == "2026-05-07T00:30:00Z"
-    assert m15_high["created_at"] == "2026-05-07T01:00:00Z"
+    assert m15_high["level_timestamp"] == "2026-05-07T00:31:00Z"
+    assert m15_high["created_at"] == "2026-05-07T01:15:00Z"
     assert m15_high["htf_level_type"] == ""
     assert m15_high["htf_origin_timestamp"] == ""
     assert m15_high["htf_origin_price"] == ""
@@ -148,7 +148,12 @@ def _m15_swing_feed() -> pd.DataFrame:
                 "SourceFile": "synthetic.csv",
             }
         )
-    return pd.DataFrame(rows)
+    # These are minute-close observations, not one observation per M15 bar.
+    expanded = []
+    for row in rows:
+        for minute in range(1, 16):
+            expanded.append({**row, "Timestamp": row["Timestamp"] + pd.Timedelta(minutes=minute)})
+    return pd.DataFrame(expanded)
 
 
 def _level(

@@ -46,7 +46,10 @@ def build_window_quality(
             (causal["Timestamp"] >= start) & (causal["Timestamp"] <= cutoff_ts)
         ].copy()
         timestamp_counts = window["Timestamp"].value_counts()
-        unique_timestamps = pd.DatetimeIndex(timestamp_counts.index).sort_values()
+        if "IsSynthetic" in window:
+            window.loc[pd.to_numeric(window.IsSynthetic, errors="raise").ne(0), "DataQuality"] = "SYNTHETIC"
+        usable = ~window.DataQuality.isin(["SYNTHETIC", "INVALID"])
+        unique_timestamps = pd.DatetimeIndex(window.loc[usable, "Timestamp"].unique()).sort_values()
         missing = expected.difference(unique_timestamps)
         duplicate_rows = int((timestamp_counts - 1).clip(lower=0).sum())
         quality_counts = {

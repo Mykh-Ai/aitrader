@@ -28,7 +28,7 @@ def test_registry_file_is_written_every_run(tmp_path: Path):
 
     registry_path = output_dir / "liquidity_zone_registry.csv"
     assert registry_path.exists()
-    assert pd.read_csv(registry_path).columns.tolist() == REGISTRY_COLUMNS
+    assert pd.read_csv(registry_path).columns.tolist() == [*REGISTRY_COLUMNS, "snapshot_available_at_utc"]
     assert "liquidity_zone_registry.csv" in REQUIRED_CSV_SCHEMAS
 
 

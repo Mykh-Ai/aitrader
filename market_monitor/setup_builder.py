@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 import re
+import math
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
+from market_monitor.causality import latest_zone_snapshot, asof_rows, evidence_times
 
 
 SETUP_BUILDER_VERSION = "SHI_RESET_37K_LIVE_REPLAY_SETUP_TIMELINE_V0"
@@ -21,6 +23,8 @@ SETUP_BUILDER_COLUMNS = [
     "start_timestamp",
     "end_timestamp",
     "setup_formed_at",
+    "decision_at_utc",
+    "latest_consumed_evidence_at_utc",
     "source_window_start",
     "source_window_end",
     "source_time_precision",
@@ -137,7 +141,7 @@ def run_setup_builder(
 
     states = _read_csv(state_path)
     windows = _prepare_windows(_read_csv(windows_path))
-    zones = _visible_zones(_read_csv(zones_path))
+    zones = _read_csv(zones_path)
     hidden_candidates = _read_csv(hidden_path) if optional_hidden_loaded and hidden_path is not None else pd.DataFrame()
     if not hidden_candidates.empty:
         windows = pd.concat(
@@ -176,15 +180,22 @@ def _build_rows(
     states = states.copy()
     states["_start_ts"] = pd.to_datetime(states["start_timestamp"], errors="coerce", utc=True)
     states["_end_ts"] = pd.to_datetime(states["end_timestamp"], errors="coerce", utc=True)
+    if states[["_start_ts", "_end_ts"]].isna().any().any():
+        raise ValueError("invalid setup state availability timestamp")
     rows: list[dict[str, object]] = []
     for _, state in states.sort_values(["_end_ts", "_start_ts"], kind="mergesort").iterrows():
-        state_windows = _windows_for_state(windows, state)
+        if state.get("h1_observation_status") == "PARTIAL":
+            continue
+        if asof_rows(pd.DataFrame([state]), state["_end_ts"]).empty:
+            continue
+        state_windows = asof_rows(_windows_for_state(windows, state), state["_end_ts"])
+        state_zones = _visible_zones(latest_zone_snapshot(zones, state["_end_ts"]))
         context = _state_context(state)
         for candidate in [
-            _seller_dominance_retest_down(state, state_windows, zones, context),
-            _supply_sweep_reclaim_down(state, state_windows, zones, context),
-            _demand_sweep_reclaim_up(state, state_windows, zones, context),
-            _accepted_breakout_up(state, state_windows, zones, context),
+            _seller_dominance_retest_down(state, state_windows, state_zones, context),
+            _supply_sweep_reclaim_down(state, state_windows, state_zones, context),
+            _demand_sweep_reclaim_up(state, state_windows, state_zones, context),
+            _accepted_breakout_up(state, state_windows, state_zones, context),
         ]:
             if candidate is not None:
                 rows.append(candidate)
@@ -378,6 +389,8 @@ def _row(
         "start_timestamp": _cell(state.get("start_timestamp")),
         "end_timestamp": _cell(state.get("end_timestamp")),
         "setup_formed_at": _formed_at(state, raw),
+        "decision_at_utc": _formed_at(state, raw),
+        "latest_consumed_evidence_at_utc": _formed_at(state, raw),
         "source_window_start": _source_window_start(state, raw),
         "source_window_end": _source_window_end(state, raw),
         "source_time_precision": _source_time_precision(raw),
@@ -535,20 +548,24 @@ def _state_context(state: pd.Series) -> dict[str, object]:
 
 
 def _target_reference_zone(zones: pd.DataFrame, side: str, price: float) -> str:
-    if zones.empty:
+    if zones.empty or pd.isna(price) or not math.isfinite(price) or price <= 0:
         return ""
     frame = zones[zones.get("side", pd.Series(dtype=str)).astype(str) == side].copy()
     if frame.empty:
         return ""
     frame["_lower"] = pd.to_numeric(frame.get("price_lower"), errors="coerce")
     frame["_upper"] = pd.to_numeric(frame.get("price_upper"), errors="coerce")
+    frame = frame.loc[frame["_lower"].gt(0) & frame["_upper"].ge(frame["_lower"])
+                      & frame["_lower"].map(math.isfinite) & frame["_upper"].map(math.isfinite)]
+    if frame.empty:
+        return ""
     if side == "BUY_SIDE":
-        candidates = frame[frame["_lower"] >= price] if not pd.isna(price) else frame
+        candidates = frame[frame["_lower"] > price]
         if candidates.empty:
             return ""
         row = candidates.sort_values(["_lower", "_upper"], kind="mergesort").iloc[0]
     else:
-        candidates = frame[frame["_upper"] <= price] if not pd.isna(price) else frame
+        candidates = frame[frame["_upper"] < price]
         if candidates.empty:
             return ""
         row = candidates.sort_values(["_upper", "_lower"], ascending=[False, False], kind="mergesort").iloc[0]

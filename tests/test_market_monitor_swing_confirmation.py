@@ -11,8 +11,8 @@ def test_h1_swing_created_at_uses_confirming_bar_timestamp():
     levels = build_structure_levels(feed)
     swing = levels[levels["level_type"] == "H1_SWING_HIGH"].iloc[0]
 
-    assert swing["level_timestamp"] == "2026-05-07T02:00:00Z"
-    assert swing["created_at"] == "2026-05-07T04:00:00Z"
+    assert swing["level_timestamp"] == "2026-05-07T02:01:00Z"
+    assert swing["created_at"] == "2026-05-07T05:00:00Z"
     assert pd.Timestamp(swing["created_at"]) >= pd.Timestamp(swing["level_timestamp"])
     assert "future_return" not in levels.columns
     assert "outcome_12_bar" not in levels.columns
@@ -29,22 +29,22 @@ def test_h4_swing_created_at_uses_right_bar_timestamp():
     levels = build_structure_levels(feed)
     swing = levels[levels["level_type"] == "H4_SWING_HIGH"].iloc[0]
 
-    assert swing["level_timestamp"] == "2026-05-07T04:00:00Z"
-    assert swing["created_at"] == "2026-05-07T08:00:00Z"
+    assert swing["level_timestamp"] == "2026-05-07T04:01:00Z"
+    assert swing["created_at"] == "2026-05-07T12:00:00Z"
 
 
 def _hourly_feed(highs, lows):
     rows = []
     for hour, (high, low) in enumerate(zip(highs, lows)):
         rows.append(_row(f"2026-05-07T{hour:02d}:00:00Z", high, low))
-    return pd.DataFrame(rows)
+    return pd.DataFrame([{**row, "Timestamp": row["Timestamp"] + pd.Timedelta(minutes=m)} for row in rows for m in range(1, 61)])
 
 
 def _four_hour_feed(highs, lows):
     rows = []
     for index, (high, low) in enumerate(zip(highs, lows)):
         rows.append(_row(f"2026-05-07T{index * 4:02d}:00:00Z", high, low))
-    return pd.DataFrame(rows)
+    return pd.DataFrame([{**row, "Timestamp": row["Timestamp"] + pd.Timedelta(minutes=m)} for row in rows for m in range(1, 241)])
 
 
 def _row(ts, high, low):

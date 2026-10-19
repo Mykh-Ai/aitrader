@@ -1,11 +1,11 @@
 import pandas as pd
 
-from market_monitor.zone_registry import build_zone_registry
+from market_monitor.zone_registry import REGISTRY_STATE_VERSION, build_zone_registry
 
 
 def test_active_carried_zone_keeps_stable_zone_id_across_days():
     day1, _ = build_zone_registry(
-        liquidity_map=_liquidity_map([_zone("zone_000001", "BUY_SIDE", 100, 110)]),
+        liquidity_map=_liquidity_map([{**_zone("zone_000001", "BUY_SIDE", 100, 110), "created_at": "2026-05-07T00:00:00Z", "last_updated_at": "2026-05-07T00:00:00Z"}]),
         feed=_path_feed("2026-05-07", [90, 95]),
     )
 
@@ -13,6 +13,7 @@ def test_active_carried_zone_keeps_stable_zone_id_across_days():
         liquidity_map=_liquidity_map([]),
         feed=_path_feed("2026-05-08", [92, 96]),
         registry_in=day1,
+        history_feed=pd.concat([_path_feed("2026-05-07", [90,95]), _path_feed("2026-05-08", [92,96])], ignore_index=True),
     )
 
     active = day2[day2["status"] == "ACTIVE"].iloc[0]
@@ -146,6 +147,9 @@ def _registry_row(
     confidence_tier="MEDIUM",
 ):
     return {
+        # Sparse expiry/status fixture; do not label its missing context clean.
+        "registry_state_version": REGISTRY_STATE_VERSION,
+        "history_context_incomplete": "true",
         "zone_id": zone_id,
         "first_seen_at": first_seen_at,
         "last_seen_at": "2026-05-07T23:59:00Z",

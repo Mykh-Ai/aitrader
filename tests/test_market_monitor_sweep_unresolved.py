@@ -47,7 +47,7 @@ def test_cross_without_pre_existing_zone_does_not_emit_unresolved_sweep():
         volume_zscore=1.6,
     )
 
-    assert event_log["event_type"].tolist() == ["LIQUIDITY_ZONE_CROSSED_UNCLASSIFIED"]
+    assert event_log.empty  # formation close is not a post-availability interaction
 
 
 def test_cross_below_minimum_excursion_does_not_emit_unresolved_sweep():

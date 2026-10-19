@@ -23,7 +23,11 @@ def test_h4_local_low_carries_htf_origin_fields_from_synthetic_fixture():
         ]
     )
 
-    levels = build_structure_levels(feed)
+    # A genuine minute-close history through the confirming H4 close.
+    dense = pd.DataFrame([_candle(ts, high=67500, low=66000, close=67200)
+                          for ts in pd.date_range("2026-03-27T12:01Z", "2026-03-28T00:00Z", freq="min")])
+    dense.loc[dense.Timestamp.eq(pd.Timestamp("2026-03-27T17:00Z")), ["LowPrice", "ClosePrice"]] = [65500, 65600]
+    levels = build_structure_levels(dense)
     h4_low = levels[
         (levels["level_type"] == "H4_SWING_LOW")
         & (levels["price"] == 65500)
@@ -33,7 +37,7 @@ def test_h4_local_low_carries_htf_origin_fields_from_synthetic_fixture():
     assert h4_low["htf_level_type"] == "H4_SWING_LOW"
     assert h4_low["htf_origin_timestamp"] == "2026-03-27T17:00:00Z"
     assert h4_low["htf_origin_price"] == 65500
-    assert h4_low["htf_confirmation_timestamp"] == "2026-03-27T20:00:00Z"
+    assert h4_low["htf_confirmation_timestamp"] == "2026-03-28T00:00:00Z"
 
 
 def test_m1_repeated_touches_do_not_increment_htf_sweep_count():
@@ -64,21 +68,21 @@ def test_h4_level_is_not_consumed_by_m1_chop():
 
     row = registry.iloc[0]
     assert row["cross_through_count"] >= 3
-    assert row["htf_sweep_count"] == 1
+    assert row["htf_sweep_count"] == 0  # current H4 has not closed
     assert row["consumption_status"] == "SWEPT_ONCE"
     assert row["consumption_status"] not in {"CONSUMED", "CHOPPED_THROUGH"}
-    assert row["sweep_importance_class"] == "HTF_STRUCTURAL_SWEEP"
+    assert row["sweep_importance_class"] == "HTF_STRUCTURAL_LEVEL"  # no closed H4 sweep yet
     assert row["active_forward_role"] not in LOCAL_CONTEXT_ACTIVE_FORWARD_ROLES
 
 
 def test_h4_sweep_count_requires_boundary_cross():
     touched_registry, _ = build_zone_registry(
         liquidity_map=_htf_liquidity_map(),
-        feed=_feed_from_lows([99.5, 99.2, 99.1], close=103),
+        feed=_complete_h4([99.5, 99.2, 99.1]),
     )
     swept_registry, _ = build_zone_registry(
         liquidity_map=_htf_liquidity_map(),
-        feed=_feed_from_lows([100.5, 98.9, 100.6], close=103),
+        feed=_complete_h4([100.5, 98.9, 100.6]),
     )
 
     assert touched_registry.iloc[0]["htf_sweep_count"] == 0
@@ -350,7 +354,7 @@ def _feed_from_lows(lows: list[float], *, close: float) -> pd.DataFrame:
     for index, low in enumerate(lows):
         rows.append(
             _candle(
-                f"2026-03-29T20:{index:02d}:00Z",
+                f"2026-03-29T20:{index + 1:02d}:00Z",
                 high=max(close, 101.0),
                 low=low,
                 close=close,
@@ -471,3 +475,10 @@ def _zone_000064_registry_row() -> dict[str, object]:
         "data_quality": "RAW",
         "precision_status": "PRECISE",
     }
+
+
+def _complete_h4(lows):
+    rows = [_candle(ts, high=104, low=103, close=103) for ts in pd.date_range("2026-03-29T20:01Z", "2026-03-30T00:00Z", freq="min")]
+    for row, low in zip(rows, lows):
+        row["LowPrice"] = low
+    return pd.DataFrame(rows)

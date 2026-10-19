@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
+import numpy as np
 
 
 class FeedContractError(ValueError):
@@ -137,13 +138,13 @@ def _read_one_csv(path: Path) -> pd.DataFrame:
 
     for column in NUMERIC_COLUMNS:
         frame[column] = pd.to_numeric(frame[column], errors="coerce")
-        if frame[column].isna().any():
+        if not np.isfinite(frame[column]).all():
             raise FeedContractError(f"Invalid numeric values in column: {column}")
 
-    frame["LiquidationDataAvailable"] = liquidation_data_available
     source_class = _source_class_for(path)
     frame["SourceClass"] = source_class
     frame["DataQuality"] = _data_quality_for(source_class, frame)
+    frame["LiquidationDataAvailable"] = liquidation_data_available & frame["DataQuality"].eq("RAW")
     frame["SourceFile"] = path.name
     frame["_source_order"] = range(len(frame))
     return frame

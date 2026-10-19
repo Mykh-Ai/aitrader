@@ -335,6 +335,9 @@ def _attach_failed_reclaim(
         return
 
     for idx, (_, bar) in enumerate(after.iterrows(), start=1):
+        if not bool(bar["completed"]) or pd.Timestamp(bar["timestamp"]) != sweep_ts + pd.Timedelta(hours=idx):
+            row["reclaim_reject_reason"] = "incomplete_or_missing_confirmation_bar"
+            return
         close = float(bar["close"])
         if direction == "BEARISH" and close < level:
             _mark_reclaim(row, bar, idx, direction, stop_price=float(sweep["high"]) * (1 + STOP_BUFFER_FRACTION))
@@ -379,9 +382,11 @@ def _prepare_h1_bars(frame: pd.DataFrame) -> pd.DataFrame:
             "volume": pd.to_numeric(frame[columns.get("volume", columns.get("qty", "volume"))], errors="coerce")
             if "volume" in columns or "qty" in columns
             else 0.0,
-            "completed": frame[columns["completed"]].astype(bool) if "completed" in columns else True,
+            "completed": frame[columns["completed"]].astype(str).str.lower().isin({"true", "1", "1.0"}) if "completed" in columns else True,
         }
     )
+    if out["timestamp"].duplicated().any():
+        raise ValueError("duplicate H1 confirmation observations")
     return out.dropna(subset=["timestamp", "open", "high", "low", "close"]).sort_values("timestamp", kind="mergesort")
 
 

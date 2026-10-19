@@ -110,7 +110,7 @@ def test_previous_day_context_is_not_replayed_as_registry_progression(tmp_path: 
 
     old_context = _minute_frame("2026-06-30T23:59:00Z", 1, close_start=105)
     progression = _minute_frame("2026-07-01T00:00:00Z", 2, close_start=90)
-    context = pd.concat([old_context, progression], ignore_index=True)
+    context = pd.concat([seed_feed, old_context, progression], ignore_index=True)
     frames = write_outputs(
         progression,
         tmp_path / "out",
@@ -123,8 +123,12 @@ def test_previous_day_context_is_not_replayed_as_registry_progression(tmp_path: 
         frames["liquidity_zone_registry.csv"]["zone_id"] == "zone_000001"
     ].iloc[0]
 
-    assert int(float(row["touch_count"])) == before_touch
-    assert not row["last_touch_at"]
+    assert int(float(row["touch_count"])) == before_touch + 1
+    assert row["last_touch_at"] == "2026-06-30T23:59:00Z"
+    # The previously unseen last minute is legitimate lifetime context, but
+    # must not be emitted again as a new July progression event.
+    events = frames["event_log.csv"]
+    assert events.empty or pd.to_datetime(events.event_timestamp, utc=True).ge(pd.Timestamp("2026-07-01T00:00Z")).all()
 
 
 def test_batch_uses_recovered_source_and_one_synthetic_minute_does_not_skip_day(tmp_path: Path):

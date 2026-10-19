@@ -49,6 +49,7 @@ def test_registry_merge_instrumentation_exposes_prior_score_and_disciplined_fres
         liquidity_map=current,
         feed=_feed("2026-05-08", [65000, 65001]),
         registry_in=registry_in,
+        history_feed=pd.concat([_feed("2026-05-07", [65000, 65001]), _feed("2026-05-08", [65000, 65001])], ignore_index=True),
     )
 
     active = registry_out[registry_out["status"] != "MERGED"].iloc[0]
@@ -95,16 +96,16 @@ def test_registry_merge_does_not_repeatedly_inflate_already_known_sources():
         liquidity_map=repeated,
         feed=_feed("2026-05-08", [65000, 65001]),
         registry_in=registry_in,
+        history_feed=pd.concat([_feed("2026-05-07", [65000, 65001]), _feed("2026-05-08", [65000, 65001])], ignore_index=True),
     )
 
     active = registry_out[registry_out["status"] != "MERGED"].iloc[0]
     components = json.loads(active["score_components_json"])
-    assert components["carry_forward_prior_score"] == 66
-    assert components["fresh_source_count"] == 0
-    assert components["source_count_bonus"] == 0
-    assert components["raw_source_count_bonus"] == 0
-    assert components["final_confidence_score"] == int(active["confidence_score"])
-    assert active["confidence_score"] < 70
+    prior = registry_in.loc[registry_in.status.ne("MERGED")].iloc[0]
+    # An identical source inventory does not constitute another confidence
+    # merge. Preserve its original components and score exactly.
+    assert components == json.loads(prior["score_components_json"])
+    assert active["confidence_score"] == prior["confidence_score"]
 
 
 def _level(level_id, side, timeframe, level_type, price):

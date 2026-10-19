@@ -154,7 +154,7 @@ def _feed(closes):
 def _cross_through_feed():
     return pd.DataFrame(
         [
-            _candle("2026-05-08T00:00:00Z", high=116, low=94, close=105),
+            _candle("2026-05-08T00:03:00Z", high=116, low=94, close=105),
             _candle("2026-05-08T00:01:00Z", high=117, low=93, close=105),
             _candle("2026-05-08T00:02:00Z", high=118, low=92, close=105),
         ]

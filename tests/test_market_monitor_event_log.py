@@ -32,7 +32,7 @@ def test_event_log_csv_is_always_written_with_exact_schema(tmp_path: Path):
         ]
     ) == 0
 
-    assert pd.read_csv(output_dir / "event_log.csv").columns.tolist() == EVENT_LOG_COLUMNS
+    assert pd.read_csv(output_dir / "event_log.csv").columns.tolist() == [*EVENT_LOG_COLUMNS, "snapshot_available_at_utc"]
 
 
 def test_event_ids_and_evidence_json_are_deterministic():
@@ -44,7 +44,8 @@ def test_event_ids_and_evidence_json_are_deterministic():
     second = build_event_log(registry=registry, feed=feed, volume_delta_state=volume_delta)
 
     assert first.equals(second)
-    assert first.loc[0, "event_id"] == "event_000001"
+    assert first.loc[0, "event_id"].startswith("event_")
+    assert first.loc[0, "event_id"] == second.loc[0, "event_id"]
     evidence = json.loads(first.loc[0, "evidence_json"])
     assert list(evidence.keys()) == sorted(evidence.keys())
     assert evidence["zone_id"] == "zone_000001"

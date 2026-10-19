@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import hashlib
+from types import MappingProxyType
 
 import pandas as pd
 
@@ -131,9 +133,11 @@ def build_event_log(
         ["event_timestamp", "zone_id", "_event_type_order", "event_type"],
         kind="mergesort",
     ).reset_index(drop=True)
-    out["event_id"] = [f"event_{idx + 1:06d}" for idx in range(len(out))]
+    out["event_id"] = ["event_" + hashlib.sha256(
+        f"{row['zone_id']}|{row['event_type']}|{row['event_timestamp']}".encode()).hexdigest()[:20]
+        for row in out.to_dict("records")]
     out = assign_market_move_groups(out)
-    return out[EVENT_LOG_COLUMNS]
+    return out.reindex(columns=EVENT_LOG_COLUMNS)
 
 
 def assign_market_move_groups(event_log: pd.DataFrame) -> pd.DataFrame:
@@ -196,10 +200,46 @@ def assign_market_move_groups(event_log: pd.DataFrame) -> pd.DataFrame:
         out.loc[idxs, "group_span_minutes"] = span_minutes
         out.loc[idxs, "grouping_window_mode"] = GROUPING_WINDOW_MODE
         out.loc[primary_idx, "market_move_role"] = "PRIMARY"
-    return out[EVENT_LOG_COLUMNS]
+    return out.reindex(columns=EVENT_LOG_COLUMNS)
 
 
-def build_market_move_groups(event_log: pd.DataFrame) -> pd.DataFrame:
+def carry_event_log(previous: pd.DataFrame | None, current: pd.DataFrame) -> pd.DataFrame:
+    """Carry immutable events and finish grouping across progression boundaries."""
+    if previous is None or previous.empty:
+        return current.copy()
+    combined = pd.concat([previous, current], ignore_index=True)
+    combined = combined.drop_duplicates(["zone_id", "event_type", "event_timestamp"], keep="first")
+    if current.empty:
+        return combined.reset_index(drop=True)
+    boundary = pd.to_datetime(current.event_timestamp, utc=True).min() - pd.Timedelta(minutes=2)
+    ends = pd.to_datetime(combined.group_end_timestamp, utc=True, errors="coerce")
+    recent = ends.ge(boundary) | pd.to_datetime(combined.event_timestamp, utc=True).ge(boundary)
+    regrouped = assign_market_move_groups(combined.loc[recent].reset_index(drop=True))
+    return (pd.concat([combined.loc[~recent], regrouped], ignore_index=True)
+            .sort_values(["event_timestamp", "zone_id", "event_type"], kind="mergesort").reset_index(drop=True))
+
+
+class _EventSignatures:
+    """Immutable cache metadata shared safely by pandas copies/row views.
+
+    Deep-copying a growing mutable attrs dictionary into every Series turns
+    an ordinary history traversal into a quadratic operation. Signatures and
+    their mapping cannot be mutated; checkpoints reconstruct the same value.
+    """
+    def __init__(self, values):
+        self._values = MappingProxyType(dict(values))
+
+    def get(self, key):
+        return self._values.get(key)
+
+    def __deepcopy__(self, memo):
+        return self
+
+    def __reduce__(self):
+        return type(self), (dict(self._values),)
+
+
+def build_market_move_groups(event_log: pd.DataFrame, *, previous_groups: pd.DataFrame | None = None) -> pd.DataFrame:
     if event_log.empty or "market_move_id" not in event_log.columns:
         return pd.DataFrame(columns=MARKET_MOVE_GROUP_COLUMNS)
     grouped = event_log[
@@ -210,13 +250,24 @@ def build_market_move_groups(event_log: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=MARKET_MOVE_GROUP_COLUMNS)
 
     rows = []
-    for _, group in grouped.groupby("market_move_id", sort=True):
-        rows.append(_market_move_group_row(group))
+    previous_signatures = {} if previous_groups is None else previous_groups.attrs.get("event_signatures", {})
+    previous_rows = {} if previous_groups is None else {str(row["market_move_id"]): row for row in previous_groups.to_dict("records")}
+    signatures = {}
+    signature_columns = [column for column in EVENT_LOG_COLUMNS if column != "snapshot_available_at_utc"]
+    for move_id, group in grouped.groupby("market_move_id", sort=True):
+        signature = tuple(map(tuple, group.reindex(columns=signature_columns).to_numpy()))
+        signatures[move_id] = signature
+        if move_id in previous_rows and previous_signatures.get(move_id) == signature:
+            rows.append(previous_rows[move_id])
+        else:
+            rows.append(_market_move_group_row(group))
     rows = sorted(
         rows,
         key=lambda row: (pd.Timestamp(row["event_timestamp"]), str(row["side"]), str(row["market_move_id"])),
     )
-    return pd.DataFrame(rows, columns=MARKET_MOVE_GROUP_COLUMNS)
+    result = pd.DataFrame(rows, columns=MARKET_MOVE_GROUP_COLUMNS)
+    result.attrs["event_signatures"] = _EventSignatures(signatures)
+    return result
 
 
 def event_stats(event_log: pd.DataFrame) -> dict[str, object]:
@@ -273,8 +324,8 @@ def _interaction_events(
 ) -> list[dict[str, object]]:
     if str(zone.get("status", "")) in {"MERGED", "EXPIRED"}:
         return []
-    first_seen = pd.Timestamp(zone["first_seen_at"])
-    run_slice = feed[feed["Timestamp"] >= first_seen].copy()
+    first_seen = pd.Timestamp(zone.get("geometry_available_at_utc") or zone["first_seen_at"])
+    run_slice = feed[feed["Timestamp"] > first_seen].copy()
     if run_slice.empty:
         return []
     if _consumed_before_or_at(zone, run_slice["Timestamp"].min()):

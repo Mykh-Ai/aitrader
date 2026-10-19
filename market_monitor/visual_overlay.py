@@ -1254,7 +1254,7 @@ def _aggregate_feed(feed: pd.DataFrame, timeframe: str) -> pd.DataFrame:
         return frame.reset_index(drop=True)
     rule = {"M5": "5min", "M15": "15min"}[timeframe]
     frame = frame.set_index("Timestamp").sort_index()
-    agg = frame.resample(rule).agg(
+    agg = frame.resample(rule, label="right", closed="right").agg(
         {
             "OpenPrice": "first",
             "HiPrice": "max",
@@ -1269,6 +1269,7 @@ def _aggregate_feed(feed: pd.DataFrame, timeframe: str) -> pd.DataFrame:
             **({"LiqBuyQty": "sum", "LiqSellQty": "sum"} if {"LiqBuyQty", "LiqSellQty"}.issubset(frame.columns) else {}),
         }
     ).dropna(subset=["OpenPrice", "HiPrice", "LowPrice", "ClosePrice"])
+    agg = agg.loc[agg.index <= frame.index.max()]
     return agg.reset_index()
 
 
