@@ -1,4 +1,6 @@
-# NEXT TASK: CONFIRM THE FROZEN MONETARY STRATEGY CANDIDATE
+# CANONICAL INTEGRITY REPAIRS: PARTIAL HISTORICAL VERIFICATION
+
+Canonical source repairs have 799 passing tests and 1,840 identical H1 prefix decisions. The user explicitly chose control-date verification and faster publication instead of finishing the full H1 continuation through October 14; final classification is PARTIAL. See `docs/MARKET_MONITOR_MAIN_INTEGRITY_REPAIR_2026_10_18.md` for the preserved carried checkpoint and exact limits. Further exhaustive continuation requires a new user request. The older research continuation below remains historical context.
 
 ## Status
 

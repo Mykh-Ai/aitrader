@@ -1,5 +1,7 @@
 # Active Docs
 
+Canonical engineering result: [Market Monitor main integrity repair](MARKET_MONITOR_MAIN_INTEGRITY_REPAIR_2026_10_18.md). Shared-source repairs have 799 passing tests and 1,840 matching H1 decisions; the user explicitly selected bounded verification and PARTIAL status. The full October H1 continuation remains unverified. This does not promote research outputs or trading behavior.
+
 Active docs describe the reset boundary, feed/data lineage, the 39A architecture audit, and the bounded v39A snapshot promotion completed on 2026-09-11.
 
 Current active documents, in source-of-truth order:

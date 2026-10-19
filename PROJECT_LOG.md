@@ -2,6 +2,10 @@
 
 Compact handoff log for AiTrader. This file is the index; detailed evidence remains in `research/canonical/` and generated outputs under `market_monitor_runs/`.
 
+## 2026-10-18/19 - MARKET_MONITOR_MAIN_INTEGRITY_REPAIR
+
+Canonical source repair directly on main from `0af6d740206aa6628cc688a813288bc79d0de34d`; source-fix commit `2b7ff920a36a49f1aab3bba5b2b60438c434e1b0`. Shared timeframe/source-quality, lifecycle carry-forward, selector as-of and downstream evidence clocks are corrected. Final regression suite: 799 passed / 11 existing warnings across all 102 tracked modules. Two source-genesis streams matched all 1,840 H1 decisions through May 27 05:00 UTC; three chronological structure/registry checkpoints passed exact independent recalculation. The user explicitly stopped the exhaustive continuation for faster control-date verification/publication, so the verdict is PARTIAL; later dates are bounded source/structure/registry diagnostics, not a full H1 continuation. See `docs/MARKET_MONITOR_MAIN_INTEGRITY_REPAIR_2026_10_18.md` and `local_runs/market_monitor_main_integrity_2026_10_18/`. Protected sources and historical 38V/38W1/40A verdicts are preserved; no strategy/PnL/live promotion is performed.
+
 ## 2026-10-15 - SHI_RESET_40N user-directed Git publication to main
 
 - User explicitly requested push to main. Frozen research snapshot commit`0862342` records40A–40M documents/code/results/all trials and40M inventory; raw primary/recovered232source files stay external/unmodified. Existing remote main had3unique commits/research23; regular merge preserves production-continuity fix`d753f05`/`bf2e9f0` and research snapshot history. No force-push, order/deployment or production-policy promotion.
