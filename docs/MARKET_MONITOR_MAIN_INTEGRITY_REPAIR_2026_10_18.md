@@ -1,6 +1,6 @@
 # Market Monitor main integrity repair — 2026-10-18
 
-Status: canonical repairs implemented; user-approved bounded validation. Final classification: **MAIN_INTEGRITY_REPAIR_PARTIAL** because the complete H1 continuation through October 14 was explicitly stopped at the user's request for faster publication.
+Status: canonical repairs implemented; historical verification incomplete. Classification: **MAIN_INTEGRITY_REPAIR_PARTIAL**. On October 19 the user clarified that questioning the runtime did not authorize reducing replay scope. The complete H1 continuation through October 14 remains required; the earlier agent's interruption is not a user-approved acceptance waiver.
 
 Starting main: `0af6d740206aa6628cc688a813288bc79d0de34d`, fetched and fast-forward checked against `origin/main`. The upstream closed-bar aggregation and setup-formation fixes are retained. Final source-repair main SHA: `2b7ff920a36a49f1aab3bba5b2b60438c434e1b0`. The documentation-only publication commit and verified final remote main SHA are recorded after push in `local_runs/market_monitor_main_integrity_2026_10_18/publication_verification.json` and the final handoff; a report cannot contain the literal SHA of its own enclosing commit.
 
@@ -50,12 +50,12 @@ Evidence directory: `local_runs/market_monitor_main_integrity_2026_10_18/` (loca
 
 All three later diagnostics passed: June 15 / September 2 / October 14 have 4,946 / 8,790 / 10,871 structure rows, respectively, and ten registry sample rows each. All 218 selected 2026 source-file hashes and the 22,161-file protection inventory passed final verification.
 
-The user explicitly selected “control dates and faster publication” after being offered the full H1 continuation versus bounded verification with a PARTIAL verdict. No interrupted or superseded run is labeled complete. This is the remaining acceptance limitation, not a claim that all unknown defects have been eliminated.
+An earlier clarification was interpreted as bounded acceptance. On October 19 the user corrected that interpretation: the full replay must still be completed, with the current follow-up limited to 15 minutes including tests and checks. No interrupted or superseded run is labeled complete. Incomplete continuation remains an acceptance limitation, not a claim that all unknown defects have been eliminated.
 
 Reproduce the causal and independent prefix runs using the shared canonical modules:
 
 ```powershell
-# Bounded acceptance selected by the user:
+# Existing bounded regression evidence (not full acceptance):
 python tools/verify_market_monitor_integrity.py --blocker-cases-only
 python tools/verify_market_monitor_integrity.py --compare-checkpoints publication_full
 python tools/verify_market_monitor_integrity.py --diagnostic-checkpoints-only
@@ -63,7 +63,7 @@ python tools/verify_market_monitor_integrity.py --preservation-only
 $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD='1'
 $integrityTestFiles = @(git ls-files 'tests/test_*.py')
 python -m pytest -q $integrityTestFiles
-# Optional exhaustive continuation, not completed by this task:
+# Required full continuation, still incomplete:
 # python tools/verify_market_monitor_integrity.py --name full_acceptance
 # python tools/verify_market_monitor_integrity.py --name prefix_acceptance --prefix-input --compare full_acceptance
 ```
@@ -74,6 +74,27 @@ Each daily checkpoint pins canonical code identity and its own carried state. `-
 
 ## Publication and limits
 
-Publication uses normal commits directly on main, a fresh remote-base check, no force push, and remote SHA/blob verification. The source-fix SHA above identifies the tested repair; the final publication receipt supplies the enclosing documentation commit's final remote main identity. Publication remains a separate check from the deliberately incomplete full-history verification.
+Publication uses normal commits directly on main, a fresh remote-base check, no force push, and remote SHA/blob verification. The source-fix SHA above identifies the tested repair; the final publication receipt supplies the enclosing documentation commit's final remote main identity. Publication remains a separate check from the currently incomplete full-history verification.
 
 Inspected scope is the active structure → zones/registry → events/observations → selector → state/flow → setup → snapshot path and its batch/replay/render consumers. Existing unimplemented 39A lifecycle features remain outside this correctness repair. Legacy daily artifacts without evidence clocks cannot be reconstructed into earlier intraday state by filtering; regenerate causally from governed feed. Certified chronological use starts at source genesis and advances through the closed H1 sequence; an isolated later first call is a cold-start diagnostic. External SHI/history files are required for the real-feed and artifact-backed reproductions. This repair does not certify unknown defects absent a reproduction, strategy edge, or live readiness.
+
+
+## October 19 runtime correction and bounded continuation
+
+The user required the current follow-up, tests and checks to finish within 15 minutes. The original complete historical replay remains required; this runtime limit does not waive it.
+
+- Canonical `zone_registry.py` now vectorizes sweep transitions and acceptance clocks, preserving elapsed-gap semantics. Already accepted uninterrupted HTF runs on either side carry counters forward from processed state instead of rescanning their lifetime. Interactions, changed geometry and extended gaps retain the full calculation. Remaining nonlinear history work is not claimed to be fully incremental.
+- Canonical `events.py` and `label_taxonomy.py` build signature arrays once and materialize only changed groups. Scoring, classifications, state schemas and selection policy are unchanged.
+- The verifier now performs forced independent recalculation at control checkpoints by default. Daily stress recalculation requires `--full-recompute-every-day`; it does not launch a second full stream. Every H1 still runs the canonical pipeline and evidence-clock assertions. `--time-budget-seconds` writes an exact resumable checkpoint and an explicit incomplete receipt on expiry, never a completion claim.
+- Before-fix unnecessary-rescan reproduction: two failures, two gap guards passing. After correction: **804 tests passed, 11 existing warnings, 52.63 seconds** (`runtime_final_tests.xml`). An initial system-temp permission failure was resolved by using a fresh workspace-local pytest temp directory; no product assertion was weakened.
+- `tools/certify_market_monitor_runtime_checkpoint.py` restricts compatible migration to six named performance functions in three modules, checks the other canonical sources, and compares the actual previous/current canonical implementations for two H1 updates. All output hashes and carried registry, structure, event, observation, taxonomy, flow and setup state match exactly. The original May 27 checkpoint is preserved. Measured comparison was about 1.7 times faster, not enough for the remaining thousands of H1 updates within 15 minutes.
+- The continuation resumed May 27 14:00 UTC without state resets, processed **46 additional H1 decisions**, and saved state through **2026-05-29 12:00:00+00:00**. The budget stopped it honestly; the October continuation remains unfinished. The independent restricted-input update at 2026-05-28 15:00:00+00:00 matched all decision tables and the snapshot exactly. Full source-genesis structure reconstruction and forced active-registry recalculation at the final saved cutoff also matched exactly.
+- All 22,161 protected/historical files and 28 policy functions remain preserved. No protected feed or historical research verdict was edited, and no 2024 source was accessed. Runtime follow-up base is `572cbbdaef330e014e8cc6f7a05e7d60ecdf1acd`; final published SHA is recorded in `runtime_followup_verification.json` after push.
+
+Continue only from the matching saved canonical state; the tool stops cleanly at its declared budget:
+
+```powershell
+python tools/verify_market_monitor_integrity.py --name runtime_next --resume-from local_runs/market_monitor_main_integrity_2026_10_18/runtime_completion_state.pkl --time-budget-seconds 600
+```
+
+Verdict remains **MAIN_INTEGRITY_REPAIR_PARTIAL**. Full H1 continuation through October 14 has not passed acceptance.

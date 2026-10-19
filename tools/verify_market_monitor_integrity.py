@@ -219,7 +219,12 @@ def main():
     parser.add_argument("--compare", help="Previously saved longer-input run name")
     parser.add_argument("--resume-from", help="Own local checkpoint from an identical canonical source revision")
     parser.add_argument("--profile-day", help="Profile one UTC day without changing calculation semantics")
+    parser.add_argument("--full-recompute-every-day", action="store_true",
+                        help="Expensive stress verification; normal continuation checks control checkpoints only")
+    parser.add_argument("--time-budget-seconds", type=float, default=0,
+                        help="Stop cleanly with an exact resumable checkpoint within this wall-clock budget")
     args = parser.parse_args()
+    budget_started = time.monotonic()
     OUT.mkdir(parents=True, exist_ok=True)
     count = preserve()
     policy_parity()
@@ -266,11 +271,22 @@ def main():
     profiler = cProfile.Profile() if args.profile_day else None
     profile_enabled = False
     started = time.monotonic()
+    stopped_for_budget = False
+    last_number = first_number - 1
+    def save_state(number):
+        checkpoint_path = OUT / f"{args.name}_state.pkl"
+        temporary_path = checkpoint_path.with_suffix(".tmp")
+        temporary_path.write_bytes(pickle.dumps({"monitor": monitor, "number": number, "identity": identity,
+            "name": args.name, "prefix_input": args.prefix_input}, protocol=pickle.HIGHEST_PROTOCOL))
+        temporary_path.replace(checkpoint_path)
     with (OUT / f"{args.name}_decisions.jsonl").open("w", encoding="utf-8") as stream:
         stream.write(prior_records)
         for number, timestamp in enumerate(pd.date_range(feed.Timestamp.min().ceil("h"), cutoff.floor("h"), freq="h")):
             if number < first_number:
                 continue
+            if args.time_budget_seconds and time.monotonic() - budget_started >= max(0, args.time_budget_seconds - 20):
+                stopped_for_budget = True
+                break
             if profiler is not None:
                 desired = timestamp.date().isoformat() == args.profile_day
                 if desired and not profile_enabled:
@@ -311,6 +327,7 @@ def main():
                       "visible": int(selected.visible_on_snapshot.eq("true").sum()), "source_rows": int(feed.Timestamp.le(timestamp).sum())}
             stream.write(json.dumps(record, sort_keys=True) + "\n")
             stream.flush()
+            last_number = number
             if control_checkpoint:
                 checkpoint = OUT / args.name / timestamp.strftime("%Y%m%d_%H%M")
                 checkpoint.mkdir(parents=True, exist_ok=True)
@@ -319,7 +336,7 @@ def main():
                 selected.to_csv(checkpoint / "selected_zone_inventory.csv", index=False)
                 decision["state"].to_csv(checkpoint / "market_structure_state.csv", index=False)
                 (checkpoint / "snapshot.json").write_text(json.dumps(decision["snapshot"], sort_keys=True, indent=2, default=str))
-            if number % 24 == 0:
+            if control_checkpoint or (args.full_recompute_every_day and number % 24 == 0):
                 active = monitor.registry.loc[monitor.registry.status.isin(CARRY_FORWARD_STATUSES)].copy()
                 cached = _update_lifecycle(active, available, use_cache=True, as_of=timestamp)
                 full = _update_lifecycle(active, available, use_cache=False, as_of=timestamp)
@@ -335,22 +352,27 @@ def main():
                 for filename, direct in [("sweep_label_taxonomy.csv", labels), ("sweep_label_summary.csv", summary)]:
                     pd.testing.assert_frame_equal(decision["frames"][filename].drop(columns="snapshot_available_at_utc", errors="ignore"),
                         direct.drop(columns="snapshot_available_at_utc", errors="ignore"), check_dtype=False, check_exact=True)
+            if number % 24 == 0 or control_checkpoint:
                 print(f"{timestamp}: {number + 1} H1, registry={len(monitor.registry)}, elapsed={time.monotonic()-started:.1f}s", flush=True)
                 assert identity == {str(path.relative_to(ROOT)): digest(path) for path in sorted((ROOT / "market_monitor").glob("*.py"))}, "canonical code changed during verification"
-                checkpoint_path = OUT / f"{args.name}_state.pkl"
-                temporary_path = checkpoint_path.with_suffix(".tmp")
-                temporary_path.write_bytes(pickle.dumps({"monitor": monitor, "number": number, "identity": identity,
-                    "name": args.name, "prefix_input": args.prefix_input}, protocol=pickle.HIGHEST_PROTOCOL))
-                temporary_path.replace(checkpoint_path)
+                save_state(number)
+    if monitor.cutoff is not None:
+        save_state(last_number)
     preserve()
     assert identity == {str(path.relative_to(ROOT)): digest(path) for path in sorted((ROOT / "market_monitor").glob("*.py"))}, "canonical code changed during verification"
-    if args.compare:
+    if args.compare and not stopped_for_budget:
         reference = {row["cutoff"]: row for row in map(json.loads, (OUT / f"{args.compare}_decisions.jsonl").read_text().splitlines())}
         actual = list(map(json.loads, (OUT / f"{args.name}_decisions.jsonl").read_text().splitlines()))
         for row in actual:
             assert reference[row["cutoff"]] == row, (row["cutoff"], "historical prefix mismatch")
         (OUT / f"{args.name}_prefix_comparison.json").write_text(json.dumps({"reference": args.compare, "cutoffs_equal": len(actual), "final_cutoff": str(cutoff)}, indent=2))
-    print(f"PASS {args.name}; {count} protected files preserved", flush=True)
+    (OUT / f"{args.name}_completion.json").write_text(json.dumps({
+        "complete": not stopped_for_budget, "requested_cutoff": str(cutoff), "last_decision_cutoff": str(monitor.cutoff),
+        "stopped_for_budget": stopped_for_budget, "elapsed_seconds": time.monotonic() - budget_started,
+        "full_recomputation_mode": "DAILY_STRESS" if args.full_recompute_every_day else "CONTROL_CHECKPOINTS",
+        "market_state_reset": False, "structure_levels_reset": False, "liquidity_zones_reset": False,
+        "qualified_h1_state_reset": False, "setup_context_reset": False}, indent=2))
+    print(f"{'PARTIAL_BUDGET' if stopped_for_budget else 'PASS'} {args.name}; cutoff={monitor.cutoff}; {count} protected files preserved", flush=True)
 
 
 if __name__ == "__main__":

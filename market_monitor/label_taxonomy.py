@@ -140,20 +140,23 @@ def build_sweep_label_frames(
     group_by_move = _groups_by_move(groups)
 
     move_ids = _market_move_ids(observations, groups)
-    observation_groups = {str(key): group for key, group in observations.groupby("market_move_id", sort=False)}
+    observation_indices = {str(key): indices for key, indices in observations.groupby("market_move_id", sort=False).indices.items()}
     previous_rows = {} if previous_taxonomy is None else {str(row["market_move_id"]): row for row in previous_taxonomy.to_dict("records")}
     previous_signatures = {} if previous_taxonomy is None else previous_taxonomy.attrs.get("source_signatures", {})
     signature_columns = [column for column in observations if column != "snapshot_available_at_utc"]
+    signature_values = observations[signature_columns].to_numpy()
+    empty_observations = observations.iloc[:0]
     rows, signatures = [], {}
     for move_id in move_ids:
-        source = observation_groups.get(move_id, observations.iloc[:0])
+        indices = observation_indices.get(move_id, [])
         group = group_by_move.get(move_id, {})
-        signature = (taxonomy_version, tuple(map(tuple, source[signature_columns].to_numpy())),
+        signature = (taxonomy_version, tuple(map(tuple, signature_values[indices])),
                      tuple((key, group[key]) for key in sorted(group) if key != "snapshot_available_at_utc"))
         signatures[move_id] = signature
         if move_id in previous_rows and previous_signatures.get(move_id) == signature:
             rows.append(previous_rows[move_id])
         else:
+            source = observations.iloc[indices] if len(indices) else empty_observations
             rows.append(_label_row(move_id=move_id, observations=source, group=group, taxonomy_version=taxonomy_version))
     taxonomy = pd.DataFrame(rows, columns=SWEEP_LABEL_TAXONOMY_COLUMNS)
     taxonomy = taxonomy.sort_values(
@@ -544,8 +547,8 @@ def _groups_by_move(groups: pd.DataFrame) -> dict[str, dict[str, object]]:
     if groups.empty or "market_move_id" not in groups.columns:
         return {}
     return {
-        str(row["market_move_id"]): row.to_dict()
-        for _, row in groups.sort_values("market_move_id", kind="mergesort").iterrows()
+        str(row["market_move_id"]): row
+        for row in groups.sort_values("market_move_id", kind="mergesort").to_dict("records")
         if str(row.get("market_move_id", ""))
     }
 

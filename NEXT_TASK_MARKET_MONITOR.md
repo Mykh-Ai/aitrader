@@ -1,6 +1,6 @@
 # CANONICAL INTEGRITY REPAIRS: PARTIAL HISTORICAL VERIFICATION
 
-Canonical source repairs have 799 passing tests and 1,840 identical H1 prefix decisions. The user explicitly chose control-date verification and faster publication instead of finishing the full H1 continuation through October 14; final classification is PARTIAL. See `docs/MARKET_MONITOR_MAIN_INTEGRITY_REPAIR_2026_10_18.md` for the preserved carried checkpoint and exact limits. Further exhaustive continuation requires a new user request. The older research continuation below remains historical context.
+Canonical source repairs have regression and historical-prefix evidence, but full H1 continuation through October 14 remains required; classification is PARTIAL. On October 19 the user clarified that the earlier interruption did not authorize reducing scope and required a 15-minute limit for the current follow-up, including tests and checks. See `docs/MARKET_MONITOR_MAIN_INTEGRITY_REPAIR_2026_10_18.md` for the carried checkpoint and exact limits. Normal continuation carries state and checks forced recomputation at control dates; daily forced recomputation is an explicit stress option. The older research continuation below remains historical context.
 
 ## Status
 

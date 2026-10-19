@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The user-scoped main integrity repairs are implemented with bounded historical verification classified PARTIAL at the user's explicit request. Read `docs/MARKET_MONITOR_MAIN_INTEGRITY_REPAIR_2026_10_18.md` for evidence clocks, versioned registry-state compatibility and the uncompleted H1 continuation. Preserve existing research verdicts and the production-continuity ADR; this repair does not authorize orders or research-to-live promotion.
+The main integrity repairs are implemented, but full historical H1 verification remains required. On October 19 the user clarified that the earlier interruption was not authorization to reduce scope. Read `docs/MARKET_MONITOR_MAIN_INTEGRITY_REPAIR_2026_10_18.md` for evidence clocks, versioned registry-state compatibility and the unfinished continuation. Preserve existing research verdicts and the production-continuity ADR; this repair does not authorize orders or research-to-live promotion.
 
 Publication40N records the user's explicit request to push this research to`main`. Read `research/canonical/SHI_RESET_40N_GIT_PUBLICATION_AUDIT_2026_10_15.md` for commit`0862342` offline reproduction and byte-preserving transfer. The existing production-continuity package/ADR is preserved on main. Publishing here does not alter the retired-main research-base policy or authorize live promotion; future work still follows the task's explicitly selected base and scope.
 

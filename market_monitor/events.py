@@ -254,13 +254,14 @@ def build_market_move_groups(event_log: pd.DataFrame, *, previous_groups: pd.Dat
     previous_rows = {} if previous_groups is None else {str(row["market_move_id"]): row for row in previous_groups.to_dict("records")}
     signatures = {}
     signature_columns = [column for column in EVENT_LOG_COLUMNS if column != "snapshot_available_at_utc"]
-    for move_id, group in grouped.groupby("market_move_id", sort=True):
-        signature = tuple(map(tuple, group.reindex(columns=signature_columns).to_numpy()))
+    signature_values = grouped.reindex(columns=signature_columns).to_numpy()
+    for move_id, indices in grouped.groupby("market_move_id", sort=True).indices.items():
+        signature = tuple(map(tuple, signature_values[indices]))
         signatures[move_id] = signature
         if move_id in previous_rows and previous_signatures.get(move_id) == signature:
             rows.append(previous_rows[move_id])
         else:
-            rows.append(_market_move_group_row(group))
+            rows.append(_market_move_group_row(grouped.iloc[indices]))
     rows = sorted(
         rows,
         key=lambda row: (pd.Timestamp(row["event_timestamp"]), str(row["side"]), str(row["market_move_id"])),

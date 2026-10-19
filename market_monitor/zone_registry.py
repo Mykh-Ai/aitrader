@@ -708,14 +708,24 @@ def _unchanged_interaction_cache(row, frame, htf_frames):
     if (recent.Timestamp.diff().dropna() > pd.Timedelta(minutes=2)).any():
         return None
     lower, upper = float(row["zone_outer_lower"]), float(row["zone_outer_upper"])
-    below = row["side"] == "BUY_SIDE"
-    if not (recent.HiPrice.lt(lower).all() if below else recent.LowPrice.gt(upper).all()):
+    below = bool(recent.HiPrice.lt(lower).all())
+    above = bool(recent.LowPrice.gt(upper).all())
+    if not (below or above):
+        return None
+    original_side = below == (row["side"] == "BUY_SIDE")
+    if not original_side and not _has_htf_source(row):
         return None
     if not row.get("accepted_below_at" if below else "accepted_above_at"):
         return None
     out = row.copy()
     name = "close_below_count" if below else "close_above_count"
     out[name] = int(float(out[name])) + len(frame) - offset
+    if not original_side:
+        # A previously accepted, uninterrupted run beyond an HTF zone adds
+        # observations, not new transitions. Geometry and the last three
+        # observations were checked above; pending short runs are excluded.
+        out["last_cross_at"] = _format_ts(frame.Timestamp.iloc[-1])
+        out["m1_interaction_count"] = int(float(out["m1_interaction_count"])) + len(frame) - offset
     metrics = _htf_lifecycle_metrics(out, frame, lower, upper, htf_frames=htf_frames)
     out.update(metrics)
     if _has_htf_source(out):
@@ -1051,13 +1061,9 @@ def _sweep_transition_timestamps(
         swept = pd.to_numeric(frame["HiPrice"], errors="coerce") > upper
     else:
         swept = pd.to_numeric(frame["LowPrice"], errors="coerce") < lower
-    timestamps: list[str] = []
-    previous = False
-    for is_swept, timestamp in zip(swept.tolist(), frame["Timestamp"]):
-        if is_swept and not previous:
-            timestamps.append(_format_ts(timestamp))
-        previous = bool(is_swept)
-    return timestamps
+    flags = swept.to_numpy(dtype=bool)
+    starts = np.flatnonzero(flags & ~np.r_[False, flags[:-1]]) if len(flags) else []
+    return [_format_ts(frame["Timestamp"].iloc[int(index)]) for index in starts]
 
 
 def _m1_interaction_count(
@@ -1153,15 +1159,19 @@ def _accepted_run_count(flags: list[bool]) -> int:
 
 
 def _consecutive_threshold_at(frame: pd.DataFrame, flags: list[bool]) -> str:
-    count = 0
-    previous = None
-    for is_flagged, timestamp in zip(flags, frame["Timestamp"]):
-        if previous is not None and timestamp - previous > pd.Timedelta(minutes=2):
-            count = 0
-        count = count + 1 if is_flagged else 0
-        previous = timestamp
-        if count >= ACCEPTANCE_CLOSE_BARS:
-            return _format_ts(timestamp)
+    values = np.asarray(flags, dtype=bool)
+    if not len(values):
+        return ""
+    # A false observation or an extended elapsed gap starts a new run.
+    # Compare timestamps as integers; avoid constructing every historical
+    # Timestamp again on every H1 update.
+    times = frame["Timestamp"].iloc[:len(values)]
+    gaps = np.r_[True, times.diff().iloc[1:].gt(pd.Timedelta(minutes=2)).to_numpy()]
+    starts = values & (gaps | ~np.r_[False, values[:-1]])
+    start_positions = np.maximum.accumulate(np.where(starts, np.arange(len(values)), 0))
+    reached = np.flatnonzero(values & (np.arange(len(values)) - start_positions + 1 >= ACCEPTANCE_CLOSE_BARS))
+    if len(reached):
+        return _format_ts(times.iloc[int(reached[0])])
     return ""
 
 
