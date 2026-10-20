@@ -1,6 +1,6 @@
 # Market Monitor main integrity repair — 2026-10-18
 
-Status: canonical repairs implemented; historical verification incomplete. Classification: **MAIN_INTEGRITY_REPAIR_PARTIAL**. On October 19 the user clarified that questioning the runtime did not authorize reducing replay scope. The complete H1 continuation through October 14 remains required; the earlier agent's interruption is not a user-approved acceptance waiver.
+Status: **MAIN_INTEGRITY_REPAIR_COMPLETE_VERIFIED**. The full H1 continuation and final regression/independent checks passed on October 20. Publication identity is recorded in `local_runs/market_monitor_main_integrity_2026_10_18/final_integrity_acceptance.json` after remote verification. Earlier partial results below are retained as history and superseded by final acceptance.
 
 Starting main: `0af6d740206aa6628cc688a813288bc79d0de34d`, fetched and fast-forward checked against `origin/main`. The upstream closed-bar aggregation and setup-formation fixes are retained. Final source-repair main SHA: `2b7ff920a36a49f1aab3bba5b2b60438c434e1b0`. The documentation-only publication commit and verified final remote main SHA are recorded after push in `local_runs/market_monitor_main_integrity_2026_10_18/publication_verification.json` and the final handoff; a report cannot contain the literal SHA of its own enclosing commit.
 
@@ -98,3 +98,21 @@ python tools/verify_market_monitor_integrity.py --name runtime_next --resume-fro
 ```
 
 Verdict remains **MAIN_INTEGRITY_REPAIR_PARTIAL**. Full H1 continuation through October 14 has not passed acceptance.
+
+
+## October 20 final full-replay acceptance
+
+The original full-scope requirement is fulfilled. A single canonical chronology from source genesis, continued through certified exact carried checkpoints, passed **all 5,218 H1 decisions**, March 11 14:00 UTC to October 14 23:00 UTC. Source availability ends October 14 23:59 UTC; 23:00 is its last completed H1. No H1 step is skipped, no data is manufactured and all state-reset flags remain false. The latest continuation took 51900.56 seconds; the earlier 15-minute runtime target was not achieved and performance remains a limitation.
+
+- The prior 1,840 independently advanced source-genesis decisions are preserved exactly in the completed decision ledger. Runtime migration from the original corrected implementation to the performance revision is separately certified with exact old/new outputs and carried-state comparisons; it does not reuse uncertified historical snapshots.
+- Independently reread whole-history structure and forced active-registry recalculation match exactly at **March 14, April 24, May 7, June 15, July 15, September 2 and October 14**. These are actual carried chronological checkpoints. The earlier bounded cold-start samples are not substituted for them.
+- Four independently loaded shorter datasets at June 15, July 15, September 2 and October 14 reproduce all output tables, selection, state, flow, setup and snapshot hashes for three consecutive H1 updates each, from exact causal predecessor states. Together with the source-genesis comparison this verifies the required sampled historical-prefix invariant. It is not a second full-period run.
+- All five original premature H1/H4 examples pass again. Per-H1 checks enforce closed-bar confirmation delay, evidence availability, selector cap and no setup backdating. Selector score/bucket/visibility policy and setup-family definitions retain 28-function exact AST parity with starting main. Existing 40A failures remain explicit regression evidence; old 38V/38W1 verdicts remain unchanged.
+- Final tracked regression suite: **804 passed, 11 existing warnings**, 56.77 seconds. All tracked configured tests are included; the unrelated untracked structural-salience test remains excluded as explained above. No assertion was weakened.
+- All **218 governed daily source hashes** and **22,161 protected/historical files** pass. Recovered-source provenance is retained; no 2024 feed source is selected. Protected feed, aggregator and historical research Git diffs are empty against original main.
+
+Canonical repair commits are `2b7ff920a36a49f1aab3bba5b2b60438c434e1b0` and runtime revision `851a670d72eaed549a36150b84ad07c4b632e8dc`. The final report/verifier commit and verified remote main SHA are supplied by the final acceptance receipt and publication handoff; a report cannot embed its enclosing commit's own SHA.
+
+Evidence: `final_full_completion.json`, `final_full_decisions.jsonl`, `final_full_control_prefixes.json`, `publication_full_independent_structure_checkpoints.json`, `final_full_independent_structure_checkpoints.json`, `acceptance_full_tests.xml` and `final_integrity_acceptance.json` under the existing local integrity run root. Reproduce control-prefix verification with `python tools/verify_market_monitor_integrity.py --verify-control-prefixes final_full`; source-genesis full recalculation at saved checkpoints uses `--compare-checkpoints publication_full` and `--compare-checkpoints final_full`.
+
+Remaining limits: CPU-intensive replay, finite inspected feed/history, and unknown unobserved defects. Historical research outcomes are not reclassified, and this engineering result makes no strategy-edge or live-readiness claim.

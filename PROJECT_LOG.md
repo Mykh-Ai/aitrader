@@ -2,6 +2,10 @@
 
 Compact handoff log for AiTrader. This file is the index; detailed evidence remains in `research/canonical/` and generated outputs under `market_monitor_runs/`.
 
+## 2026-10-20 - Main integrity repair full acceptance
+
+Full canonical H1 reconstruction through October 14 is verified: 5,218 H1 decisions, 804 passing tests, seven independent whole-history structure/registry checkpoints and four later carried-prefix comparisons. Earlier source-genesis streams matched 1,840 decisions. Protected sources, original research verdicts and selector policy remain preserved. All five premature H1/H4 reproductions pass; 218 source hashes and 22,161 protected/historical files match. Full carried chronology has no reset or skipped H1 step; earlier interrupted evidence is retained. Final report: `docs/MARKET_MONITOR_MAIN_INTEGRITY_REPAIR_2026_10_18.md`; receipt: `local_runs/market_monitor_main_integrity_2026_10_18/final_integrity_acceptance.json`. Canonical runtime commit `851a670`; final report/verifier commit and remote main SHA are recorded after publication. Scope remains engineering integrity, not strategy edge or live promotion.
+
 ## 2026-10-19 - Integrity replay runtime follow-up
 
 Canonical performance edits and normal checkpoint-only verification mode; 804 tests passed. Two old/new H1 decisions and carried states match exactly; a restricted-input H1 update and final full structure/registry recalculation match exactly. Continued 46 H1 steps through 2026-05-29 12:00:00+00:00 within the bounded follow-up. Full October replay remains unfinished and required. Corrected the earlier claim that the user waived full verification. See the existing integrity repair report and `local_runs/market_monitor_main_integrity_2026_10_18/runtime_followup_verification.json`; no protected-data or policy changes.

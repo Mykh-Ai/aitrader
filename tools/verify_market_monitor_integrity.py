@@ -206,6 +206,34 @@ def diagnostic_checkpoint_cases():
     (OUT / "publication_diagnostic_checkpoints.json").write_text(json.dumps(results, indent=2))
 
 
+def verify_control_prefixes(name):
+    """Independently reread shorter inputs from exact carried predecessor states."""
+    records = {row["cutoff"]: row for row in map(json.loads, (OUT / f"{name}_decisions.jsonl").read_text().splitlines())}
+    identity = {str(path.relative_to(ROOT)): digest(path) for path in sorted((ROOT / "market_monitor").glob("*.py"))}
+    results = []
+    for path in sorted((OUT / name).glob("*/prefix_predecessor.pkl")):
+        saved = pickle.loads(path.read_bytes())
+        assert saved["identity"] == identity
+        monitor = saved["monitor"]
+        initial = monitor.cutoff
+        target = pd.to_datetime(path.parent.name, format="%Y%m%d_%H%M", utc=True)
+        feed, files = sources(target)
+        equal = 0
+        for timestamp in pd.date_range(initial + pd.Timedelta(hours=1), target, freq="h"):
+            available = feed.loc[feed.Timestamp.le(timestamp)]
+            decision = monitor.update(available, timestamp)
+            assert decision_digest(decision) == records[str(timestamp)]["hashes"], str(timestamp)
+            equal += 1
+        assert equal == 3
+        results.append({"cutoff": str(target), "carried_from": str(initial), "h1_decisions_equal": equal,
+            "source_files": files, "predecessor_sha256": digest(path), "state_reset": False,
+            "status": "EXACT_FULL_DECISION_PREFIX_PARITY"})
+        print(f"PASS independent carried prefix {target}: {equal} H1 decisions", flush=True)
+        del saved, monitor, decision, feed
+    assert results, "no independently replayable control predecessors"
+    (OUT / f"{name}_control_prefixes.json").write_text(json.dumps(results, indent=2))
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cutoff", default="2026-10-14T23:59:00Z")
@@ -223,6 +251,9 @@ def main():
                         help="Expensive stress verification; normal continuation checks control checkpoints only")
     parser.add_argument("--time-budget-seconds", type=float, default=0,
                         help="Stop cleanly with an exact resumable checkpoint within this wall-clock budget")
+    parser.add_argument("--save-prefix-controls", action="store_true",
+                        help="Save carried predecessors for independent three-H1 control-prefix comparisons")
+    parser.add_argument("--verify-control-prefixes", help="Independently verify saved control predecessors after a full run")
     args = parser.parse_args()
     budget_started = time.monotonic()
     OUT.mkdir(parents=True, exist_ok=True)
@@ -241,6 +272,10 @@ def main():
         return
     if args.diagnostic_checkpoints_only:
         diagnostic_checkpoint_cases()
+        preserve()
+        return
+    if args.verify_control_prefixes:
+        verify_control_prefixes(args.verify_control_prefixes)
         preserve()
         return
     cutoff = pd.Timestamp(args.cutoff)
@@ -273,14 +308,18 @@ def main():
     started = time.monotonic()
     stopped_for_budget = False
     last_number = first_number - 1
-    def save_state(number):
-        checkpoint_path = OUT / f"{args.name}_state.pkl"
+    def save_state(number, checkpoint_path=None):
+        checkpoint_path = checkpoint_path or OUT / f"{args.name}_state.pkl"
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
         temporary_path = checkpoint_path.with_suffix(".tmp")
         temporary_path.write_bytes(pickle.dumps({"monitor": monitor, "number": number, "identity": identity,
             "name": args.name, "prefix_input": args.prefix_input}, protocol=pickle.HIGHEST_PROTOCOL))
         temporary_path.replace(checkpoint_path)
     with (OUT / f"{args.name}_decisions.jsonl").open("w", encoding="utf-8") as stream:
         stream.write(prior_records)
+        control_times = [pd.Timestamp(text) for text in ["2026-03-14T14:00Z", "2026-04-24T14:00Z",
+            "2026-05-07T14:00Z", "2026-06-15T14:00Z", "2026-07-15T14:00Z", "2026-09-02T14:00Z"]]
+        control_times.append(cutoff.floor("h"))
         for number, timestamp in enumerate(pd.date_range(feed.Timestamp.min().ceil("h"), cutoff.floor("h"), freq="h")):
             if number < first_number:
                 continue
@@ -301,8 +340,7 @@ def main():
             if observed_times.empty or observed_times.max() < timestamp - pd.Timedelta(minutes=1):
                 stream.write(json.dumps({"cutoff": str(timestamp), "status": "MISSING_CLOSING_OBSERVATION"}) + "\n")
                 continue
-            control_checkpoint = ((timestamp.hour == 14 and timestamp.strftime("%m-%d") in
-                {"03-14", "04-24", "05-07", "06-15", "09-02"}) or timestamp == cutoff.floor("h"))
+            control_checkpoint = timestamp in control_times
             decision = monitor.update(available if args.prefix_input else feed, timestamp)
             levels = monitor.structure.levels
             if not levels.empty:
@@ -328,6 +366,9 @@ def main():
             stream.write(json.dumps(record, sort_keys=True) + "\n")
             stream.flush()
             last_number = number
+            if args.save_prefix_controls and timestamp + pd.Timedelta(hours=3) in control_times:
+                target = timestamp + pd.Timedelta(hours=3)
+                save_state(number, OUT / args.name / target.strftime("%Y%m%d_%H%M") / "prefix_predecessor.pkl")
             if control_checkpoint:
                 checkpoint = OUT / args.name / timestamp.strftime("%Y%m%d_%H%M")
                 checkpoint.mkdir(parents=True, exist_ok=True)

@@ -1,6 +1,6 @@
 # Active Docs
 
-Canonical engineering result: [Market Monitor main integrity repair](MARKET_MONITOR_MAIN_INTEGRITY_REPAIR_2026_10_18.md). Shared-source repairs have regression and historical-prefix evidence, but the full October H1 continuation remains unverified and required. The user clarified on October 19 that the earlier interruption did not authorize reducing scope. This does not promote research outputs or trading behavior.
+Canonical engineering result: [Market Monitor main integrity repair](MARKET_MONITOR_MAIN_INTEGRITY_REPAIR_2026_10_18.md), **COMPLETE_VERIFIED**. Full canonical H1 reconstruction through October 14 is verified: 5,218 H1 decisions, 804 passing tests, seven independent whole-history structure/registry checkpoints and four later carried-prefix comparisons. Earlier source-genesis streams matched 1,840 decisions. Protected sources, original research verdicts and selector policy remain preserved. This does not promote research outputs or trading behavior.
 
 Active docs describe the reset boundary, feed/data lineage, the 39A architecture audit, and the bounded v39A snapshot promotion completed on 2026-09-11.
 

@@ -1,6 +1,6 @@
-# CANONICAL INTEGRITY REPAIRS: PARTIAL HISTORICAL VERIFICATION
+# CANONICAL INTEGRITY REPAIRS: FULL REPLAY VERIFIED
 
-Canonical source repairs have regression and historical-prefix evidence, but full H1 continuation through October 14 remains required; classification is PARTIAL. On October 19 the user clarified that the earlier interruption did not authorize reducing scope and required a 15-minute limit for the current follow-up, including tests and checks. See `docs/MARKET_MONITOR_MAIN_INTEGRITY_REPAIR_2026_10_18.md` for the carried checkpoint and exact limits. Normal continuation carries state and checks forced recomputation at control dates; daily forced recomputation is an explicit stress option. The older research continuation below remains historical context.
+Full canonical H1 reconstruction through October 14 is verified: 5,218 H1 decisions, 804 passing tests, seven independent whole-history structure/registry checkpoints and four later carried-prefix comparisons. Earlier source-genesis streams matched 1,840 decisions. Protected sources, original research verdicts and selector policy remain preserved. Full continuation is complete; do not restart this campaign without a new scoped request. See `docs/MARKET_MONITOR_MAIN_INTEGRITY_REPAIR_2026_10_18.md` and its final acceptance receipt. The older research continuation below remains historical context.
 
 ## Status
 

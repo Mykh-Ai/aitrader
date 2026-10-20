@@ -1,6 +1,6 @@
 # AiTrader
 
-Canonical Market Monitor integrity repairs are implemented in the shared source. Historical verification remains **PARTIAL**: full H1 continuation through October 14 is still required. The user clarified on October 19 that the earlier interruption did not authorize reducing scope. See [defects, evidence and remaining verification limits](docs/MARKET_MONITOR_MAIN_INTEGRITY_REPAIR_2026_10_18.md). Historical research verdicts and trading rules remain preserved.
+Canonical Market Monitor integrity repair: **MAIN_INTEGRITY_REPAIR_COMPLETE_VERIFIED**. Full canonical H1 reconstruction through October 14 is verified: 5,218 H1 decisions, 804 passing tests, seven independent whole-history structure/registry checkpoints and four later carried-prefix comparisons. Earlier source-genesis streams matched 1,840 decisions. Protected sources, original research verdicts and selector policy remain preserved. See [defects, evidence and remaining scope limits](docs/MARKET_MONITOR_MAIN_INTEGRITY_REPAIR_2026_10_18.md).
 
 Publication40N: the user explicitly requested publishing the research to`main`. Read [40N publication/reproduction notes](research/canonical/SHI_RESET_40N_GIT_PUBLICATION_AUDIT_2026_10_15.md) with the40M roadmap. The preserved research snapshot is commit`0862342`; current main also retains the existing [production-continuity ADR](docs/MARKET_MONITOR_CONTINUOUS_CONTEXT_AND_GAP_POLICY_ADR.md). Historical replay uses the frozen snapshot and raw inputs, not rehashed current runtime code.
 
